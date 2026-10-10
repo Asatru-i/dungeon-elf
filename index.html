@@ -1010,10 +1010,13 @@ var MERCS=[
   {id:'paladin',icon:'🛡️',name:'Паладин',desc:'-30% урона',price:15000,permanent:true,
    lore:'Он был стражем храма. Давал клятву: «Помню. Держу. Отпущу». Он не отпустил. Он держал — до конца. И после.'}
 ];
+/* v8.4.1 — записки друидов: отдельная ветка Кодекса. */
+var DRUID_NOTES=[
+  {id:0,text:'«Мы — друиды леса. Мы знали про корень. Мы пытались предупредить Тириона. Он не слушал. Он сказал: „Я спасу всех". Он не спас никого. Даже себя».'},
+  {id:1,text:'«Корень не злой. Корень — голодный. Тирион думал, что сможет его накормить собой. Он накормил. Корень вырос. Тирион — остался внутри».'},
+  {id:2,text:'«Если ты читаешь это — ты дошёл. Возьми нашу силу. Мы оставили её в камнях. Она — твоя. Просто не повторяй его ошибку. Не пытайся остановить смерть. Смерть — не враг».'}
+];
 var LORE_NOTES=[
-  {floor:1,text:'«Мы — друиды леса. Мы знали про корень. Мы пытались предупредить Тириона. Он не слушал. Он сказал: „Я спасу всех". Он не спас никого. Даже себя».',location:'druid'},
-  {floor:2,text:'«Корень не злой. Корень — голодный. Тирион думал, что сможет его накормить собой. Он накормил. Корень вырос. Тирион — остался внутри».',location:'druid'},
-  {floor:3,text:'«Если ты читаешь это — ты дошёл. Возьми нашу силу. Мы оставили её в камнях. Она — твоя. Просто не повторяй его ошибку. Не пытайся остановить смерть. Смерть — не враг».',location:'druid'},
   {floor:1,text:'«Осень пришла раньше срока. Листья падают, но не гниют — лежат на земле, целые. Старейшина сказал: это не погода. Это проклятие. Это — Тирион. Я не поверил. Теперь верю.»'},
   {floor:2,text:'«Внизу не лес. Я думал — там просто темно. Но темнота смотрит. Она не пустая. Она ждёт.»'},
   {floor:3,text:'«Тирион был Архимагом. Нашим наставником. Он учил нас, что природа — не слуга, а сестра. А потом нарушил собственную клятву.»'},
@@ -7101,9 +7104,23 @@ function buildDruidCircle(){
   fallingLeaves=[];
   if(!REDUCED_MOTION){var _bl=BALANCE.weather.leaves;for(var fl=0;fl<30;fl++)fallingLeaves.push({x:gameRNG()*VW,y:gameRNG()*VH,vy:rand(_bl.vyMin,_bl.vyMax),vx:rand(_bl.vxMin,_bl.vxMax),phase:gameRNG()*Math.PI*2,size:rand(_bl.sizeMin,_bl.sizeMax),color:pick([PAL.tLeaf1,PAL.tLeaf2,PAL.tLeaf3,PAL.tLeaf4])});}
   _spawnScenes();_trySpawnEpic();
-  if(!player._druidLoreShown){player._druidLoreShown=true;
-    var _druidNotes=['«Мы — друиды леса. Мы знали про корень. Мы пытались предупредить Тириона. Он не слушал. Он сказал: „Я спасу всех". Он не спас никого. Даже себя».','«Корень не злой. Корень — голодный. Тирион думал, что сможет его накормить собой. Он накормил. Корень вырос. Тирион — остался внутри».','«Если ты читаешь это — ты дошёл. Возьми нашу силу. Мы оставили её в камнях. Она — твоя. Просто не повторяй его ошибку. Не пытайся остановить смерть. Смерть — не враг».'];
-    [1500,6000,11000].forEach(function(delay,idx){setTimeout(function(){if(inHub||gameOver||currentLocation!=='druid')return;queueLoreModal('🌿 Записка друидов',_druidNotes[idx],'#a0c080',null);},delay);});
+  /* v8.4.1 — записки друидов показываются и сохраняются отдельно в Кодексе. */
+  if(!player._druidLoreShown){
+    player._druidLoreShown=true;
+    if(!Array.isArray(stats.loreRead))stats.loreRead=[];
+    for(var _di=0;_di<DRUID_NOTES.length;_di++){
+      (function(note){
+        var _key='druid'+note.id;
+        if(stats.loreRead.indexOf(_key)<0){
+          stats.loreRead.push(_key);
+          saveStats();
+        }
+        setTimeout(function(){
+          if(inHub||gameOver||currentLocation!=='druid')return;
+          queueLoreModal('🌿 Записка друидов',note.text,'#a0c080',null);
+        },1500+note.id*4500);
+      })(DRUID_NOTES[_di]);
+    }
   }
 }
 
@@ -9260,7 +9277,8 @@ function _collectRunData(){
       _potionSynced: true,
       _sellCount: player._sellCount || null,
       _runLore: player._runLore || {},
-      _runBook: player._runBook || {}
+      _runBook: player._runBook || {},
+      bagPurchased: player.bagPurchased || 0
     },
     world: {
       floorNum: floorNum,
@@ -9986,6 +10004,7 @@ function openCodex(){
     +'<div class="tab" onclick="showCodexTab(\'guard\',this)">🛡️ Гвардия</div>'
     +'<div class="tab" onclick="showCodexTab(\'fortress\',this)">🏰 Крепость</div>'
     +'<div class="tab" onclick="showCodexTab(\'book\',this)">📖 Промокшая книга</div>'
+    +'<div class="tab" onclick="showCodexTab(\'druid\',this)">🌿 Записки друидов</div>'
     +'<div class="tab" onclick="showCodexTab(\'paths\',this)">⚔️ Пути</div>'
     +'</div>';
 
@@ -10224,6 +10243,22 @@ function openCodex(){
   html+='<p style="font-size:11px;color:#a08060;margin-top:10px">Собрано: '+opened+' / '+total+'</p>';
 
   // ===== Пути (подклассы) =====
+  /* v8.4.1 — отдельная вкладка записок друидов. */
+  html+='<div id="codex_druid" style="display:none">';
+  if(!Array.isArray(stats.loreRead))stats.loreRead=[];
+  for(var _dri=0;_dri<DRUID_NOTES.length;_dri++){
+    var _drn=DRUID_NOTES[_dri];
+    var _drnKey='druid'+_drn.id;
+    var _drnRead=stats.loreRead.indexOf(_drnKey)>=0;
+    if(_drnRead)opened++;
+    html+='<div class="itemRow '+(_drnRead?'done':'')+'" style="align-items:flex-start">'
+      +'<div class="itemIcon">'+(_drnRead?'🌿':'🔒')+'</div>'
+      +'<div class="itemInfo"><b>Записка друидов '+(_dri+1)+'</b><br>'
+      +'<i style="font-style:italic;color:'+(_drnRead?'#a0c080':'#5a4020')+'">'+(_drnRead?_drn.text:'Записка ещё не найдена')+'</i>'
+      +'</div></div>';
+  }
+  html+='</div>';
+
   html+='<div id="codex_paths" style="display:none">';
   var _pathClassNames={warrior:'Воина',archer:'Лучника',mage:'Мага'};
   for(var _pc in SUBCLASSES){
@@ -10265,7 +10300,7 @@ function openCodex(){
 
 function showCodexTab(tab,el){
   /* v4.9.43 — ФИКС: убрана зависимость от window.event (Safari/Firefox) */
-  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_paths'];
+  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_paths'];
   for(var i=0;i<ids.length;i++){
     var s=document.getElementById(ids[i]);
     if(s)s.style.display='none';
@@ -16564,7 +16599,8 @@ function continueRun(){
   player.curseHaste = false; player.curseFragility = false;
   player._diaryShown = {};
   player._sellCount = p._sellCount || null;
-  player.bagPurchased = 0;
+  /* v8.4.1 — сохраняем расширение сумки между продолжениями забега. */
+  player.bagPurchased = (typeof p.bagPurchased === 'number' && isFinite(p.bagPurchased)) ? p.bagPurchased : 0;
 
   /* v7.9.13 PATCH — запоминаем координаты сохранённого игрока до генерации.
      Генератор этажа выставляет игрока в центр; после генерации попробуем вернуть
