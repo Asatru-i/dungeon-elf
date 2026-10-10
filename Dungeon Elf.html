@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v7.9.13 PATCHED: shop price guard, start-kit timing, regen timers, run-history cleanup. -->
+<!-- Dungeon Elf v8.2.1: Druid Circle lore stones, dormant miniboss, polish. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v7.9.13 — Баланс магазина</title>
+<title>Dungeon Elf v8.0.0 — Круг друидов</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -460,7 +460,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v7.9.13 · БАЛАНС МАГАЗИНА</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v8.0.0 · КРУГ ДРУИДОВ</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -480,7 +480,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='7.9.13';
+var GAME_VERSION='8.2.1';
 var DEBUG_UI = false;
 var CAMP_NAME='Осенний Приют';
 var CAMP_ICON='🍂';
@@ -1011,6 +1011,9 @@ var MERCS=[
    lore:'Он был стражем храма. Давал клятву: «Помню. Держу. Отпущу». Он не отпустил. Он держал — до конца. И после.'}
 ];
 var LORE_NOTES=[
+  {floor:1,text:'«Мы — друиды леса. Мы знали про корень. Мы пытались предупредить Тириона. Он не слушал. Он сказал: „Я спасу всех". Он не спас никого. Даже себя».',location:'druid'},
+  {floor:2,text:'«Корень не злой. Корень — голодный. Тирион думал, что сможет его накормить собой. Он накормил. Корень вырос. Тирион — остался внутри».',location:'druid'},
+  {floor:3,text:'«Если ты читаешь это — ты дошёл. Возьми нашу силу. Мы оставили её в камнях. Она — твоя. Просто не повторяй его ошибку. Не пытайся остановить смерть. Смерть — не враг».',location:'druid'},
   {floor:1,text:'«Осень пришла раньше срока. Листья падают, но не гниют — лежат на земле, целые. Старейшина сказал: это не погода. Это проклятие. Это — Тирион. Я не поверил. Теперь верю.»'},
   {floor:2,text:'«Внизу не лес. Я думал — там просто темно. Но темнота смотрит. Она не пустая. Она ждёт.»'},
   {floor:3,text:'«Тирион был Архимагом. Нашим наставником. Он учил нас, что природа — не слуга, а сестра. А потом нарушил собственную клятву.»'},
@@ -1130,6 +1133,10 @@ var BESTIARY={
   leafSpirit:{name:'Листовой дух',desc:'Летает, стреляет листьями с дистанции.',weak:'быстрый урон',
     lore:'Духи появляются там, где листья падают и не гниют. Они — не призраки. Они — сама осень, которая не хочет заканчиваться. Их можно убить, но весной появится новый.',
     quote:'«Дух кружился вокруг меня. Он не напал. Он смотрел, как я иду. Я понял — он запоминает.» — Аэлис, запись 5',deeper:'Листовые духи — не его творения. Они старше Тириона. Они — память леса о тех, кто умер осенью. Каждый дух — чей-то последний вдох. Убить духа — не убить. Это отпустить.'},
+  druidSpirit:{name:'Древний Листовой Дух',desc:'Хранитель круга друидов.',weak:'огонь',
+    lore:'Он спал в кругу тысячу лет. Друиды оставили его стеречь вход в тайные знания. Он не злой — он страж.',
+    quote:'«Мы не хотели будить его. Но он сам проснётся, когда почует своего».',
+    deeper:'Он — не дух леса. Он — дух друидов. Последний из тех, кто знал, как остановить Тириона. Он не смог — остался здесь. Стеречь то, что не смог защитить.'},
 
   /* v6.0.1 — Мобы замка */
   ghostKnight:{name:'Рыцарь-призрак',desc:'Бывший защитник замка. Медленный, но сильный.',weak:'свет и лёд',
@@ -1886,7 +1893,7 @@ function _findLoreForFloor(floor){
     var src=LORE_SOURCES[i];
     for(var j=0;j<src.arr.length;j++){
       var e=src.arr[j];
-      if(e.floor===floor){
+      if(e.floor===floor && (!e.location || e.location===currentLocation)){
         /* v7.0 (из v6.5.6): ключ с индексом — уникальность при нескольких
            записях одного источника на этаже. Старый формат пишется рядом
            в _presentLore для совместимости со старыми сейвами. */
@@ -1937,6 +1944,7 @@ function _showFloorLore(isVillage){
   var items=_findLoreForFloor(floorNum);
   for(var i=0;i<items.length;i++){
     var it=items[i];
+    if(it.entry && it.entry.location && it.entry.location!==currentLocation)continue;
     /* v4.9.72 — письма старейшины показываем везде, включая деревню.
        Остальные — только в подземелье. */
     if(it.source.id==='hero')continue; /* v6.4.1 — дневник героя показывается отдельно через _showHeroDiary */
@@ -3523,6 +3531,44 @@ var SPR_TRADER=['....HHHHHH....','...HHHHHHHH...','..HHHHHHHHHH..','..HHHSSSSHHH
 var PAL_TRADER={'H':PAL.trHood,'S':PAL.eSkin,'E':PAL.trEye,'B':PAL.trBody,'D':'#3a2a4a'};
 var SPR_TREE=['......LLLLLLLLL.........','....LLLLLLLLLLLLL.......','...LLL11LLLLL11LLL......','..LLL1111111111LLL......','..LL111222211111LLL.....','.LLL1122222211111LLL....','.LLL1222222222111LLL....','.LLL1222222222111LLL....','.LLLL122222221111LLL....','.LLLL111222111111LLL....','..LLLL111111111LLL......','..LLLLL11111111LLL......','...LLLLLLLLLLLLL........','....LLLLLLLLLLL.........','......TTTT..............','......TTTT..............','......TTTT..............','......TTTTT.............','.....TTTTTT.............','.....TTTTTT.............','.....TTTTTT.............','....TTTTTTT.............','....TTTTTTT.............','....TTTTTTT.............','...TTTTTTTT.............','...DDDDDDDD.............','...DDDDDDDD.............','........................'];
 var PAL_TREE={'L':PAL.tLeaf4,'1':PAL.tLeaf1,'2':PAL.tLeaf2,'T':PAL.tTrunk,'D':PAL.tTrunkD};
+// v8.0.0 — зелёное дерево друидов: вокруг осень, а здесь весна.
+var SPR_TREE_GREEN = [
+'......LLLLLLLLL.........',
+'....LLLLLLLLLLLLL.......',
+'...LLL11LLLLL11LLL......',
+'..LLL1111111111LLL......',
+'..LL111222211111LLL.....',
+'.LLL1122222211111LLL....',
+'.LLL1222222222111LLL....',
+'.LLL1222222222111LLL....',
+'.LLLL122222221111LLL....',
+'.LLLL111222111111LLL....',
+'..LLLL111111111LLL......',
+'..LLLLL11111111LLL......',
+'...LLLLLLLLLLLLL........',
+'....LLLLLLLLLLL.........',
+'......TTTT..............',
+'......TTTT..............',
+'......TTTT..............',
+'......TTTTT.............',
+'.....TTTTTT.............',
+'.....TTTTTT.............',
+'.....TTTTTT.............',
+'....TTTTTTT.............',
+'....TTTTTTT.............',
+'....TTTTTTT.............',
+'...TTTTTTTT.............',
+'...DDDDDDDD.............',
+'...DDDDDDDD.............',
+'........................'
+];
+var PAL_TREE_GREEN = {
+  'L': '#1a4a1a',
+  '1': '#3a7a2a',
+  '2': '#5aaa3a',
+  'T': '#3a281a',
+  'D': '#2a1a10'
+};
 var SPR_TREE2=['......3333333...........','....33333333333.........','...33222222222333.......','..33222211222222333.....','..32221111112222333.....','.33221111111112222333...','.33221111111112222333...','.332211111111122222333..','.332211111111122222333..','.33222111111112222333...','..3322111111111222233...','..333221111111122233....','...3332222222222233.....','....333333333333........','......TTTT..............','......TTTT..............','.....TTTTTT.............','.....TTTTTT.............','....TTTTTTTT............','....TTTTTTTT............','...TTTTTTTTT............','...TTTTTTTTT............','..TTTTTTTTTT............','..TTTTTTTTTT............','..TTTTTTTTTT............','..DDDDDDDDDD............','..DDDDDDDDDD............','........................'];
 var PAL_TREE2={'3':PAL.tLeaf3,'2':PAL.tLeaf2,'1':PAL.tLeaf1,'T':PAL.tTrunk,'D':PAL.tTrunkD};
 var SPR_BUSH=['....BBBBBB....','..BBBB2222BB..','.BB22222222BB.','.B2222211122B.','BB2211111122BB','BB211R1111122B','B221R1R111222B','.BB111111122B.','..BBBBBBBBBB..','....DDDDDD....'];
@@ -3618,6 +3664,34 @@ var SPR_ALTAR=['..RRRRRR..','.RRGGGGRR.','.RGGGGGGR.','RRGGGGGGGR','RRGGGGGGGR',
 var PAL_ALTAR={'R':PAL.altarStone,'G':PAL.altarGlow,'S':PAL.altarStone,'D':PAL.altarStone};
 var SPR_MEMORY_SHRINE=['..CCCCCCCC..','.CGGGGGGGGC.','CGGSSSSSSGGC','CGSSSSSSSSGC','CGSSSSSSSSGC','CGGSSSSSSGGC','.CGGGGGGGGC.','..CCCCCCCC..','...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','SSSSSSSSSSSS'];
 var PAL_MEMORY_SHRINE={'C':'#5a4a6a','G':'#8a7a9a','S':'#a0d0ff'};
+var SPR_DRUID_STONE=['......SS......','.....SSSS.....','....SSSSSS....','....SSRRSS....','...SSSRRSSS...','...SSSSSSSS...','..SSSSSSSSSS..','..SSRSSSSRSS..','..SSSSSSSSSS..','.SSSSSSSSSSSS.','.SSSSSSSSSSSS.','SSSSSSSSSSSSSS','SSSSSSSSSSSSSS','SSSSSSSSSSSSSS','SSSSSSSSSSSSSS','.SSSSSSSSSSSS.','..SSSSSSSSSS..','...SSSSSSSS...','....SSSSSS....','.....DDDD.....'];
+var PAL_DRUID_STONE={'S':'#5a5a4a','R':'#a0d0ff','D':'#3a3a2a'};
+// v8.0.0 — телепорт-камень друидов. Синее свечение.
+var SPR_DRUID_TELEPORT = [
+'.....SSSS.....',
+'....SSSSSS....',
+'...SSSSSSSS...',
+'...SSSSSSSS...',
+'..SSSSSSSSSS..',
+'..SSRRRRRRSS..',
+'..SSRRRRRRSS..',
+'.SSSRRRRRRSSS.',
+'.SSSSRRRRSSSS.',
+'.SSSSSSSSSSSS.',
+'SSSSSSSSSSSSSS',
+'SSSSSSSSSSSSSS',
+'SSSSSSSSSSSSSS',
+'.SSSSSSSSSSSS.',
+'..SSSSSSSSSS..',
+'...SSSSSSSS...',
+'....SSSSSS....',
+'.....BBBB.....'
+];
+var PAL_DRUID_TELEPORT = {
+  'S': '#5a5a4a',
+  'R': '#60c0ff',
+  'B': '#3a3a5a'
+};
 var SPR_LORE=['..RRRRRR..','.RGGGGGGR.','RGGGGGGGGR','RGGGGGGGGR','RGGGGGGGGR','RGGGGGGGGR','.RGGGGGGR.','..RRRRRR..','..DDDDDD..','..DDDDDD..'];
 var PAL_LORE={'R':PAL.loreStone,'G':PAL.loreRune,'D':PAL.loreRune};
 var SPR_GBCLAD=['..DDDDDD..','.DDDDDDDD.','DDDGGGGDDD','DDDGGGGDDD','DDDDDDDDDD','.DDDDDDDD.'];
@@ -4127,6 +4201,7 @@ var ENEMY_SPRITES={
   wolf:[SPR_WOLF,PAL_WOLF,0],
   autumnWolf:[SPR_WOLF,PAL_AUTUMN_WOLF,0],   /* v5.9.0 */
   leafSpirit:[SPR_LEAF_SPIRIT,PAL_LEAF_SPIRIT,0],   /* v5.9.0 */
+  druidSpirit:[SPR_LEAF_SPIRIT,PAL_LEAF_SPIRIT,2],   /* v8.2.1 */
   skeleton:[SPR_SKELETON,PAL_SKELETON,0],
   spider:[SPR_SPIDER,PAL_SPIDER,0],
   golem:[SPR_GOLEM,PAL_GOLEM,1],
@@ -4160,6 +4235,20 @@ var VIGNETTES = [
 {id:'necklace',icon:'📿',name:'Ожерелье из костей',text:'«Птичьи косточки. Мелкие. Аккуратно нанизанные. Кто-то делал это долго. Кто-то делал это с любовью. Ты не хочешь думать о том, зачем. Ты просто кладёшь его обратно.»'},
 {id:'doll',icon:'🎎',name:'Тряпичная кукла',text:'«Сшита из двух лоскутов. Глаза — пуговицы. Волосы — конский волос. Её обнимали так сильно, что ткань протёрлась. Кто-то не выпускал её из рук. До самого конца.»'},
 {id:'sandal',icon:'👡',name:'Детский сандалик',text:'«Один. Маленький. Кожа потрескалась. Ремешок оборван. Второй — не здесь. Может, потерян. Может — оставлен. Может — его унесли вместе с ребёнком.»'}
+];
+
+// v8.2.1 — лор на каждом камне друидов. Короткие строки — как заклинания.
+var DRUID_STONE_LORE = [
+  '«Помни. Корень — не враг. Голод — враг».',
+  '«Мы пели ему. Он не слышал. Мы пели громче».',
+  '«Тирион был добрым. Доброта — не защита».',
+  '«Осень — не смерть. Осень — вопрос».',
+  '«Смерть — не конец. Конец — забыть».',
+  '«Мы держали его. Он вырвался. Мы — остались».',
+  '«Камни помнят. Мы — камни. Мы помним».',
+  '«Если дойдёшь — вспомни нас. Мы ждали».',
+  '«Не бойся. Он тоже боялся. Это и погубило».',
+  '«Круг — не тюрьма. Круг — дверь. Открой».',
 ];
 
 var LORE_STONE_TEXTS=[
@@ -4461,7 +4550,7 @@ ARMORS.archmageRobe.sprite=SPR_ARMOR;ARMORS.archmageRobe.pal={M:'#8a5a2a',L:'#c8
    [SECTION 6] СОСТОЯНИЕ
    ===================================================================== */
 var TILE=40;var PX=4;
-var MAP_W=0,MAP_H=0,map=null,rooms=[],decor=[],enemies=[],projectiles=[],bloodParticles=[],dmgTexts=[],groundItems=[],chests=[],doors=[],fallingLeaves=[],bookPagesOnFloor=[],stairs=null,caveEntrance=null,forestEntrance=null,forestExit=null,castleEntrance=null,trader=null,boss=null,npcs=[],player=null; /* v5.9.0 — forestEntrance */
+var MAP_W=0,MAP_H=0,map=null,rooms=[],decor=[],enemies=[],projectiles=[],bloodParticles=[],dmgTexts=[],groundItems=[],chests=[],doors=[],fallingLeaves=[],bookPagesOnFloor=[],stairs=null,caveEntrance=null,forestEntrance=null,forestExit=null,castleEntrance=null,druidEntrance=null,druidExit=null,trader=null,boss=null,npcs=[],player=null; /* v5.9.0 — forestEntrance */
 var cam={x:0,y:0},biome=BIOMES[0],floorNum=1,tickTime=0,floorCanvas=null,floorCacheCanvas=null,wallCanvas=null,waterCanvas=null,lavaCanvas=null,weaponLevel=1,armorLevel=1,combatFog=0,runStartTime=0,gameOver=false,lastStepSound=0;
 /* v4.9.58 — защита от повторного вызова endRun (смерть → кнопка «В Хаб») */
 /* v5.2.3 — флаг блокировки автосохранения во время сброса прогресса.
@@ -5318,7 +5407,7 @@ function _buildFloorInternal(showLore){
   /* v5.9.0 — Лес — НЕ подземелье. Не показываем записки,
      не кидаем проклятия, не считаем как этаж. */
   /* v6.0.1 — Замок — тоже не подземелье. Та же логика. */
-  if(currentLocation === 'forest' || currentLocation === 'castle'){
+  if(currentLocation === 'forest' || currentLocation === 'castle' || currentLocation === 'druid'){
     if(showLore){
       _showAllHeroDiaryForLocation(currentLocation);
     }
@@ -5328,7 +5417,7 @@ function _buildFloorInternal(showLore){
   }
 
   if(showLore){
-    _showFloorLore(floorNum===1);
+    if(currentLocation!=='druid') _showFloorLore(floorNum===1);
     _showHeroDiary(currentLocation, floorNum);
   }
   _rollFloorCurse();
@@ -5368,6 +5457,8 @@ function _pickBiomeAndPalette(){
   } else if(currentLocation === 'castle'){
     /* v6.0.1 — Замок: свой биом */
     biome = BIOMES[BIOMES.length - 1];
+  } else if(currentLocation === 'druid'){
+    biome = BIOMES[1];
   } else {
     biome = isVillage ? BIOMES[0] : BIOMES[BIOME_REGION(floorNum)];
   }
@@ -5546,6 +5637,7 @@ function _generateLevelLayout(){
   var isVillage=(floorNum===1);
   if(currentLocation === 'castle') buildCastle();
   else if(currentLocation === 'forest') buildForest();
+  else if(currentLocation === 'druid') buildDruidCircle();
   else if(isVillage) buildVillage();
   else buildDungeon();
   if(player){cam.x=player.x-VW/2;cam.y=player.y-VH/2;}
@@ -5562,9 +5654,9 @@ function _generateLevelLayout(){
     }
   }
   var fl=document.getElementById('floorLabel');
-  if(fl)fl.textContent=(currentLocation==='forest'?'🍂 Лес':currentLocation==='castle'?'🏰 Замок Тириона':isVillage?'Деревня':'Этаж '+floorNum);
+  if(fl)fl.textContent=(currentLocation==='forest'?'🍂 Лес':currentLocation==='castle'?'🏰 Замок Тириона':currentLocation==='druid'?'🌿 Круг друидов':isVillage?'Деревня':'Этаж '+floorNum);
   var ft=document.getElementById('floorTxt');
-  if(ft)ft.textContent=(currentLocation==='forest'?'🍂':currentLocation==='castle'?'🏰':floorNum);
+  if(ft)ft.textContent=(currentLocation==='forest'?'🍂':currentLocation==='castle'?'🏰':currentLocation==='druid'?'🌿':floorNum);
 
   _trySpawnGhost();}
 
@@ -5903,6 +5995,7 @@ var _phr=[NPC_PHRASES_MOURN,_pool,NPC_PHRASES_GUIDE][ni%3];npcs.push({x:spot.x,y
      Раньше эта строка затирала его. */
   enemies=[];doors=[];fallingLeaves=[];
   castleEntrance=null;
+  druidEntrance=null;
   forestExit=null;
   if(!REDUCED_MOTION){
     /* v7.3.8 — числа из BALANCE.weather.leaves. */
@@ -6836,6 +6929,15 @@ decor.push({x: _castleX + 1, y: _castleY, type: 'forestGate', s: 1.2, seed: game
 decor.push({x: _castleX, y: _castleY + 1, type: 'forestPath', s: 1.0, seed: gameRNG()});
 decor.push({x: _castleX, y: _castleY + 2, type: 'forestPath', s: 1.0, seed: gameRNG()});
 decor.push({x: _castleX, y: _castleY + 3, type: 'forestPath', s: 1.0, seed: gameRNG()});
+
+  // v8.0.0 — вход в круг друидов
+  var _druidX=Math.floor(MAP_W*0.3),_druidY=Math.floor(MAP_H*0.3);
+  druidEntrance={x:_druidX*TILE,y:_druidY*TILE,w:2*TILE,h:2*TILE};
+  for(var _dy=_druidY-2;_dy<=_druidY+2;_dy++)for(var _dx=_druidX-2;_dx<=_druidX+2;_dx++){
+    if(_dx>2&&_dy>2&&_dx<MAP_W-2&&_dy<MAP_H-2)map[_dy][_dx]=0;
+  }
+  decor=decor.filter(function(d){return !(Math.abs(d.x-_druidX)<3&&Math.abs(d.y-_druidY)<3);});
+  decor.push({x:_druidX,y:_druidY,type:'druidStone',s:1.3,seed:gameRNG(),isPortal:true});
   _spawnScenes();
   _spawnBiomeClusters();
   _trySpawnEpic();
@@ -6865,6 +6967,128 @@ decor.push({x: _castleX, y: _castleY + 3, type: 'forestPath', s: 1.0, seed: game
     }
   }
 }
+/* v8.0.0 — Круг друидов */
+function buildDruidCircle(){
+  var W=25,H=25; MAP_W=W+4; MAP_H=H+4; map=[];
+  for(var y=0;y<MAP_H;y++){map[y]=[];for(var x=0;x<MAP_W;x++)map[y][x]=(x<2||y<2||x>=MAP_W-2||y>=MAP_H-2)?1:0;}
+  for(var k=0;k<60;k++){var side=randi(0,3),ex,ey;
+    if(side===0){ex=randi(0,MAP_W-1);ey=2;}else if(side===1){ex=randi(0,MAP_W-1);ey=MAP_H-3;}
+    else if(side===2){ex=2;ey=randi(0,MAP_H-1);}else{ex=MAP_W-3;ey=randi(0,MAP_H-1);}
+    if(map[ey]&&map[ey][ex]===0)map[ey][ex]=1;
+  }
+  var _cX=Math.floor(MAP_W/2),_cY=Math.floor(MAP_H/2);decor=[];
+  for(var i=0;i<10;i++){var a=i/10*Math.PI*2,_sx=Math.round(_cX+Math.cos(a)*4),_sy=Math.round(_cY+Math.sin(a)*4);
+    if(_sx>2&&_sy>2&&_sx<MAP_W-2&&_sy<MAP_H-2&&map[_sy][_sx]===0)decor.push({x:_sx,y:_sy,type:'druidStone',s:1,seed:gameRNG()});}
+  for(var g=0;g<40;g++){var _gx=randi(3,MAP_W-4),_gy=randi(3,MAP_H-4);if(map[_gy][_gx]!==0)continue;
+    var _blocked=false;for(var d=0;d<decor.length;d++)if(decor[d].x===_gx&&decor[d].y===_gy){_blocked=true;break;}
+    if(!_blocked)decor.push({x:_gx,y:_gy,type:'grass',s:1,seed:gameRNG()});}
+
+  // v8.0.0 — зелёные деревья внутри круга: магия древних сопротивляется осени.
+  for(var t = 0; t < 28; t++){
+    var _treeAngle = gameRNG() * Math.PI * 2;
+    var _treeDist = 5.5 + gameRNG() * 5.5;
+    var _tx = Math.round(_cX + Math.cos(_treeAngle) * _treeDist);
+    var _ty = Math.round(_cY + Math.sin(_treeAngle) * _treeDist);
+    if(_tx < 3 || _ty < 3 || _tx >= MAP_W-3 || _ty >= MAP_H-3) continue;
+    if(map[_ty][_tx] !== 0) continue;
+    var _treeBlocked = false;
+    for(var d2 = 0; d2 < decor.length; d2++){
+      if(decor[d2].x === _tx && decor[d2].y === _ty){ _treeBlocked = true; break; }
+    }
+    if(_treeBlocked) continue;
+    var _treeType = gameRNG() < 0.7 ? 'tree' : 'treeGreen';
+    decor.push({x: _tx, y: _ty, type: _treeType, s: 0.9 + gameRNG()*0.2, seed: gameRNG()});
+  }
+
+  // v8.0.0 — дополнительный декор поляны: кусты, цветы, грибы и трава.
+  for(var d3 = 0; d3 < 48; d3++){
+    var _dx3 = randi(4, MAP_W-5);
+    var _dy3 = randi(4, MAP_H-5);
+    if(map[_dy3][_dx3] !== 0) continue;
+    var _occupied = false;
+    for(var d4 = 0; d4 < decor.length; d4++){
+      if(decor[d4].x === _dx3 && decor[d4].y === _dy3){ _occupied = true; break; }
+    }
+    if(_occupied) continue;
+    if(Math.abs(_dx3 - _cX) < 3 && Math.abs(_dy3 - _cY) < 3) continue;
+    var _decorRoll = gameRNG();
+    var _decorType;
+    if(_decorRoll < 0.35) _decorType = 'bush';
+    else if(_decorRoll < 0.55) _decorType = 'flower';
+    else if(_decorRoll < 0.75) _decorType = 'mushroom';
+    else if(_decorRoll < 0.90) _decorType = 'glow_mushroom';
+    else _decorType = 'grass';
+    decor.push({x: _dx3, y: _dy3, type: _decorType, s: 0.9 + gameRNG()*0.2, seed: gameRNG()});
+  }
+
+  // v8.2.1 — кольцо редких светящихся грибов и цветов по внешней кромке.
+  for(var _rim=0;_rim<14;_rim++){
+    var _ra=(_rim/14)*Math.PI*2+(gameRNG()-0.5)*0.22;
+    var _rd=9.0+gameRNG()*2.0;
+    var _rx=Math.round(_cX+Math.cos(_ra)*_rd),_ry=Math.round(_cY+Math.sin(_ra)*_rd);
+    if(_rx<3||_ry<3||_rx>=MAP_W-3||_ry>=MAP_H-3||map[_ry][_rx]!==0)continue;
+    var _rimBusy=false;
+    for(var _ri=0;_ri<decor.length;_ri++){if(decor[_ri].x===_rx&&decor[_ri].y===_ry){_rimBusy=true;break;}}
+    if(!_rimBusy)decor.push({x:_rx,y:_ry,type:gameRNG()<0.48?'glow_mushroom':(gameRNG()<0.5?'moss':'flower'),s:0.9+gameRNG()*0.25,seed:gameRNG()});
+  }
+
+  if(!player){var startHp=BALANCE.player.baseHp;player={x:_cX*TILE,y:_cY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,
+    lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,
+    potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,
+    poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,
+    craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};}else{player.x=_cX*TILE;player.y=_cY*TILE;}
+  // v8.2.1 — босс спит в центре круга. Просыпается при приближении.
+  enemies = [];
+  var _boss = spawnLeafSpirit(_cX * TILE, _cY * TILE);
+  if(_boss){
+    _boss.type = 'druidSpirit';
+    _boss.hp = _boss.maxHp = Math.floor(_boss.maxHp * 3);
+    _boss.dmg = Math.floor(_boss.dmg * 1.5);
+    _boss.r = Math.floor(_boss.r * 1.5);
+    _boss.isMiniBoss = true;
+    _boss.gold = 100;
+    _boss.aggro = false;
+    _boss.room = -1;
+    _boss.dormant = true;
+    _boss.awakenProgress = 0;
+    _boss.awakenSound = false;
+    enemies.push(_boss);
+  }
+  // v8.0.0 — телепорт возврата. Синий камень в углу поляны.
+  var _tpX = MAP_W - 5;
+  var _tpY = 5;
+  forestExit = { x: _tpX*TILE, y: _tpY*TILE, w: 2*TILE, h: 2*TILE };
+
+  // Расчистить площадку под телепорт.
+  for(var _ty2 = _tpY - 1; _ty2 <= _tpY + 2; _ty2++){
+    for(var _tx2 = _tpX - 1; _tx2 <= _tpX + 2; _tx2++){
+      if(_tx2 > 2 && _ty2 > 2 && _tx2 < MAP_W-2 && _ty2 < MAP_H-2){
+        map[_ty2][_tx2] = 0;
+      }
+    }
+  }
+  // Убрать декор рядом, чтобы камень был доступен.
+  decor = decor.filter(function(d){
+    return !(Math.abs(d.x - _tpX) < 2 && Math.abs(d.y - _tpY) < 2);
+  });
+  decor.push({
+    x: _tpX,
+    y: _tpY,
+    type: 'druidTeleport',
+    s: 1.2,
+    seed: gameRNG(),
+    isTeleport: true
+  });
+  chests=[];doors=[];groundItems=[];npcs=[];trader=null;boss=null;stairs=null;caveEntrance=null;forestEntrance=null;castleEntrance=null;druidEntrance=null;druidExit=null;
+  fallingLeaves=[];
+  if(!REDUCED_MOTION){var _bl=BALANCE.weather.leaves;for(var fl=0;fl<30;fl++)fallingLeaves.push({x:gameRNG()*VW,y:gameRNG()*VH,vy:rand(_bl.vyMin,_bl.vyMax),vx:rand(_bl.vxMin,_bl.vxMax),phase:gameRNG()*Math.PI*2,size:rand(_bl.sizeMin,_bl.sizeMax),color:pick([PAL.tLeaf1,PAL.tLeaf2,PAL.tLeaf3,PAL.tLeaf4])});}
+  _spawnScenes();_trySpawnEpic();
+  if(!player._druidLoreShown){player._druidLoreShown=true;
+    var _druidNotes=['«Мы — друиды леса. Мы знали про корень. Мы пытались предупредить Тириона. Он не слушал. Он сказал: „Я спасу всех". Он не спас никого. Даже себя».','«Корень не злой. Корень — голодный. Тирион думал, что сможет его накормить собой. Он накормил. Корень вырос. Тирион — остался внутри».','«Если ты читаешь это — ты дошёл. Возьми нашу силу. Мы оставили её в камнях. Она — твоя. Просто не повторяй его ошибку. Не пытайся остановить смерть. Смерть — не враг».'];
+    [1500,6000,11000].forEach(function(delay,idx){setTimeout(function(){if(inHub||gameOver||currentLocation!=='druid')return;queueLoreModal('🌿 Записка друидов',_druidNotes[idx],'#a0c080',null);},delay);});
+  }
+}
+
 /* ============================================================
    v6.0.1 — ЗАМОК ТИРИОНА
    Финальная локация. Дом Тириона до падения.
@@ -8395,7 +8619,7 @@ function hasLineOfSight(x1,y1,x2,y2){
 function solidAt(px,py){var tx=Math.floor(px/TILE),ty=Math.floor(py/TILE);if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H)return true;if(!map[ty])return true;var t=map[ty][tx];return t===1||t===2||t===3||t===6;}
 /* v5.9.0 — Твёрдый декор: деревья, камни, брёвна, дома, ворота */
 var _SOLID_DECOR = {
-  tree: 1, tree2: 1, rock: 1, log: 1, boulder: 1,
+  tree: 1, tree2: 1, treeGreen: 1, rock: 1, log: 1, boulder: 1, druidStone: 1,
   dead_tree: 1, house: 1, well: 1, forestGate: 1,
   giantMush: 1, frozen_pillar: 1, glacier: 1,
   /* v6.0.1 — Твёрдый декор замка и леса */
@@ -11807,6 +12031,44 @@ if(e.ally){
       _updateAllySkeleton(e,dt,_enemiesLen);
       continue;
     }
+    // v8.2.1 — пробуждение босса друидов
+    if(e.dormant){
+      var _dToPlayer = Math.sqrt(dist2(e.x, e.y, player.x, player.y));
+      var _awakenRange = 140;
+      // Прогресс идёт только когда игрок рядом — босс не проснётся заранее.
+      if(_dToPlayer < _awakenRange){
+        e.awakenProgress = Math.min(1, e.awakenProgress + dt * 0.012);
+      }
+
+      if(_dToPlayer < _awakenRange && !e.awakenSound){
+        e.awakenSound = true;
+        SfxPlay('bossRoar');
+        showToast('🌿 Дух пробуждается...');
+        if(!REDUCED_MOTION){
+          for(var _ap = 0; _ap < 24; _ap++){
+            var _apa = gameRNG() * Math.PI * 2;
+            bloodParticles.push({
+              x: e.x, y: e.y,
+              vx: Math.cos(_apa) * 1.5,
+              vy: Math.sin(_apa) * 1.5 - 1,
+              life: 40,
+              color: '#a0d080'
+            });
+          }
+        }
+      }
+
+      if(_dToPlayer < _awakenRange && e.awakenProgress >= 0.5){
+        e.dormant = false;
+        e.aggro = true;
+      }
+
+      e.hurtFlash = Math.max(0, e.hurtFlash - dt);
+      e.bounce += 0.08;
+      if(e.bounce > 6.2832) e.bounce -= 6.2832;
+      if(e.hp <= 0) onEnemyDeath(e);
+      continue;
+    }
     if(_updateStatusEffects(e,dt)==='dead')continue;
     // FIX: mimic in disguise - check first, skip effects
     if(e.type==='mimic'&&e.disguised){
@@ -13108,6 +13370,9 @@ function drawWallTile(sx,sy){if(wallCanvas)ctx.drawImage(wallCanvas,sx,sy);}
 /* v5.4.17 — простые спрайт-декорации: рисуются одним drawSprite. */
 var DECOR_SPRITES={
   memoryShrine:{spr:SPR_MEMORY_SHRINE,pal:PAL_MEMORY_SHRINE,yOff:0,scaleOff:1},
+  druidStone:{spr:SPR_DRUID_STONE,pal:PAL_DRUID_STONE,yOff:0,scaleOff:1},
+  treeGreen:{spr:SPR_TREE_GREEN, pal:PAL_TREE_GREEN, yOff:0, scaleOff:1},
+  druidTeleport:{spr:SPR_DRUID_TELEPORT, pal:PAL_DRUID_TELEPORT, yOff:0, scaleOff:1},
   bush:       {spr:SPR_BUSH,       pal:PAL_BUSH},
   rock:       {spr:SPR_ROCK,       pal:PAL_ROCK},
   log:        {spr:SPR_LOG,        pal:PAL_LOG},
@@ -13897,6 +14162,27 @@ function drawDecor(d){
     drawSprite(_def.spr,_def.pal,cx,cy+_yOff,_sc);
   }
 
+  // v8.2.1 — оставляем у рунических камней только мягкое пульсирующее свечение,
+  // без контурных кругов и овальных подложек вокруг основания.
+  if(t==='druidStone'&&currentLocation==='druid'){
+    var _stonePulse=0.5+0.5*Math.sin(Date.now()*0.0022+(d.seed||0)*8);
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    var _stoneGlowR=23+_stonePulse*5;
+    var _stoneGlow=ctx.createRadialGradient(cx,cy+2,1,cx,cy+2,_stoneGlowR);
+    _stoneGlow.addColorStop(0,'rgba(120,232,137,'+(0.12+_stonePulse*0.10)+')');
+    _stoneGlow.addColorStop(0.55,'rgba(120,232,137,'+(0.05+_stonePulse*0.04)+')');
+    _stoneGlow.addColorStop(1,'rgba(120,232,137,0)');
+    ctx.fillStyle=_stoneGlow;
+    ctx.fillRect(cx-_stoneGlowR,cy+2-_stoneGlowR,_stoneGlowR*2,_stoneGlowR*2);
+    // Несколько крошечных светящихся пикселей — магия на самом камне, без обводки.
+    ctx.globalAlpha=0.22+_stonePulse*0.28;ctx.fillStyle='#d5ffd0';
+    ctx.fillRect(Math.round(cx-5),Math.round(cy-5),2,1);
+    ctx.fillRect(Math.round(cx+3),Math.round(cy+1),2,1);
+    ctx.fillRect(Math.round(cx-1),Math.round(cy+7),2,1);
+    ctx.restore();
+  }
+
   /* v7.9.0 — living-world ambience: tiny, deterministic fireflies/spores near magical flora. */
   if(!REDUCED_MOTION && (t==='glow_mushroom'||t==='glowTree'||t==='bloomMeadow'||t==='spore_pod'||t==='giantMush')){
     var _ambSeed=(d.seed||((d.x||0)*17+(d.y||0)*29));
@@ -14457,6 +14743,24 @@ function drawEnemy(e){
         ctx.globalAlpha = 1;
       }
     }
+  }
+  // v8.2.1 — визуал пробуждения босса друидов
+  if(e.dormant){
+    var _dp = e.awakenProgress || 0;
+    var _glowSize = 16 + _dp * 24;
+    ctx.save();
+    ctx.globalAlpha = 0.25 + _dp * 0.55;
+    ctx.fillStyle = '#a0ff80';
+    ctx.beginPath();
+    ctx.arc(sx, sy, _glowSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.5 + _dp * 0.4;
+    ctx.strokeStyle = '#d0ffa0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(sx, sy, _glowSize + 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
   _drawEnemyPolish(e,sx,sy,bounceY);
   _drawBossPolish(e,sx,sy,bounceY);
@@ -15027,11 +15331,72 @@ function _renderGroundLayer(){
   drawBloodTiles();
   drawStairs();
   drawCaveEntrance();
+
+  // v8.2.1 — мягкие тени крон на земле в лесу и у Круга друидов.
+  if(currentLocation==='forest'||currentLocation==='druid'){
+    ctx.save();
+    for(var _sh=0;_sh<decor.length;_sh++){
+      var _sd=decor[_sh];
+      if(!_sd||(_sd.type!=='tree'&&_sd.type!=='tree2'&&_sd.type!=='treeGreen'&&_sd.type!=='glowTree'))continue;
+      var _shx=_sd.x*TILE-cam.x+TILE/2;
+      var _shy=_sd.y*TILE-cam.y+TILE*0.88;
+      if(_shx<-100||_shy<-100||_shx>VW+100||_shy>VH+100)continue;
+      var _shr=0.75+((_sd.s||1)*0.16);
+      ctx.globalAlpha=_sd.type==='glowTree'?0.20:0.27;
+      ctx.fillStyle='#07100a';
+      ctx.beginPath();
+      ctx.ellipse(_shx+TILE*0.16,_shy,TILE*0.82*_shr,TILE*0.28*_shr,-0.12,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // v8.2.1 — древние руны под кругом камней друидов.
+  if(currentLocation==='druid'){
+    var _dcx=(Math.floor(MAP_W/2)+0.5)*TILE-cam.x;
+    var _dcy=(Math.floor(MAP_H/2)+0.5)*TILE-cam.y;
+    if(_dcx>-260&&_dcy>-260&&_dcx<VW+260&&_dcy<VH+260){
+      var _runePulse=0.5+0.5*Math.sin(Date.now()*0.0012);
+      ctx.save();
+      ctx.translate(_dcx,_dcy);
+      ctx.strokeStyle='rgba(105,190,115,'+(0.16+_runePulse*0.12)+')';
+      ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(0,0,TILE*5.1,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(0,0,TILE*5.65,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([5,9]);ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(0,0,TILE*4.65,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      for(var _ri=0;_ri<12;_ri++){
+        var _ang=_ri*Math.PI/6, _inner=TILE*4.35, _outer=TILE*(4.75+_runePulse*0.08);
+        ctx.beginPath();ctx.moveTo(Math.cos(_ang)*_inner,Math.sin(_ang)*_inner);
+        ctx.lineTo(Math.cos(_ang+0.035)*_outer,Math.sin(_ang+0.035)*_outer);ctx.stroke();
+        var _sx=Math.cos(_ang)*TILE*5.4,_sy=Math.sin(_ang)*TILE*5.4;
+        ctx.fillStyle='rgba(145,225,145,'+(0.25+_runePulse*0.25)+')';
+        ctx.beginPath();ctx.arc(_sx,_sy,2.5+_runePulse*1.5,0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Тихие огоньки духов дрейфуют над поляной, не влияя на игровой мир.
+    if(!REDUCED_MOTION){
+      var _wispTime=Date.now()*0.00035;
+      for(var _wi=0;_wi<9;_wi++){
+        var _wa=_wispTime+_wi*2.399;
+        var _wr=TILE*(3.1+((_wi*7)%5)*0.52);
+        var _wx=(Math.floor(MAP_W/2)+0.5)*TILE+Math.cos(_wa)*_wr-cam.x;
+        var _wy=(Math.floor(MAP_H/2)+0.5)*TILE+Math.sin(_wa*0.83+_wi)*_wr*0.72-cam.y;
+        if(_wx<-30||_wy<-30||_wx>VW+30||_wy>VH+30)continue;
+        var _waura=0.25+0.25*(0.5+0.5*Math.sin(Date.now()*0.002+_wi));
+        ctx.fillStyle='rgba(90,210,145,'+(_waura*0.22)+')';ctx.beginPath();ctx.arc(_wx,_wy,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(160,255,190,'+_waura+')';ctx.beginPath();ctx.arc(_wx,_wy,2.1,0,Math.PI*2);ctx.fill();
+      }
+    }
+  }
+
   var _decorLen=decor.length;
   for(var g=0;g<_decorLen;g++){
     var dg=decor[g];
     var t2=dg.type;
-    if(t2!=='grass'&&t2!=='leafpile'&&t2!=='crack'&&t2!=='lily'&&t2!=='web'&&t2!=='spikeTrap'&&t2!=='water_puddle'&&t2!=='moss'&&t2!=='cobweb'&&t2!=='snow_pile'&&t2!=='water_lily')continue;
+    if(t2!=='grass'&&t2!=='leafpile'&&t2!=='crack'&&t2!=='lily'&&t2!=='web'&&t2!=='spikeTrap'&&t2!=='water_puddle'&&t2!=='moss'&&t2!=='cobweb'&&t2!=='snow_pile'&&t2!=='water_lily'&&t2!=='druidTeleport')continue;
     var _dx=dg.x*TILE-cam.x,_dy=dg.y*TILE-cam.y;
     if(_dx<-160||_dy<-160||_dx>VW+160||_dy>VH+160)continue;
 
@@ -15058,6 +15423,22 @@ function _renderGroundLayer(){
 
     drawDecor(dg);
     _drawEnvironmentPixelAccents(dg, dg.x*TILE-cam.x+TILE/2, dg.y*TILE-cam.y+TILE/2);
+    // v8.0.0 — пульсация синего телепорта друидов.
+    if(dg.type === 'druidTeleport'){
+      var _tpx = dg.x*TILE - cam.x + TILE/2;
+      var _tpy = dg.y*TILE - cam.y + TILE/2;
+      if(_tpx > -100 && _tpy > -100 && _tpx < VW+100 && _tpy < VH+100){
+        var _tppulse = Math.sin(Date.now()*0.005 + (dg.seed||0)*7) * 0.5 + 0.5;
+        ctx.fillStyle = 'rgba(100, 200, 255, ' + (0.15 + _tppulse*0.15) + ')';
+        ctx.beginPath();
+        ctx.arc(_tpx, _tpy, 35 + _tppulse*6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(160, 220, 255, ' + (0.25 + _tppulse*0.20) + ')';
+        ctx.beginPath();
+        ctx.arc(_tpx, _tpy, 20 + _tppulse*4, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
     /* v7.0.9 — вернули эффекты эхо-камней, эпика, лорных объектов */
     if(t2==='lore'){
       var _exs=dg.x*TILE-cam.x+TILE/2;
@@ -15337,6 +15718,35 @@ function _renderOverlays(){
   ctx.fillRect(0,0,VW,VH);
   ctx.restore();
   ctx.fillStyle=biome.fog;ctx.fillRect(0,0,VW,VH);
+  // v8.2.1 — контраст атмосферы: чаща темнее, священная поляна светлее.
+  if(currentLocation==='forest'){
+    var _forestMist=ctx.createRadialGradient(VW*0.5,VH*0.46,Math.min(VW,VH)*0.12,VW*0.5,VH*0.46,Math.max(VW,VH)*0.72);
+    _forestMist.addColorStop(0,'rgba(5,15,10,0.02)');
+    _forestMist.addColorStop(0.48,'rgba(4,12,8,0.18)');
+    _forestMist.addColorStop(1,'rgba(1,5,4,0.52)');
+    ctx.fillStyle=_forestMist;ctx.fillRect(0,0,VW,VH);
+    // Низкие полосы тумана медленно ползут между стволами.
+    if(!REDUCED_MOTION){
+      var _fmT=Date.now()*0.00012;
+      for(var _fm=0;_fm<3;_fm++){
+        var _fmY=VH*(0.28+_fm*0.24)+Math.sin(_fmT+_fm*2.1)*VH*0.025;
+        var _fmG=ctx.createLinearGradient(0,_fmY-35,0,_fmY+35);
+        _fmG.addColorStop(0,'rgba(105,130,110,0)');
+        _fmG.addColorStop(0.5,'rgba(105,130,110,0.075)');
+        _fmG.addColorStop(1,'rgba(105,130,110,0)');
+        ctx.fillStyle=_fmG;ctx.fillRect(0,_fmY-35,VW,70);
+      }
+    }
+  }else if(currentLocation==='druid'){
+    var _druidFogX=(Math.floor(MAP_W/2)+0.5)*TILE-cam.x;
+    var _druidFogY=(Math.floor(MAP_H/2)+0.5)*TILE-cam.y;
+    var _druidClear=ctx.createRadialGradient(_druidFogX,_druidFogY,Math.min(VW,VH)*0.08,_druidFogX,_druidFogY,Math.max(VW,VH)*0.70);
+    _druidClear.addColorStop(0,'rgba(125,205,130,0.10)');
+    _druidClear.addColorStop(0.34,'rgba(70,125,80,0.035)');
+    _druidClear.addColorStop(0.72,'rgba(5,18,10,0.18)');
+    _druidClear.addColorStop(1,'rgba(1,7,4,0.38)');
+    ctx.fillStyle=_druidClear;ctx.fillRect(0,0,VW,VH);
+  }
   _renderDarkFantasyAtmosphere();
   /* Освещение поверх тумана и общей цветокоррекции: факел действительно раскрывает окружение. */
   drawLighting();
@@ -16288,6 +16698,31 @@ function handleCanvasTap(clientX,clientY){
   /* === Базовый декор (алтарь, эхо-камни, клад, скелет крепости) === */
   for(var di2=0;di2<decor.length;di2++){
     var dd2=decor[di2];
+    // v8.2.1 — лор на камнях друидов
+    if(dd2.type === 'druidStone' && !dd2.isPortal){
+      var _dsx = dd2.x*TILE + TILE/2;
+      var _dsy = dd2.y*TILE + TILE/2;
+      if(dist2(wx, wy, _dsx, _dsy) < 50*50){
+        if(dist2(_dsx, _dsy, player.x, player.y) < 80*80){
+          // Находим индекс камня среди всех druidStone
+          var _stoneIdx = -1;
+          var _stoneCounter = 0;
+          for(var _si = 0; _si < decor.length; _si++){
+            if(decor[_si].type === 'druidStone' && !decor[_si].isPortal){
+              if(decor[_si] === dd2){ _stoneIdx = _stoneCounter; break; }
+              _stoneCounter++;
+            }
+          }
+          if(_stoneIdx >= 0 && _stoneIdx < DRUID_STONE_LORE.length){
+            showToast('🪨 ' + DRUID_STONE_LORE[_stoneIdx]);
+            SfxPlay('altar');
+          }
+        } else {
+          showToast('Подойди ближе');
+        }
+        return;
+      }
+    }
     if(dd2.type==='memoryShrine'){
       var _msx=dd2.x*TILE+TILE/2,_msy=dd2.y*TILE+TILE/2;
       if(dist2(wx,wy,_msx,_msy)<55*55){if(dist2(_msx,_msy,player.x,player.y)<90*90)openMemoryShrine(dd2);else showToast('Подойди ближе');return;}
@@ -16340,6 +16775,16 @@ function handleCanvasTap(clientX,clientY){
   /* === Предметы на полу === */
   for(var k=0;k<groundItems.length;k++){var it=groundItems[k];if(it.kind==='gold'||it.kind==='potion')continue;
     if(dist2(wx,wy,it.x,it.y)<40*40){if(dist2(it.x,it.y,player.x,player.y)<65*65){if(it.kind==='vignette'){_showVignette(it);return;}askTakeItem(it);}else showToast('Подойди ближе');return;}}
+  // v8.0.0 — вход/выход круга друидов
+  if(druidEntrance&&currentLocation==='forest'){
+    var _dex=druidEntrance.x+druidEntrance.w/2,_dey=druidEntrance.y+druidEntrance.h/2;
+    if(dist2(wx,wy,_dex,_dey)<120*120){if(dist2(_dex,_dey,player.x,player.y)<110*110)enterDruidCircle();else showToast('Подойди ближе');return;}
+  }
+  if(forestExit&&currentLocation==='druid'){
+    var _fex=druidExit?druidExit.x+druidExit.w/2:forestExit.x+forestExit.w/2;
+    var _fey=druidExit?druidExit.y+druidExit.h/2:forestExit.y+forestExit.h/2;
+    if(dist2(wx,wy,_fex,_fey)<120*120){if(dist2(_fex,_fey,player.x,player.y)<110*110)exitDruidCircle();else showToast('Подойди ближе');return;}
+  }
   /* === Замок === */
   if(castleEntrance&&(currentLocation==='forest'||currentLocation==='castle')){
     var cex2=castleEntrance.x+castleEntrance.w/2,cey2=castleEntrance.y+castleEntrance.h/2;
@@ -16699,6 +17144,16 @@ function exitCastle(){
   updateHUD();
   showToast('\u{1F341} Осенний лес');
   SfxPlay('door');
+}
+
+// v8.0.0 — переходы в круг друидов
+function enterDruidCircle(){
+  if(currentLocation==='druid'||currentLocation!=='forest'||inHub||gameOver)return;
+  currentLocation='druid';buildFloor();updateHUD();showToast('🌿 Круг друидов');SfxPlay('descend');
+}
+function exitDruidCircle(){
+  if(currentLocation!=='druid')return;
+  currentLocation='forest';buildFloor();updateHUD();showToast('🍂 Осенний лес');SfxPlay('door');
 }
 
 /* v5.9.0 — Выход из леса обратно в деревню */
