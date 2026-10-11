@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v8.6.0. -->
+<!-- Dungeon Elf v9.0.9 — исправление слоёв цветов и аудит декора. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v8.6.0 — Священная Роща</title>
+<title>Dungeon Elf v9.0.3 — Лесной декор и коллизии</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -461,7 +461,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v8.5.1 · СВЯЩЕННАЯ РОЩА</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v8.6.19 · CHARACTER & CREATURE PASS</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -481,7 +481,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='8.6.1';
+var GAME_VERSION='9.0.9';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -593,7 +593,7 @@ var _curseWhisperCd=0; /* v6.5.9-OPT: кулдаун шёпота проклят
 var _ambientCd=200;
 /* v7.0.2-FIX: таймеры атмосферы — объявлены здесь для строгого режима */
 var _whisperTimer=1800;
-var _lastAmbientTick=Date.now();
+/* _lastAmbientTick объявлен ниже, в блоке AMBIENT. */
 var _ghostSilhouette=null;
 var _ghostShown=false;
 var _elderEpilogueShown=false;
@@ -628,14 +628,7 @@ function resize(){
   canvas.width=Math.floor(w*DPR);canvas.height=Math.floor(h*DPR);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
   _spriteCache={};_spriteCacheCount=0;
-  // Инициализируем кэш до первого вызова resize() при загрузке страницы.
-  if (typeof _vignetteCache === 'undefined' || !_vignetteCache) {
-    _vignetteCache = { w: -1, h: -1, grd: null };
-  } else {
-    _vignetteCache.w = -1;
-    _vignetteCache.h = -1;
-    _vignetteCache.grd = null;
-  }
+  _spriteCacheReady=false;
   _shadowCache = {};
   /* v8.5.8-FIX: сброс кэша атмосферной виньетки при resize/orientationchange. */
   if(typeof _darkAtmoCache !== 'undefined')_darkAtmoCache={w:0,h:0,grd:null};
@@ -1263,7 +1256,7 @@ var BIOME_PAL_IDX=function(biomeIdx){
 /* Per-biome decor pools */
 var BIOME_DECOR={
   'Деревня Эльфов':['tree','tree2','bush','log','grass','leafpile','torch'],
-  'Осенний Эльфийский Лес':['tree','tree2','bush','log','leafpile','mushroom','grass','torch'],
+  'Осенний Эльфийский Лес':['tree','tree2','bush','log','leafpile','mushroom','mushroom','stump','stump','grass','torch'],
   'Каменистые Тропы':['rock','crack','log','grass','torch'],
   'Тёмные Катакомбы':['bone_pile','tomb','candle','cobweb','crack','rock','skull_pile','torch'],
   'Ржавые Залы':['rust_pipe','broken_sword','chain','barrel','crack','rock','torch'],
@@ -1699,6 +1692,7 @@ function countBookPagesFound(){
   var count=0;
   for(var i=0;i<BOOK_PAGES.length;i++){
     if(BOOK_PAGES[i].secret)continue;  /* эпилог не считается */
+    if(BOOK_PAGES[i].num === 13) continue;  /* защита от опечатки, как в totalBookPages */
     var key='book'+BOOK_PAGES[i].num;
     if(stats.loreRead && stats.loreRead.indexOf(key)>=0)count++;
   }
@@ -2420,10 +2414,11 @@ var ACHIEVEMENTS=[
   {id:'necroArmy',icon:'💀',name:'Армия теней',desc:'Победить Древня за Адепта Тьмы, имея 5 скелетов',check:function(s){return s.necroArmyWin;}},
   {id:'pacifist',icon:'☮️',name:'Милосердие',desc:'Победить Древня, не убив ни одного эльфа-предателя',check:function(s){return s.pacifistWins&&s.pacifistWins.length>=1;}},
   {id:'allSubclassSpecial',icon:'🌟',name:'Все пути пройдены',desc:'Открыть все 9 подклассов',check:function(s){if(!s.subclassWins)return false;var _sc=['berserk','paladin','knight','sniper','hunter','rogue','pyromancer','cryomancer','necromancer'];for(var i=0;i<_sc.length;i++){if(s.subclassWins.indexOf(_sc[i])<0)return false;}return true;}},
-    {id:'bookKeeper',icon:'📖',name:'Хранитель книги',desc:'Собрать все 12 страниц промокшей книги',check:function(s){
+    {id:'bookKeeper',icon:'📖',name:'Хранитель книги',desc:'Собрать все 13 страниц промокшей книги',check:function(s){
     if(!s.loreRead)return false;
-    for(var _bi=1;_bi<=12;_bi++){
-      if(s.loreRead.indexOf('book'+_bi)<0)return false;
+    var _pageNums=[1,2,3,4,5,6,7,8,9,10,11,12,14];
+    for(var _bi=0;_bi<_pageNums.length;_bi++){
+      if(s.loreRead.indexOf('book'+_pageNums[_bi])<0)return false;
     }
     return true;
   }},
@@ -3541,20 +3536,20 @@ var PAL_QSPIDER={'B':PAL.qsBody,'E':PAL.qsEye,'L':PAL.qsLeg};
 var SPR_GOB_ARCHER=['..G.....G..','.GG.....GG.','.GGGGGGGGG.','.GBBBBBBBG.','.BBEBBBEBB.','.BBBBBBBBB.','.BBTBBBTBB.','..BBBBBBB..','.BBBBBBBBB.','.BWWWWWWWB.','.BW.....WB.','..D.....D..','..D.....D..'];
 var PAL_GOB_ARCHER={'G':PAL.gobArcher,'B':PAL.gobArcher,'E':PAL.gEye,'T':PAL.gTooth,'D':PAL.gBodyD,'W':PAL.gobBow};
 var SPR_ARROW=['.H.','AAA','.F.','.F.'];
-var PAL_ARROW={'A':PAL.arrow,'H':PAL.arrowHead,'F':PAL.arrowFeather};
+var PAL_ARROW={'A':'#9a7044','H':'#d8e0df','F':'#e0c46e'}; /* v8.6.21: wood shaft, steel head, ochre fletching */
 var SPR_MAGEBALL=['.MM.','MHHM','MHHM','.MM.'];
-var PAL_MAGEBALL={'M':PAL.mageOrb,'H':PAL.mageOrbH};
+var PAL_MAGEBALL={'M':'#8860df','H':'#e9d9ff'}; /* v8.6.21: arcane violet core */
 var SPR_FIREBALL=['.FF.','FHHF','FHHF','.FF.'];
-var PAL_FIREBALL={'F':PAL.drFire,'H':PAL.drFireH};
+var PAL_FIREBALL={'F':'#f06a25','H':'#fff0a0'}; /* v8.6.21: ember orange and hot core */
 // v4.4.0 — цветные снаряды
 var SPR_ICEBALL=['.II.','IHHI','IHHI','.II.'];
-var PAL_ICEBALL={'I':'#a0d0ff','H':'#ffffff'};
+var PAL_ICEBALL={'I':'#65bde8','H':'#eaffff'}; /* v8.6.21: glacial cyan */
 var SPR_SHADOWBALL=['.SS.','SXXS','SXXS','.SS.'];
-var PAL_SHADOWBALL={'S':'#6a2a8a','X':'#e0a0ff'};
+var PAL_SHADOWBALL={'S':'#48205f','X':'#d9a0ff'}; /* v8.6.21: deep void with lilac core */
 var SPR_HOLYBALL=['.YY.','YHHY','YHHY','.YY.'];
-var PAL_HOLYBALL={'Y':'#f0d040','H':'#ffffff'};
+var PAL_HOLYBALL={'Y':'#e9bd43','H':'#fff9d5'}; /* v8.6.21: sacred gold */
 var SPR_ARROW_HUNTER=['.H.','AAA','.F.','.F.'];
-var PAL_ARROW_HUNTER={'A':'#5a4a2a','H':'#c0a060','F':'#a08040'};
+var PAL_ARROW_HUNTER={'A':'#6c4d2e','H':'#e0c68a','F':'#86a85a'}; /* v8.6.21: hunter's green fletching */
 
 var SPR_BOSS=['..H...........H..','.HH...........HH.','HHH...........HHH','.OOOOOOOOOOOOOOO.','OOOOOOOOOOOOOOOOO','OOEEOOOOOOOOOEEOO','OOEEOOOOOOOOOEEOO','OOOOOOOOOOOOOOOOO','OOOOOTTOOOTTOOOOO','OOOOOOOOOOOOOOOOO','.OOOOOOOOOOOOOOO.','DDDOOOOOOOOOOODDD','DDDDOOOOOOOOODDDD','DDDDDDDDDDDDDDDDD','DDDDDDDDDDDDDDDDD','..DDD.....DDD....','..DDD.....DDD....','..DDD.....DDD....','..DDD.....DDD....'];
 var PAL_BOSS={'H':PAL.bsHorn,'O':PAL.bsBody,'E':PAL.bsEye,'T':PAL.oTooth,'D':PAL.bsBodyD};
@@ -3667,18 +3662,15 @@ var PAL_SACRED_TREE = {
   'I': '#1f3414',
   'J': '#1d270f'
 };
-/* v8.5.1 — здоровая палитра: используется в редкие моменты,
-   когда Древо «вздыхает» — листва на мгновение зеленеет. */
+/* v9.0.11 — резервные палитры совместимы с реальными ключами A-J спрайта.
+   Пока не подключены к drawDecor: основная палитра остаётся PAL_SACRED_TREE. */
 var PAL_SACRED_TREE_ALIVE = {
-  'G': '#236b31', 'g': '#65a94b',
-  'T': '#654329', 'K': '#38251b',
-  'D': '#1a1408'
+  'A':'#9dbf5e','B':'#7e9d38','C':'#688a2e','D':'#667c26','E':'#3d6b26',
+  'F':'#5e4a1c','G':'#3d5b1e','H':'#41521b','I':'#265122','J':'#1c3615'
 };
-/* Умирающая палитра — наоборот, ещё серее. */
 var PAL_SACRED_TREE_DYING = {
-  'G': '#343c28', 'g': '#555b3d',
-  'T': '#514035', 'K': '#2a211c',
-  'D': '#1a1408'
+  'A':'#7a7a5a','B':'#5e5e3e','C':'#4a4a32','D':'#484832','E':'#2a3a26',
+  'F':'#3e3222','G':'#2a2a1c','H':'#2e2618','I':'#1e2a18','J':'#181c12'
 };
 
 // v8.0.0 — зелёное дерево друидов: вокруг осень, а здесь весна.
@@ -3756,30 +3748,30 @@ var PAL_NPC={'H':PAL.eHood,'S':PAL.eSkin,'B':PAL.eEye,'C':'#6a4a5a','G':PAL.eGol
 /* Палитра для второго NPC-спрайта. */
 var PAL_NPC2={'H':'#4a3a6a','S':PAL.eSkin,'B':PAL.eEye,'C':'#6a4a3a','G':PAL.eGold,'D':'#3a2a2a'};
 var SPR_COIN=['..GGG..','.GHHGG.','GHHHHGG','GHHHHGG','GHHHHGG','.GHHGG.','..DDD..'];
-var PAL_COIN={'G':PAL.coin,'H':PAL.coinH,'D':PAL.coinD};
+var PAL_COIN={'G':'#d69b2d','H':'#fff2a6','D':'#79501f'}; /* v8.6.21: warm gold with readable shadow */
 var SPR_POTION=['..WWW..','..WWW..','..GGG..','.GPPPG.','GPPHPPG','GPHHHPG','GPHHHPG','GPPPPPG','.GPPPG.','..GGG..'];
-var PAL_POTION={'W':PAL.potionGlass,'G':'#a08060','P':PAL.potion,'H':PAL.potionH};
+var PAL_POTION={'W':'#d9f4f2','G':'#7a5938','P':'#c34e72','H':'#ffe0ec'}; /* v8.6.21: glass highlight and ruby elixir */
 var SPR_SCROLL=['.PPPP.','PIIIIP','PISIIP','PIISIP','PIIIIP','.PPPP.'];
-var PAL_SCROLL={'P':PAL.scrollPaper,'I':PAL.scrollInk,'S':PAL.scrollSeal};
+var PAL_SCROLL={'P':'#e6d4a6','I':'#59452e','S':'#a8443b'}; /* v8.6.21: parchment, ink, wax seal */
 var SPR_CHEST=['..MMMMMMMMMMMM..','.MWWWWWWWWWWWM..','MWWWWWWWWWWWWWM.','MWWWWWWWWWWWWWM.','MMMMMOOOOOMMMMM.','MWWWWWOLLOWWWWM.','MWWWWWOLLOWWWWM.','MWWWWWWWWWWWWWM.','MWWWWWWWWWWWWWM.','.MMMMMMMMMMMMM..','................'];
 var PAL_CHEST={'M':PAL.chestMetal,'W':PAL.chestWood,'O':PAL.chestMetalD,'L':PAL.coinH};
 var SPR_CHEST_OPEN=['MMMMMMMMMMMMMMMM','MWWWWWWWWWWWWWWM','MWWWWWWWWWWWWWWM','MWWWWWWWWWWWWWWM','MM............MM','MWWWWWWWWWWWWWWM','MWWWWWWWWWWWWWWM','MWWWWWWWWWWWWWWM','MWWWWWWWWWWWWWWM','.MMMMMMMMMMMMMM.','................'];
 var PAL_CHEST_OPEN={'M':PAL.chestMetal,'W':PAL.chestWood};
 var SPR_KEY=['..GGG....','.GHHGG...','GHHGHGG..','GHHGHGG..','.GHHGG...','..GGG....','...GG....','...GGG...','...GG....'];
-var PAL_KEY={'G':PAL.keyGold,'H':PAL.keyGoldH};
+var PAL_KEY={'G':'#d69b2d','H':'#fff0a0'}; /* v8.6.21: gold key */
 var SPR_DOOR=['MMMMMMMMMMMMMM','MWWWWWWWWWWWWM','MWDDDDDDDDDDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWOOOOWDWM','MWDWWWOLLOWDWM','MWDWWWOLLOWDWM','MWDWWWOOOOWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDWWWWWWWWDWM','MWDDDDDDDDDDWM','MWWWWWWWWWWWWM','MMMMMMMMMMMMMM'];
 var PAL_DOOR={'M':PAL.doorMetal,'W':PAL.doorWood,'D':PAL.doorMetal,'O':PAL.doorLock,'L':PAL.coinH};
 var SPR_JEWEL=['..JJJJ..','.JLLLLJ.','JLLLLLLJ','JLLLLLLJ','.JLLLLJ.','..JJJJ..'];
 var SPR_SWORD=['.....M....','....MM....','....MM....','....MM....','....MM....','....MM....','..MMMMMM..','....WW....','....WW....','...WWWW...'];
 var SPR_BOW=['..WWW....','.WMMMW...','WMMWMMW..','WMW.W.W..','WW...W...','W....W...','WW...W...','WMW.W.W..','WMMWMMW..','.WMMMW...','..WWW....'];
-var PAL_BOW={'W':PAL.eWood,'M':'#8a7050'};
+var PAL_BOW={'W':'#a8753d','M':'#d5c39a'}; /* v8.6.21: layered yew wood and pale binding */
 var SPR_STAFF=['....MM....','...M..M...','...M..M...','....MM....','...WWWW...','....WW....','....WW....','....WW....','....WW....','....WW....','....WW....'];
-var PAL_STAFF={'M':'#ff6020','W':PAL.eWood};
-var PAL_SWORD={'M':PAL.eMetal,'W':PAL.eWood};
+var PAL_STAFF={'M':'#e8a8ff','W':'#6f4a35'}; /* v8.6.21: amethyst focus */
+var PAL_SWORD={'M':'#b9d1d8','W':'#80512f'}; /* v8.6.21: cool steel and warm grip */
 var SPR_DAGGER=['...M..','..MM..','..MM..','..MM..','..MM..','.MMM..','..W...','..W...'];
-var PAL_DAGGER={'M':PAL.eMetal,'W':PAL.eWood};
+var PAL_DAGGER={'M':'#c9dbe0','W':'#80512f'}; /* v8.6.21: bright dagger edge */
 var SPR_GREATSWORD=['...MM...','...MM...','...MM...','...MM...','...MM...','...MM...','...MM...','.MMMMMM.','...WW...','...WW...','..WWWW..'];
-var PAL_GREATSWORD={'M':PAL.eMetal,'W':PAL.eWood};
+var PAL_GREATSWORD={'M':'#d0e0e5','W':'#70452c'}; /* v8.6.21: broad steel blade */
 var PAL_FIRESWORD={'M':PAL.fireBlade,'W':PAL.fireBladeH};
 var PAL_ICESWORD={'M':PAL.iceBlade,'W':PAL.iceBladeH};
 var PAL_VAMPSWORD={'M':PAL.vampBlade,'W':PAL.vampBladeH};
@@ -4160,37 +4152,37 @@ var PAL_TRAIL_DIRT={'D':'#3a2410','G':'#8a6030','L':'#6a4828'};
 
 /* Катакомбы */
 var SPR_DEAD_CANDLE=['..WWW..','..WWW..','..WWW..','..WWW..','.WWWWW.','.GGGGG.'];
-var PAL_DEAD_CANDLE={'W':'#a09080','G':'#7a6a58'};
+var PAL_DEAD_CANDLE={'W':'#d6c6a8','G':'#55463b'};
 var SPR_BOOK_OPEN=['.BBBBBBB.','BWWWBWWWB','BWWWBWWWB','BWWWBWWWB','BWWWBWWWB','BWWWBWWWB','.BBBBBBB.'];
-var PAL_BOOK_OPEN={'B':'#5a3018','W':'#e8d8a0'};
+var PAL_BOOK_OPEN={'B':'#392316','W':'#f0dfb1'};
 var SPR_BROKEN_BOTTLE=['...G..','..GGG.','.GGGG.','GGGGG.','.GGG..','..G...'];
-var PAL_BROKEN_BOTTLE={'G':'rgba(180,220,200,0.55)'};
+var PAL_BROKEN_BOTTLE={'G':'rgba(155,220,211,0.72)'};
 var SPR_STATUE_BROKEN=['..SSSS..','.SSSSSS.','SSSSSSSS','SSSSSSSS','.SSSSSS.','..SSSS..','...SS...','..SSSS..','.SSSSSS.','SSSSSSSS'];
-var PAL_STATUE_BROKEN={'S':'#8a8070'};
+var PAL_STATUE_BROKEN={'S':'#8f9b9d'};
 
 /* Лава */
 var SPR_LAVA_CRACK=['...LLL...','..L...L..','.L.FFF.L.','L..FFF..L','L.FFFFF.L','L..FFF..L','.L.FFF.L.','..L...L..','...LLL...'];
-var PAL_LAVA_CRACK={'L':'#8a2010','F':'#ff6020'};
+var PAL_LAVA_CRACK={'L':'#76251b','F':'#ff8a24'};
 var SPR_OBSIDIAN_SHARD=['..KK..','.KKKK.','KKKKKK','.KKKK.','..KK..','..KK..','.GGGG.'];
-var PAL_OBSIDIAN_SHARD={'K':'#1a1a2a','G':'#3a3a4a'};
+var PAL_OBSIDIAN_SHARD={'K':'#171b2c','G':'#66748a'};
 var SPR_BURNT_SKELETON=['..HHHH..','.HKKKKH.','.HKEKEKH','.HKKKKH.','..HHHH..','.BBBBBB.','BKKKKKKB','B.KKKK.B','..K..K..'];
-var PAL_BURNT_SKELETON={'H':'#3a3028','K':'#1a1410','E':'#8a2010','B':'#2a2018'};
+var PAL_BURNT_SKELETON={'H':'#514239','K':'#171310','E':'#e05a25','B':'#30231d'};
 
 /* Лёд */
 var SPR_ICICLE=['..III..','.IIIII.','.IIIII.','..III..','..III..','...I...','...I...'];
-var PAL_ICICLE={'I':'rgba(200,230,255,0.75)'};
+var PAL_ICICLE={'I':'rgba(190,231,255,0.88)'};
 var SPR_FROZEN_CORPSE=['..HHHH..','.HIIIIH.','.HIEIEH.','.HIIIIH.','..HHHH..','.IIIIII.','IIIIIIII','I.IIII.I','..I..I..'];
-var PAL_FROZEN_CORPSE={'H':'#8a9aa8','I':'rgba(200,230,255,0.6)','E':'#3a4a5a'};
+var PAL_FROZEN_CORPSE={'H':'#819baa','I':'rgba(184,226,255,0.78)','E':'#293f54'};
 var SPR_ICE_CRACK=['..II..II..','.IIII.III.','II.IIII.II','.I..II..I.','....II....','...I..I...','..I....I..'];
-var PAL_ICE_CRACK={'I':'rgba(180,220,255,0.5)'};
+var PAL_ICE_CRACK={'I':'rgba(165,220,255,0.68)'};
 
 /* Вода */
 var SPR_SUNKEN_LOG=['.................. ','.LLLLLLLLLLLLLLLL.','LWLLLLLLLLLLLLLWL.','.LLLLLLLLLLLLLLLL.','..WWWWWWWWWWWWWW..'];
-var PAL_SUNKEN_LOG={'L':'#4a3828','W':'#2a4054'};
+var PAL_SUNKEN_LOG={'L':'#57402b','W':'#31576b'};
 var SPR_BROKEN_BOAT=['...WWWWW...','..WWWWWWW..','.WWDDDDDWW.','WWDDDDDDDWW','WDDDDDDDDDW','.WW.....WW.','..WW...WW..'];
-var PAL_BROKEN_BOAT={'W':'#5a3a20','D':'#3a2410'};
+var PAL_BROKEN_BOAT={'W':'#77502e','D':'#35251a'};
 var SPR_ALGAE=['.G.G.G.','G.G.G.G','.G.G.G.','G.G.G.G','.G.G.G.'];
-var PAL_ALGAE={'G':'rgba(60,140,80,0.55)'};
+var PAL_ALGAE={'G':'rgba(72,170,111,0.72)'};
 
 /* Грибы */
 var SPR_MUSH_BLUE=['...BBB...','..BBBBB..','.BBHHBBB.','.BBBBBBB.','..BBBBB..','...WWW...','...WWW...'];
@@ -4740,14 +4732,15 @@ function _dropAtPlayer(itemToDrop){
     if(!collideCircle(_ax,_ay,8)){_px=_ax;_py=_ay;break;}
   }
   if(collideCircle(_px,_py,8))return;
-  groundItems.push({
+  var _gi = {
     x: _px,
     y: _py,
     kind: itemToDrop.kind,
-    id: itemToDrop.id,
-    count: itemToDrop.count,
-    amount: itemToDrop.amount
-  });
+    id: itemToDrop.id
+  };
+  if(typeof itemToDrop.count === 'number') _gi.count = itemToDrop.count;
+  if(typeof itemToDrop.amount === 'number') _gi.amount = itemToDrop.amount;
+  groundItems.push(_gi);
 }
 /* v7.3.14 — числа в BALANCE.legendary. Здесь — контент.
    stats/effect заполняются синхронизацией ниже. */
@@ -4984,6 +4977,8 @@ function _openScrollMenu(slotIdx){
   showModal(html);
 }
 function placeScrollInSlot(slotIdx,bagIdx){
+  if(typeof slotIdx!=='number'||slotIdx<0||slotIdx>2){closeModal();return;}
+  if(typeof bagIdx!=='number'||bagIdx<0||bagIdx>=bag.length){closeModal();return;}
   var it=bag[bagIdx];
   if(!it||it.kind!=='scroll'){closeModal();return;}
   if((it.count||1)<=0){closeModal();return;}
@@ -5296,11 +5291,10 @@ function onHitEffects(attacker,defender,damage){
    [SECTION 7] РЕНДЕР СПРАЙТОВ (v4.4.6 — OPTIMIZED)
    ===================================================================== */
 var _spriteCache={};var _spriteCacheCount=0;
+var _spriteCacheReady=false;  /* v9.0.2 PERF — cache prewarm state */
 /* v8.4.2 — cached white hit-flash palettes by enemy type. */
 var _whitePalCache={};
-var _lightingCache={radius:-1,dark:-1,grd:null};
-/* v7.5.2 — кеш виньетки. */
-var _vignetteCache = { w: -1, h: -1, grd: null };
+/* v8.6.1 — удалены мёртвые _lightingCache и _vignetteCache. */
 var _shadowCache = {};
 var _spriteKeyCache=new WeakMap();
 var _SPRITE_CACHE_MAX=2000; /* v8.4.1 */
@@ -5328,6 +5322,16 @@ function drawSprite(sp,pal,x,y,ps,fx){
     return;
   }
   var w=cols*ps,h=rows*ps;
+  /* Compute category once per sprite, not once per pixel. */
+  var _isActorSprite=(sp===SPR_ELF||sp===SPR_ELF_ATK||sp===SPR_ELF_ATK_BIG||
+    sp===SPR_NPC||sp===SPR_TRADER||sp===SPR_MERC||sp===SPR_GHOST_SERVANT||
+    sp===SPR_GOBLIN||sp===SPR_GOB_ARCHER||sp===SPR_ORC||sp===SPR_ORC_ARCHER||
+    sp===SPR_SHAMAN||sp===SPR_WOLF||sp===SPR_SKELETON||sp===SPR_GHOST||
+    sp===SPR_SPIDER||sp===SPR_QSPIDER||sp===SPR_GOLEM||sp===SPR_SCORPION||
+    sp===SPR_IMP||sp===SPR_SWORDFISH||sp===SPR_MUSHMAN||sp===SPR_SKEL_ELF||
+    sp===SPR_GHOST_KNIGHT||sp===SPR_SHADOW||sp===SPR_LEAF_SPIRIT||
+    sp===SPR_BOSS||sp===SPR_MAGE||sp===SPR_DRAGON||sp===SPR_BONELORD||
+    sp===SPR_TREANT||sp===SPR_AELIS||sp===SPR_MIMIC);
   var off=document.createElement('canvas');
   off.width=w;off.height=h;
   var octx=off.getContext('2d');
@@ -5337,9 +5341,73 @@ function drawSprite(sp,pal,x,y,ps,fx){
       var ch=row.charAt(c);
       if(ch==='.'||ch===' ')continue;
       var col=pal[ch];if(!col)continue;
+      if(_isActorSprite&&/^#[0-9a-f]{6}$/i.test(col)){
+        var _cr=parseInt(col.slice(1,3),16),_cg=parseInt(col.slice(3,5),16),_cb=parseInt(col.slice(5,7),16);
+        var _avg=(_cr+_cg+_cb)/3;
+        _cr=Math.max(0,Math.min(255,Math.round((_cr-_avg)*1.07+_avg+(_cr>100?2:0))));
+        _cg=Math.max(0,Math.min(255,Math.round((_cg-_avg)*1.07+_avg+(_cg>100?1:0))));
+        _cb=Math.max(0,Math.min(255,Math.round((_cb-_avg)*1.07+_avg)));
+        col='rgb('+_cr+','+_cg+','+_cb+')';
+      }
       var cx=fx?(cols-1-c):c;
       octx.fillStyle=col;
       octx.fillRect(cx*ps,r*ps,ps,ps);
+    }
+  }
+  /* v8.6.18 — Усиленный общий ремастер пиксельных спрайтов всех категорий.
+     Более читаемый верхний свет, внутренняя грань и мягкая нижняя тень.
+     Работает только внутри уже нарисованного силуэта; геометрия, хитбоксы,
+     палитры игровых состояний и логика существ не меняются. */
+  var _solidAt=function(px,py){
+    if(px<0||py<0||px>=cols||py>=rows)return false;
+    var _ch=sp[py].charAt(fx?(cols-1-px):px);
+    return _ch!=='.'&&_ch!==' '&&!!pal[_ch];
+  };
+  octx.fillStyle='rgba(255,239,198,0.22)';
+  for(var _hr=0;_hr<rows;_hr++){
+    for(var _hc=0;_hc<cols;_hc++){
+      if(!_solidAt(_hc,_hr))continue;
+      if(!_solidAt(_hc,_hr-1)||!_solidAt(_hc-1,_hr))
+        octx.fillRect((fx?(cols-1-_hc):_hc)*ps,_hr*ps,ps,ps);
+    }
+  }
+  octx.fillStyle='rgba(12,18,28,0.19)';
+  for(var _sr=0;_sr<rows;_sr++){
+    for(var _sc=0;_sc<cols;_sc++){
+      if(!_solidAt(_sc,_sr))continue;
+      if(!_solidAt(_sc+1,_sr)||!_solidAt(_sc,_sr+1))
+        octx.fillRect((fx?(cols-1-_sc):_sc)*ps,_sr*ps,ps,ps);
+    }
+  }
+  /* v8.6.18 — тонкая цветная грань внутри силуэта: делает дерево, металл,
+     ткань и камень читаемее, не меняя сами карты спрайтов и их размеры. */
+  octx.fillStyle='rgba(255,210,128,0.10)';
+  for(var _ir=1;_ir<rows;_ir++){
+    for(var _ic=1;_ic<cols;_ic++){
+      if(!_solidAt(_ic,_ir))continue;
+      if(_solidAt(_ic,_ir-1)&&!_solidAt(_ic-1,_ir))
+        octx.fillRect((fx?(cols-1-_ic):_ic)*ps,_ir*ps,Math.max(1,Math.ceil(ps/2)),ps);
+    }
+  }
+  /* v8.6.20 — compact material glints for actors: small warm highlights on upper
+     edges and cool reflected light near lower edges, clipped to existing sprite cells. */
+  var _actorForGlint=(sp===SPR_ELF||sp===SPR_ELF_ATK||sp===SPR_ELF_ATK_BIG||sp===SPR_NPC||
+    sp===SPR_TRADER||sp===SPR_MERC||sp===SPR_GHOST_SERVANT||sp===SPR_GOBLIN||sp===SPR_GOB_ARCHER||
+    sp===SPR_ORC||sp===SPR_ORC_ARCHER||sp===SPR_SHAMAN||sp===SPR_WOLF||sp===SPR_SKELETON||
+    sp===SPR_GHOST||sp===SPR_SPIDER||sp===SPR_QSPIDER||sp===SPR_GOLEM||sp===SPR_SCORPION||
+    sp===SPR_IMP||sp===SPR_SWORDFISH||sp===SPR_MUSHMAN||sp===SPR_SKEL_ELF||sp===SPR_GHOST_KNIGHT||
+    sp===SPR_SHADOW||sp===SPR_LEAF_SPIRIT||sp===SPR_BOSS||sp===SPR_MAGE||sp===SPR_DRAGON||
+    sp===SPR_BONELORD||sp===SPR_TREANT||sp===SPR_AELIS||sp===SPR_MIMIC);
+  if(_actorForGlint){
+    octx.fillStyle='rgba(255,236,177,0.16)';
+    for(var _gr=0;_gr<rows;_gr++)for(var _gc=0;_gc<cols;_gc++){
+      if(_solidAt(_gc,_gr)&&(_gr===0||!_solidAt(_gc,_gr-1)))
+        octx.fillRect((fx?(cols-1-_gc):_gc)*ps,_gr*ps,ps,Math.max(1,Math.ceil(ps/2)));
+    }
+    octx.fillStyle='rgba(110,190,220,0.08)';
+    for(var _br=0;_br<rows;_br++)for(var _bc=0;_bc<cols;_bc++){
+      if(_solidAt(_bc,_br)&&(_bc===0||!_solidAt(_bc-1,_br)))
+        octx.fillRect((fx?(cols-1-_bc):_bc)*ps,_br*ps,Math.max(1,Math.ceil(ps/3)),ps);
     }
   }
   /* v4.9.63 — ПРАВИЛЬНЫЙ контур: обводим только непрозрачные пиксели.
@@ -5360,28 +5428,150 @@ function drawSprite(sp,pal,x,y,ps,fx){
       }
     }
   }
-  octx.fillStyle='rgba(0,0,0,0.55)';
+  octx.fillStyle='rgba(20,16,24,0.42)';
   for(var e=0;e<_edge.length;e++){
     octx.fillRect(_edge[e].x*ps,_edge[e].y*ps,ps,ps);
   }
-  if(_spriteCacheCount<_SPRITE_CACHE_MAX){_spriteCache[cacheKey]=off;_spriteCacheCount++;}
+  if(_spriteCacheCount<_SPRITE_CACHE_MAX){
+    _spriteCache[cacheKey]=off;
+    _spriteCacheCount++;
+  } else {
+    /* v8.6.1 — LRU-эвакуация: сбрасываем половину кеша при переполнении.
+       Раньше кеш просто переставал пополняться — на больших этажах
+       спрайты рендерились каждый кадр. */
+    var _keysToDrop=Math.floor(_SPRITE_CACHE_MAX/2);
+    var _dropped=0;
+    for(var _k in _spriteCache){
+      if(_dropped>=_keysToDrop)break;
+      delete _spriteCache[_k];
+      _dropped++;
+    }
+    _spriteCacheCount=Object.keys(_spriteCache).length;
+    _spriteCache[cacheKey]=off;
+    _spriteCacheCount++;
+  }
   ctx.drawImage(off,Math.round(x-w/2),Math.round(y-h/2));
 }
 
 /* =====================================================================
    [SECTION 8] ГЕНЕРАЦИЯ
    ===================================================================== */
-function makeFloorTile(colors,seed){
-  var c=document.createElement('canvas');c.width=TILE;c.height=TILE;var cx=c.getContext('2d');cx.imageSmoothingEnabled=false;
+function makeFloorTile(colors,seed,style){
+  var c=document.createElement('canvas');c.width=TILE;c.height=TILE;
+  var cx=c.getContext('2d');cx.imageSmoothingEnabled=false;
   cx.fillStyle=colors[Math.abs(seed)%colors.length];cx.fillRect(0,0,TILE,TILE);
-  var rnd=(seed*9301+49297)%233280;
+  /* Текстурная случайность локальная: карту и gameRNG не меняем. */
+  var rnd=(Math.abs(seed)*9301+49297)%233280;
   function nextRand(){rnd=(rnd*9301+49297)%233280;return rnd/233280;}
-  for(var i=0;i<6;i++){cx.fillStyle='rgba(0,0,0,0.18)';cx.fillRect(Math.floor(nextRand()*TILE),Math.floor(nextRand()*TILE),PX,PX);}
-  for(var j=0;j<4;j++){cx.fillStyle='rgba(255,220,160,0.10)';cx.fillRect(Math.floor(nextRand()*TILE),Math.floor(nextRand()*TILE),PX,PX);}
+  function rect(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(x,y,w,h);}
+  function path(points,col,width){cx.strokeStyle=col;cx.lineWidth=width||2;cx.beginPath();cx.moveTo(points[0][0],points[0][1]);for(var p=1;p<points.length;p++)cx.lineTo(points[p][0],points[p][1]);cx.stroke();}
+  /* Сохраняем прежнее число обращений к игровому RNG — один вызов на плитку. */
   var variants=gameRNG();
-  if(variants<0.25){cx.fillStyle='rgba(0,0,0,0.30)';cx.fillRect(Math.floor(nextRand()*(TILE-8)),Math.floor(nextRand()*(TILE-8)),PX*2,PX);}
-  else if(variants<0.5){cx.fillStyle='rgba(180,140,80,0.25)';cx.beginPath();cx.arc(nextRand()*TILE,nextRand()*TILE,2,0,Math.PI*2);cx.fill();}
-  else if(variants<0.7){cx.strokeStyle='rgba(0,0,0,0.35)';cx.beginPath();var sx=nextRand()*(TILE-8)+4,sy=nextRand()*(TILE-8)+4;cx.moveTo(sx,sy);cx.lineTo(sx+6,sy+6);cx.stroke();}
+  style=style==null?1:style;
+  if(style===0||style===11||style===12){
+    /* v9.0.15 — лесная земля: приглушённая осень и органичные пятна вместо повторяющихся квадратных газонов.
+       Только локальный RNG текстуры; карта и игровой RNG не меняются. */
+    rect(0,0,TILE,TILE,style===12?'rgba(16,34,24,0.20)':'rgba(48,30,18,0.30)');
+    /* Неровные пятна земли/мха из мелких ступенчатых фрагментов. */
+    var patchX=2+Math.floor(nextRand()*20), patchY=2+Math.floor(nextRand()*20);
+    var mossBase=style===12?'rgba(57,94,47,0.62)':'rgba(64,73,36,0.55)';
+    var mossLight=style===12?'rgba(101,133,61,0.55)':'rgba(105,91,43,0.48)';
+    for(var mp=0;mp<7;mp++){
+      var mxp=patchX+Math.floor(nextRand()*13)-3, myp=patchY+Math.floor(nextRand()*11)-3;
+      rect(mxp,myp,2+Math.floor(nextRand()*5),1+Math.floor(nextRand()*3),mp%3===0?mossLight:mossBase);
+    }
+    /* Тонкие корни и сухие травинки, расположенные по-разному на каждой вариации. */
+    if(nextRand()<0.82){
+      var rx= Math.floor(nextRand()*14), ry= Math.floor(nextRand()*23)+8;
+      path([[rx,ry],[rx+4,ry-2],[rx+8,ry+1],[rx+13,ry-4]],'rgba(35,24,15,0.78)',2);
+      path([[rx+1,ry+1],[rx+5,ry-1],[rx+9,ry+2]],'rgba(132,91,47,0.62)',1);
+    }
+    for(var g=0;g<(style===12?4:style===11?2:3);g++){
+      var gx=2+Math.floor(nextRand()*35),gy=2+Math.floor(nextRand()*34);
+      var grassCol=style===12?'rgba(117,157,76,0.72)':'rgba(105,111,57,0.68)';
+      rect(gx,gy,1,3+Math.floor(nextRand()*3),grassCol);
+      rect(gx-2,gy+2,3,1,'rgba(72,83,43,0.76)');
+    }
+    /* Опавшие листья: рыжие, охристые, медные и сухо-коричневые — осень видна сразу. */
+    var leafCols=style===12?['rgba(173,139,67,0.82)','rgba(132,91,48,0.86)','rgba(190,113,55,0.80)']:
+      ['rgba(177,83,35,0.92)','rgba(205,124,47,0.90)','rgba(151,66,31,0.90)','rgba(190,151,72,0.88)','rgba(111,58,31,0.88)'];
+    var leafCount=style===11?9:(style===0?5:3);
+    for(var lf=0;lf<leafCount;lf++){
+      var lx=1+Math.floor(nextRand()*36), ly=1+Math.floor(nextRand()*36), lc=leafCols[Math.floor(nextRand()*leafCols.length)];
+      rect(lx,ly,2+Math.floor(nextRand()*2),1,lc);
+      if(nextRand()<0.60)rect(lx+1,ly-1,1,3,lc);
+      if(nextRand()<0.35)rect(lx-1,ly+1,2,1,'rgba(69,43,25,0.70)');
+    }
+    /* Редкие камешки и тёмные комочки почвы ломают одинаковый ритм плиток. */
+    for(var peb=0;peb<3;peb++){
+      var px=2+Math.floor(nextRand()*34), py=2+Math.floor(nextRand()*34);
+      rect(px,py,2+Math.floor(nextRand()*2),1,'rgba(38,31,25,0.72)');
+      if(nextRand()<0.55)rect(px+1,py-1,1,1,'rgba(163,139,103,0.46)');
+    }
+    if(style===12){rect(17,6,2,2,'rgba(103,184,135,0.68)');rect(19,8,1,2,'rgba(158,207,160,0.72)');}
+  }else if(style===1){
+    /* Каменистые тропы: земля и россыпь камней, без регулярной кладки. */
+    rect(0,0,40,40,'rgba(48,38,29,0.24)');
+    for(var r=0;r<7;r++){var ax=Math.floor(nextRand()*34),ay=Math.floor(nextRand()*34);rect(ax,ay,3+Math.floor(nextRand()*7),2+Math.floor(nextRand()*5),r%2?'rgba(24,21,19,0.42)':'rgba(174,151,119,0.18)');rect(ax+1,ay,2,1,'rgba(220,203,169,0.20)');}
+    for(var rk=0;rk<7;rk++){var kx=Math.floor(nextRand()*36),ky=Math.floor(nextRand()*36);rect(kx,ky,2+Math.floor(nextRand()*3),1+Math.floor(nextRand()*2),'rgba(25,23,21,0.62)');rect(kx,ky,1,1,'rgba(194,177,147,0.48)');}
+    path([[3,28],[9,24],[13,27],[19,22]],'rgba(31,26,21,0.70)',1);rect(24,8,7,2,'rgba(90,100,59,0.60)');rect(27,10,3,2,'rgba(107,117,65,0.50)');
+  }else if(style===2){
+    /* Катакомбы: обветренный камень, крошка костей и тёмные органические пятна. */
+    rect(0,0,40,40,'rgba(0,0,0,0.18)');
+    for(var cb=0;cb<5;cb++){var bx=Math.floor(nextRand()*31),by=Math.floor(nextRand()*31);rect(bx,by,4+Math.floor(nextRand()*7),3+Math.floor(nextRand()*6),cb%2?'rgba(7,7,8,0.42)':'rgba(126,112,94,0.18)');rect(bx+2,by+1,3,1,'rgba(184,170,147,0.12)');}
+    path([[5,4],[10,9],[7,14],[12,18],[10,23]],'rgba(4,4,5,0.84)',2);path([[6,4],[11,9],[8,14]],'rgba(177,164,143,0.36)',1);
+    for(var bone=0;bone<4;bone++){var ux=Math.floor(nextRand()*34),uy=Math.floor(nextRand()*34);rect(ux,uy,3,1,'rgba(193,183,158,0.58)');rect(ux+1,uy-1,1,3,'rgba(193,183,158,0.45)');}
+    rect(23,26,8,3,'rgba(57,43,36,0.56)');rect(25,27,4,2,'rgba(106,72,54,0.48)');
+  }else if(style===3){
+    /* Ржавые залы: грязный металл, коррозия и остатки старой краски. */
+    rect(0,0,40,40,'rgba(44,24,15,0.26)');
+    for(var rust=0;rust<7;rust++){var tx=Math.floor(nextRand()*34),ty=Math.floor(nextRand()*34);rect(tx,ty,3+Math.floor(nextRand()*8),2+Math.floor(nextRand()*5),rust%2?'rgba(149,62,25,0.58)':'rgba(83,43,25,0.60)');rect(tx+1,ty,3,1,'rgba(214,111,48,0.34)');}
+    path([[3,9],[8,12],[6,18],[12,22]],'rgba(24,15,12,0.86)',2);path([[26,4],[23,10],[29,14],[27,18]],'rgba(24,15,12,0.82)',2);
+    for(var riv=0;riv<4;riv++){var vx=3+Math.floor(nextRand()*32),vy=3+Math.floor(nextRand()*32);rect(vx,vy,2,2,'rgba(182,157,119,0.52)');rect(vx,vy,1,1,'rgba(229,190,132,0.50)');}
+  }else if(style===4){
+    /* Лава: неровный базальт, крупные светящиеся разломы, зола. */
+    rect(0,0,40,40,'rgba(8,3,3,0.32)');
+    path([[3,2],[10,8],[7,15],[14,21],[12,30],[17,38]],'rgba(10,3,2,0.98)',5);path([[4,2],[11,8],[8,15],[15,21],[13,30],[18,38]],'rgba(255,90,24,0.94)',2);
+    path([[25,1],[22,8],[28,13],[25,19]],'rgba(10,3,2,0.98)',4);path([[26,1],[23,8],[29,13],[26,19]],'rgba(255,118,26,0.86)',2);
+    path([[23,25],[29,28],[26,34],[34,38]],'rgba(10,3,2,0.98)',4);path([[24,25],[30,28],[27,34],[35,38]],'rgba(255,75,18,0.88)',2);
+    for(var ash=0;ash<6;ash++){var ex=Math.floor(nextRand()*37),ey=Math.floor(nextRand()*37);rect(ex,ey,2+Math.floor(nextRand()*3),1,'rgba(75,44,36,0.78)');}
+    rect(5,5,3,2,'#ffbd46');rect(12,19,3,2,'#ff9b2e');rect(30,31,3,2,'#ffb13b');
+  }else if(style===5||style===10){
+    /* Лёд: естественные кристаллические пласты, не регулярные плитки. */
+    rect(0,0,40,40,style===10?'rgba(12,42,65,0.26)':'rgba(20,52,70,0.18)');
+    path([[1,7],[8,11],[13,6],[21,13],[29,8],[38,12]],'rgba(21,70,105,0.86)',3);path([[2,6],[9,10],[14,5],[22,12],[30,7],[38,11]],'rgba(159,225,255,0.82)',1);
+    path([[3,29],[10,24],[16,29],[24,23],[31,30],[38,26]],'rgba(18,64,96,0.85)',3);path([[4,28],[11,23],[17,28],[25,22],[32,29],[38,25]],'rgba(133,210,248,0.82)',1);
+    rect(7,13,8,4,'rgba(110,185,220,0.32)');rect(9,14,4,2,'rgba(206,246,255,0.68)');rect(25,15,8,4,'rgba(12,47,76,0.38)');rect(27,15,4,2,'rgba(164,226,255,0.48)');
+    for(var ice=0;ice<4;ice++){var ix=Math.floor(nextRand()*35),iy=Math.floor(nextRand()*35);path([[ix,iy],[ix+2,iy-3],[ix+4,iy]],'rgba(204,244,255,0.60)',1);}
+    if(style===10){path([[19,2],[16,10],[21,16],[17,23],[20,37]],'rgba(130,232,255,0.95)',2);rect(17,16,6,3,'rgba(181,248,255,0.72)');}
+  }else if(style===6){
+    /* Затопленные залы: тёмная влажная порода, лужицы и следы воды. */
+    rect(0,0,40,40,'rgba(4,17,27,0.30)');
+    for(var wet=0;wet<4;wet++){var wx=Math.floor(nextRand()*30),wy=Math.floor(nextRand()*31);rect(wx,wy,5+Math.floor(nextRand()*8),3+Math.floor(nextRand()*5),'rgba(23,72,91,0.52)');rect(wx+2,wy+1,3+Math.floor(nextRand()*3),1,'rgba(112,194,207,0.44)');}
+    path([[3,11],[8,14],[6,17]],'rgba(105,197,213,0.78)',2);path([[27,5],[31,9],[29,13]],'rgba(105,197,213,0.72)',2);path([[11,33],[17,30],[22,33]],'rgba(18,47,59,0.86)',2);
+    rect(12,28,5,3,'rgba(60,113,62,0.70)');rect(14,26,2,5,'rgba(84,153,74,0.78)');
+    for(var dr=0;dr<4;dr++){var dx=Math.floor(nextRand()*37),dy=Math.floor(nextRand()*37);rect(dx,dy,2,1,'rgba(188,233,235,0.58)');}
+  }else if(style===7||style===9){
+    /* Грибные пещеры: споровые облачка, мицелий и органические пятна. */
+    var spore=style===9?'rgba(220,140,255,0.80)':'rgba(185,126,226,0.78)';
+    rect(0,0,40,40,'rgba(29,15,43,0.24)');
+    for(var mush=0;mush<4;mush++){var mx=Math.floor(nextRand()*31),my=Math.floor(nextRand()*31);rect(mx,my,4+Math.floor(nextRand()*7),3+Math.floor(nextRand()*6),'rgba(65,40,83,0.70)');rect(mx+2,my+1,3+Math.floor(nextRand()*3),2,spore);rect(mx+3,my,2,4,'rgba(233,180,255,0.48)');}
+    path([[2,25],[8,21],[12,24],[16,20]],'rgba(151,100,194,0.86)',2);path([[23,4],[26,9],[31,10],[35,15]],'rgba(151,100,194,0.82)',2);
+    for(var si=0;si<5;si++){var sxp=2+Math.floor(nextRand()*35),syp=2+Math.floor(nextRand()*35);rect(sxp,syp,2+Math.floor(nextRand()*2),2,spore);rect(sxp+1,syp+1,1,1,'rgba(255,223,255,0.90)');}
+    if(style===9){rect(6,28,5,3,'rgba(76,155,105,0.72)');rect(28,8,4,3,'rgba(76,155,105,0.72)');}
+  }else if(style===8){
+    /* Пещера пауков: пыльный камень, отдельные нити паутины и коконы. */
+    rect(0,0,40,40,'rgba(18,16,27,0.24)');
+    for(var web=0;web<5;web++){var jx=Math.floor(nextRand()*33),jy=Math.floor(nextRand()*33);rect(jx,jy,4+Math.floor(nextRand()*6),2+Math.floor(nextRand()*4),'rgba(94,89,128,0.42)');}
+    path([[1,2],[9,10],[18,2]],'rgba(205,210,235,0.72)',1);path([[2,2],[10,2],[10,10],[2,10]],'rgba(205,210,235,0.62)',1);path([[22,22],[30,30],[38,22]],'rgba(205,210,235,0.72)',1);path([[22,22],[30,22],[30,30],[22,30]],'rgba(205,210,235,0.62)',1);
+    path([[3,35],[10,28],[16,35]],'rgba(174,182,211,0.52)',1);path([[24,5],[31,12],[38,5]],'rgba(174,182,211,0.52)',1);
+    rect(11,11,2,2,'rgba(232,236,255,0.86)');rect(31,31,2,2,'rgba(232,236,255,0.86)');
+  }else{
+    /* Резервная фактура для неизвестных стилей. */
+    for(var d=0;d<8;d++){var dx0=Math.floor(nextRand()*37),dy0=Math.floor(nextRand()*37);rect(dx0,dy0,2+Math.floor(nextRand()*4),1+Math.floor(nextRand()*3),'rgba(0,0,0,0.18)');}
+  }
+  /* Различающиеся мелкие повреждения, только локальная случайность. */
+  if(style!==0&&style!==11&&style!==12&&variants<0.72){var cx0=5+Math.floor(nextRand()*25),cy0=5+Math.floor(nextRand()*25);path([[cx0,cy0],[cx0+4,cy0+3],[cx0+2,cy0+7],[cx0+7,cy0+10]],'rgba(0,0,0,0.62)',2);path([[cx0+1,cy0],[cx0+5,cy0+3],[cx0+3,cy0+7]],'rgba(210,200,175,0.24)',1);}
   return c;
 }
 function makeWallTile(){var c=document.createElement('canvas');c.width=TILE;c.height=TILE;var cx=c.getContext('2d');cx.fillStyle=PAL.wallA;cx.fillRect(0,0,TILE,TILE);cx.fillStyle=PAL.wallC;cx.fillRect(0,0,TILE,6);cx.fillStyle='rgba(255,220,180,0.15)';cx.fillRect(0,0,TILE,3);cx.fillStyle='rgba(0,0,0,0.45)';cx.fillRect(0,TILE-6,TILE,6);return c;}
@@ -5432,7 +5622,7 @@ function resetFloorTransient(){
 
 
 /* v7.3.15 — восстановление популяции врагов, если генератор вернул пустой массив. */
-function _repairPlayerVitals(){if(!player)return;if(typeof player.maxHp!=='number'||!isFinite(player.maxHp)||player.maxHp<=0){var m=100;try{m=calcMaxHp(0,player.subclass?getSubclassData(player.class,player.subclass):null,getClassStats());}catch(_e){}player.maxHp=(typeof m==='number'&&isFinite(m)&&m>0)?m:100;}if(typeof player.hp!=='number'||!isFinite(player.hp))player.hp=player.maxHp;player.hp=clamp(player.hp,0,player.maxHp);if(typeof player.invuln!=='number'||!isFinite(player.invuln)||player.invuln<0)player.invuln=0;}
+function _repairPlayerVitals(){if(!player)return;if(typeof player.maxHp!=='number'||!isFinite(player.maxHp)||player.maxHp<=0){var m=100;try{m=calcMaxHp(0,player.subclass?getSubclassData(player.class,player.subclass):null,getClassStats());}catch(_e){ _warn('[DungeonElf] calcMaxHp failed in _repairPlayerVitals:', _e && _e.message); }player.maxHp=(typeof m==='number'&&isFinite(m)&&m>0)?m:100;}if(typeof player.hp!=='number'||!isFinite(player.hp))player.hp=player.maxHp;player.hp=clamp(player.hp,0,player.maxHp);if(typeof player.invuln!=='number'||!isFinite(player.invuln)||player.invuln<0)player.invuln=0;}
 
 function _ensureHostilePopulation(){
   /* v8.5.1 — роща — мирная локация, как деревня. */
@@ -5584,8 +5774,7 @@ function _resetFloorState(){
   resetFloorTransient();
   combatMusicActive=false;
   _spriteCache={};_spriteCacheCount=0;floorMiniBoss=null;
-  _lightingCache.radius=-1;_lightingCache.dark=-1;_lightingCache.grd=null;
-  _lightingCache.biomeName=null;_lightingCache.tintKey=null;_lightingCache.dayKey=null;
+  /* v8.6.1 — _lightingCache удалён */
   for(var _ti=0;_ti<decor.length;_ti++){if(decor[_ti]._grd)decor[_ti]._grd=null;}
   /* v7.3.16 — сброс флага призрака на новом этаже. */
   _ghostShown = false;
@@ -5621,14 +5810,19 @@ function _pickBiomeAndPalette(){
     [PAL.floorGiantMushA,PAL.floorGiantMushB,PAL.floorGiantMushC,PAL.floorGiantMushD],
     [PAL.floorIceCaveA,PAL.floorIceCaveB,PAL.floorIceCaveC,PAL.floorIceCaveD]
   ];
-  var pal=palettes[BIOME_PAL_IDX(BIOME_REGION(floorNum))];
-  if(isVillage)pal=palettes[0];
+  var _floorStyle=BIOME_PAL_IDX(BIOME_REGION(floorNum));
+  var pal=palettes[_floorStyle];
+  if(isVillage){pal=palettes[0];_floorStyle=0;}
+  if(currentLocation === 'forest'){_floorStyle=11;}
+  if(currentLocation === 'druid'){_floorStyle=12;}
   if(currentLocation === 'castle'){
     /* v6.0.1 — Замок: тёмный камень */
-    pal=[PAL.floorCatA,PAL.floorCatB,PAL.floorCatC,PAL.floorCatD];
+    pal=[PAL.floorCatA,PAL.floorCatB,PAL.floorCatC,PAL.floorCatD];_floorStyle=2;
   }
   floorCanvas=[];
-  for(var fi=0;fi<8;fi++)floorCanvas.push(makeFloorTile(pal,fi*17+floorNum*3));
+  for(var fi=0;fi<8;fi++)floorCanvas.push(makeFloorTile(pal,fi*17+floorNum*3,_floorStyle));
+  /* Пол визуально меняется при смене биома, но карта и её генерация не затрагиваются. */
+  floorCacheCanvas=null;
   wallCanvas=makeWallTile();waterCanvas=makeWaterCanvas();lavaCanvas=makeLavaCanvas();
 }
 
@@ -5930,6 +6124,10 @@ function _finalizeFloor(){
   _buildDecalCanvas();
 }
 
+/* v8.6.2 — Руины эльфийской башни: встроенный пиксельный спрайт, отдельный файл не нужен. */
+/* v8.6.4 — Башня рисуется процедурно пиксельными примитивами; внешняя картинка не используется. */
+var TOWER_RUIN_LORE = {title:'🗼 Руины эльфийской башни',text:'«Башня стояла здесь задолго до того, как лес потускнел.\n\nЕё окна помнят зелёные кроны, голоса эльфов и свет, которого больше нет.\n\nТеперь ветер гуляет среди сломанных арок, а осенние листья лежат у подножия, словно кто-то всё ещё приносит сюда дары.\n\nНекоторые руины забывают. Эти — ждут.»'};
+
 function buildVillage(){
   /* v5.7.3 — расширено с 30×22 до 50×35 для крепости на окраине */
   var W=50,H=35;MAP_W=W+4;MAP_H=H+4;
@@ -5946,11 +6144,17 @@ function buildVillage(){
   for(var ly=0;ly<lakeH;ly++)for(var lx=0;lx<lakeW;lx++){var ddx=lx-lakeW/2,ddy=ly-lakeH/2;
     if(Math.sqrt(ddx*ddx+ddy*ddy)<lakeW/2-0.5){var mx=lakeX+lx,my=lakeY+ly;if(mx>1&&my>1&&mx<MAP_W-2&&my<MAP_H-2)map[my][mx]=3;}}
   var houseSpots=[];var attempts=0;
-  var targetHouses=randi(5,7);while(houseSpots.length<targetHouses&&attempts<200){
+  var targetHouses=randi(7,9);while(houseSpots.length<targetHouses&&attempts<200){
     attempts++;var hx=randi(5,MAP_W-9),hy=randi(5,MAP_H-9);var ok=true;
     for(var cxx=hx-1;cxx<=hx+3&&ok;cxx++)for(var cyy=hy-1;cyy<=hy+3&&ok;cyy++)
       if(cxx>=0&&cyy>=0&&cxx<MAP_W&&cyy<MAP_H&&map[cyy][cxx]===3)ok=false;
     if(ok)for(var hi=0;hi<houseSpots.length;hi++)if(Math.abs(houseSpots[hi].x-hx)<6&&Math.abs(houseSpots[hi].y-hy)<6){ok=false;break;}
+    /* v9.0.3 — не ставим домики в площадки, которые позже расчищают под руины.
+       Это предотвращает случайное исчезновение части деревни. */
+    var _towerClear=Math.abs(hx-9)<4&&Math.abs(hy-10)<4;
+    var _fortressX=Math.floor(MAP_W*0.65),_fortressY=Math.floor(MAP_H*0.60);
+    var _fortressClear=hx>=_fortressX-2&&hx<_fortressX+17&&hy>=_fortressY-2&&hy<_fortressY+9;
+    if(_towerClear||_fortressClear)ok=false;
     if(ok)houseSpots.push({x:hx,y:hy});
   }
   decor=[];
@@ -5963,12 +6167,52 @@ for(var ti=0;ti<260;ti++){var tx=randi(4,MAP_W-5),ty=randi(4,MAP_H-5);if(map[ty]
     if(nearHouse)continue;if(Math.abs(tx-centerX)<3&&Math.abs(ty-centerY)<3)continue;
     if(tx>lakeX-2&&tx<lakeX+lakeW+2&&ty>lakeY-2&&ty<lakeY+lakeH+2)continue;
     var dt='tree',roll=gameRNG();
-    if(roll<0.35)dt='tree2';else if(roll<0.55)dt='bush';else if(roll<0.75)dt='rock';else if(roll<0.85)dt='log';else if(roll<0.95)dt='mushroom';else dt='grass';
+    if(roll<0.35)dt='tree2';else if(roll<0.55)dt='bush';else if(roll<0.75)dt='rock';else if(roll<0.85)dt='log';else if(roll<0.98)dt='mushroom';else dt='grass';
     decor.push({x:tx,y:ty,type:dt,seed:gameRNG(),s:0.85+gameRNG()*0.3});}
   /* v5.7.3 — больше листвы */
 for(var li=0;li<90;li++){var lx2=randi(4,MAP_W-5),ly2=randi(4,MAP_H-5);if(map[ly2][lx2]===0)decor.push({x:lx2,y:ly2,type:'leafpile',seed:gameRNG(),s:1.0});}
+  /* v8.6.8 — дополнительная кайма леса по окраинам деревни, центр и дорожки не забиваем. */
+  for(var _vf=0;_vf<46;_vf++){
+    var _vx=randi(3,MAP_W-4),_vy=randi(3,MAP_H-4);
+    if(!map[_vy]||map[_vy][_vx]!==0)continue;
+    var _edge=Math.min(_vx,_vy,MAP_W-1-_vx,MAP_H-1-_vy);
+    if(_edge>5 && gameRNG()<0.72)continue;
+    if(Math.abs(_vx-MAP_W/2)<4&&Math.abs(_vy-MAP_H/2)<4)continue;
+    var _nearHouse=false;
+    for(var _vh=0;_vh<houseSpots.length;_vh++){if(Math.abs(_vx-houseSpots[_vh].x)<3&&Math.abs(_vy-houseSpots[_vh].y)<3){_nearHouse=true;break;}}
+    if(_nearHouse)continue;
+    var _vt=gameRNG()<0.58?'tree':(gameRNG()<0.68?'tree2':'bush');
+    decor.push({x:_vx,y:_vy,type:_vt,seed:gameRNG(),s:0.92+gameRNG()*0.28});
+  }
   /* v7.0 — доп. декор деревни */
   _spawnNewDecor(80, true);
+
+  /* v9.0.3 — заметные грибы и светящиеся грибочки в деревенских зелёных зонах.
+     Не размещаем рядом с домами, большими деревьями и уже занятыми клетками. */
+  var _villageMushroomsPlaced=0;
+  for(var _vmTry=0;_vmTry<900&&_villageMushroomsPlaced<25;_vmTry++){
+    var _vmX=randi(4,MAP_W-5),_vmY=randi(4,MAP_H-5);
+    if(!map[_vmY]||map[_vmY][_vmX]!==0)continue;
+    if(Math.abs(_vmX-centerX)<4&&Math.abs(_vmY-centerY)<4)continue;
+    if(_vmX>lakeX-2&&_vmX<lakeX+lakeW+2&&_vmY>lakeY-2&&_vmY<lakeY+lakeH+2)continue;
+    var _vmBlocked=false;
+    for(var _vmh=0;_vmh<houseSpots.length;_vmh++){
+      if(Math.abs(_vmX-houseSpots[_vmh].x)<5&&Math.abs(_vmY-houseSpots[_vmh].y)<5){_vmBlocked=true;break;}
+    }
+    if(_vmBlocked)continue;
+    for(var _vmd=0;_vmd<decor.length;_vmd++){
+      var _vmo=decor[_vmd];
+      if(_vmo.x===_vmX&&_vmo.y===_vmY){_vmBlocked=true;break;}
+      if(Math.abs(_vmo.x-_vmX)<=1&&Math.abs(_vmo.y-_vmY)<=1&&
+         (_vmo.type==='tree'||_vmo.type==='tree2'||_vmo.type==='treeGreen'||_vmo.type==='pine'||_vmo.type==='dead_tree')){
+        _vmBlocked=true;break;
+      }
+    }
+    if(_vmBlocked)continue;
+    decor.push({x:_vmX,y:_vmY,type:gameRNG()<0.32?'glow_mushroom':'mushroom',s:1.02+gameRNG()*0.16,seed:gameRNG()});
+    _villageMushroomsPlaced++;
+  }
+
   for(var bi=0;bi<houseSpots.length;bi++){var bh=houseSpots[bi];if(gameRNG()<0.7)decor.push({x:bh.x+4,y:bh.y+1,type:'barrel',seed:gameRNG(),s:1.0});}
   for(var rei=0;rei<24;rei++){var rpx=randi(lakeX-2,lakeX+lakeW+1),rpy=randi(lakeY-2,lakeY+lakeH+1);if(rpx>0&&rpy>0&&rpx<MAP_W&&rpy<MAP_H&&map[rpy][rpx]===0)decor.push({x:rpx,y:rpy,type:'reed',seed:gameRNG(),s:1.0});}
   for(var lli=0;lli<6;lli++){var lpx=randi(lakeX,lakeX+lakeW-1),lpy=randi(lakeY,lakeY+lakeH-1);if(lpx>0&&lpy>0&&lpx<MAP_W&&lpy<MAP_H&&map[lpy][lpx]===3)decor.push({x:lpx,y:lpy,type:'lily',seed:gameRNG(),s:1.0});}
@@ -6018,9 +6262,28 @@ for(var li=0;li<90;li++){var lx2=randi(4,MAP_W-5),ly2=randi(4,MAP_H-5);if(map[ly
   for(var _fi=0;_fi<6;_fi++){
     var _fx=_ruinX+2+randi(0,10);
     var _fy=_ruinY+2+randi(0,4);
+    /* v9.0.7: обломки не должны создавать невидимую/непроходимую зону
+       возле скелета Каэлара и сундука. Их позиции рассчитываются заранее. */
+    var _safeSkelX=_ruinX+6, _safeSkelY=_ruinY+3;
+    var _safeChestX=_safeSkelX+3, _safeChestY=_safeSkelY;
+    if(Math.abs(_fx-_safeSkelX)<=1&&Math.abs(_fy-_safeSkelY)<=1)continue;
+    if(Math.abs(_fx-_safeChestX)<=1&&Math.abs(_fy-_safeChestY)<=1)continue;
     if(map[_fy] && map[_fy][_fx]===0){
       decor.push({x:_fx,y:_fy,type:'rock',seed:gameRNG(),s:0.7+gameRNG()*0.3});
     }
+  }
+
+  /* v9.0.7 — страховочная расчистка коллизий вокруг главной сцены.
+     Ранее случайный декор мог попасть вплотную к скелету/сундуку и блокировать
+     подход, хотя визуально это выглядело как пустая клетка. */
+  var _clearSkelX=_ruinX+6, _clearSkelY=_ruinY+3;
+  var _clearChestX=_clearSkelX+3, _clearChestY=_clearSkelY;
+  for(var _cl=decor.length-1;_cl>=0;_cl--){
+    var _cd=decor[_cl];
+    if(!_cd)continue;
+    var _isNearSkel=Math.abs(_cd.x-_clearSkelX)<=1&&Math.abs(_cd.y-_clearSkelY)<=1;
+    var _isNearChest=Math.abs(_cd.x-_clearChestX)<=1&&Math.abs(_cd.y-_clearChestY)<=1;
+    if((_isNearSkel||_isNearChest)&&(_cd.type==='rock'||_cd.type==='boulder'||_cd.type==='log'||_cd.type==='tree'||_cd.type==='tree2'||_cd.type==='treeGreen'||_cd.type==='pine'||_cd.type==='stump'))decor.splice(_cl,1);
   }
 
   /* Шаг 3 — скелет внутри двора.
@@ -6050,15 +6313,6 @@ for(var li=0;li<90;li++){var lx2=randi(4,MAP_W-5),ly2=randi(4,MAP_H-5);if(map[ly
       secret:false
     });
   }
-  /* v7.3.1 — числа вынесены в BALANCE.player. */
-  var _bp = BALANCE.player;
-  var startHp=_bp.baseHp+(hasUpgrade('hpBoost')?_bp.hpBoostUpgrade:0);
-  var startSpeed=_bp.baseSpeed*(hasUpgrade('speedBoost')?_bp.speedBoostMul:1.0);
-  if(!player){
-    player={x:centerX*TILE,y:centerY*TILE,r:12,speed:startSpeed,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
-    weaponLevel=1;armorLevel=1;
-  }
-  else{player.x=centerX*TILE;player.y=centerY*TILE;}
   /* v4.9.36 — торговец ищет свободную клетку */
   var _tpV=findFreeTileForNPC(null,centerX+2,centerY-1);
   trader={x:_tpV.tx*TILE,y:_tpV.ty*TILE,stock:generateTraderStock(true)};
@@ -6160,10 +6414,47 @@ var _phr=[NPC_PHRASES_MOURN,_pool,NPC_PHRASES_GUIDE][ni%3];npcs.push({x:spot.x,y
   stairs=null;
   _spawnNewDecor(60);
   _trySpawnEpic();
+  /* v8.6.2 — Башня в тихом углу деревни. */
+  _spawnTowerRuin();
+
+  /* v9.0.4 — ФИКС: игрок создаётся ПОСЛЕ всего декора,
+     чтобы гарантированно не оказаться внутри препятствия. */
+  var _bp2 = BALANCE.player;
+  var _startHp2=_bp2.baseHp+(hasUpgrade('hpBoost')?_bp2.hpBoostUpgrade:0);
+  var _startSpeed2=_bp2.baseSpeed*(hasUpgrade('speedBoost')?_bp2.speedBoostMul:1.0);
+  if(!player){
+    player={x:centerX*TILE,y:centerY*TILE,r:12,speed:_startSpeed2,hp:_startHp2,maxHp:_startHp2,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
+    weaponLevel=1;armorLevel=1;
+  }
+  else{player.x=centerX*TILE;player.y=centerY*TILE;}
+  if(collideCircle(player.x,player.y,player.r) || _decorCollides(player.x,player.y,player.r)){
+    for(var _sfty=1;_sfty<=8 && (collideCircle(player.x,player.y,player.r)||_decorCollides(player.x,player.y,player.r));_sfty++){
+      player.x=centerX*TILE + _sfty*TILE;
+      if(!collideCircle(player.x,player.y,player.r) && !_decorCollides(player.x,player.y,player.r))break;
+      player.y=centerY*TILE + _sfty*TILE;
+    }
+  }
 }
+
+/* v8.6.2 — фиксированная декоративная башня в верхнем левом углу деревни.
+   Не меняет сохранения, баланс или игровые переходы. */
+function _spawnTowerRuin(){
+  if(!map||!MAP_W||!MAP_H||currentLocation&&currentLocation!=='village') return;
+  var tx=9, ty=10; // глубже от каменной кромки, чтобы пограничные камни не перекрывали руины
+  /* Расчистка небольшой площадки, не трогая воду и граничные стены. */
+  for(var y=ty-3;y<=ty+3;y++)for(var x=tx-3;x<=tx+3;x++){
+    if(x<2||y<2||x>=MAP_W-2||y>=MAP_H-2)continue;
+    if(map[y]&&map[y][x]!==3)map[y][x]=0;
+  }
+  for(var i=decor.length-1;i>=0;i--){var d=decor[i];if(Math.abs(d.x-tx)<4&&Math.abs(d.y-ty)<4)decor.splice(i,1);}
+  decor.push({x:tx,y:ty,type:'towerRuin',s:1,seed:gameRNG(),isTowerRuin:true});
+  for(var j=0;j<8;j++){var a=gameRNG()*Math.PI*2,dist=3+gameRNG()*1.5,lx=Math.round(tx+Math.cos(a)*dist),ly=Math.round(ty+Math.sin(a)*dist);if(lx>2&&ly>2&&lx<MAP_W-2&&ly<MAP_H-2&&map[ly]&&map[ly][lx]===0)decor.push({x:lx,y:ly,type:'leafpile',s:1,seed:gameRNG()});}
+}
+
+
 /* v7.0 — Спавн дополнительного декора по биомам */
 var _NEW_DECOR_BY_BIOME={
-'Осенний Эльфийский Лес':['fallenTree','fallenTree','berryBush','berryBush','trailDirt','trailDirt'],
+'Осенний Эльфийский Лес':['fallenTree','fallenTree','berryBush','berryBush','trailDirt','trailDirt','stump','stump','mushroom','mushroom'],
 'Каменистые Тропы':['trailDirt','trailDirt','statueBroken','brokenBottle'],
 'Тёмные Катакомбы':['deadCandle','deadCandle','bookOpen','brokenBottle','statueBroken','statueBroken','rottingRemains'],
 'Ржавые Залы':['brokenBottle','brokenBottle','bookOpen','deadCandle','statueBroken'],
@@ -6175,7 +6466,7 @@ var _NEW_DECOR_BY_BIOME={
 'Гигантские Грибы':['mushBlue','mushRed','mushRed','glowMold','slimePuddle'],
 'Ледяные Пещеры':['icicle','iceCrack','frozenCorpse','icicle','auroraSpot'],
 'Замок Тириона':['deadCandle','deadCandle','bookOpen','statueBroken','rottingRemains'],
-'Деревня Эльфов':['berryBush','trailDirt','fallenTree']
+'Деревня Эльфов':['berryBush','trailDirt','fallenTree','mushroom','mushroom','glow_mushroom']
 };
 
 function _spawnNewDecor(count, skipCenter){
@@ -6187,8 +6478,11 @@ for(var i=0;i<count;i++){
 var tx=randi(4,MAP_W-5),ty=randi(4,MAP_H-5);
 if(!map[ty]||map[ty][tx]!==0)continue;
 if(skipCenter&&Math.abs(tx-_cx)<3&&Math.abs(ty-_cy)<3)continue;
-/* v8.5.7 — ФИКС: декор не ставится на лестницу/NPC/сундуки/торговца. */
+/* v9.0.4 — ФИКС: не ставим декор на игрока, лестницу, NPC, сундуки,
+   торговца, наёмника, входы в пещеру/лес/замок. */
 if(typeof _isBlockedByEntity==='function' && _isBlockedByEntity(tx,ty))continue;
+/* v9.0.4 — не ставим декор прямо на игрока. */
+if(player && Math.floor(player.x/TILE)===tx && Math.floor(player.y/TILE)===ty)continue;
 var _blocked=false;
 for(var d=0;d<decor.length;d++){if(decor[d].x===tx&&decor[d].y===ty){_blocked=true;break;}}
 if(_blocked)continue;
@@ -6198,16 +6492,16 @@ decor.push({x:tx,y:ty,type:_pool[Math.floor(gameRNG()*_pool.length)],seed:gameRN
 
 /* v7.0 — Эпический декор (редкий, 1 на несколько этажей) */
 var EPIC_BY_BIOME={
-'Осенний Эльфийский Лес':['glowTree','bloomMeadow'],
+'Осенний Эльфийский Лес':['glowTree','bloomMeadow','dungeonSacredTree'],
 'Каменистые Тропы':['brokenAltar'],
 'Тёмные Катакомбы':['skeletonThrone','bloodFountain'],
 'Ржавые Залы':['brokenAltar','skeletonThrone'],
 'Лавовые Пещеры':['bloodFountain'],
 'Ледяные Залы':['frozenFall'],
 'Затопленные Залы':['brokenAltar'],
-'Грибные Пещеры':['glowTree'],
+'Грибные Пещеры':['glowTree','dungeonSacredTree'],
 'Пещера Паутины':['skeletonThrone'],
-'Гигантские Грибы':['glowTree','bloomMeadow'],
+'Гигантские Грибы':['glowTree','bloomMeadow','dungeonSacredTree'],
 'Ледяные Пещеры':['frozenFall'],
 'Замок Тириона':['skeletonThrone','brokenAltar']
 };
@@ -6242,7 +6536,8 @@ _found=true;break;
 }
 if(!_found)return;
 decor.push({
-x:_tx,y:_ty,type:_type,s:1.2,seed:gameRNG(),isEpic:true
+x:_tx,y:_ty,type:_type,s:_type==='dungeonSacredTree'?1.48:1.2,seed:gameRNG(),isEpic:true,
+isDungeonSacredTree:_type==='dungeonSacredTree'
 });
 }
 
@@ -6257,6 +6552,13 @@ function _spawnRoomDecor(){
       var tx=randi(room.x+1,room.x+room.w-2),ty=randi(room.y+1,room.y+room.h-2);
       if(map[ty][tx]!==0)continue;
       if(Math.abs(tx-room.cx)<2&&Math.abs(ty-room.cy)<2)continue;
+      /* v8.6.13-AUDIT: room decor must not overwrite an existing scene/epic prop.
+         _trySpawnEpic() runs before room decor; keep its tile reserved. */
+      var _occupied=false;
+      for(var _di2=0;_di2<decor.length;_di2++){
+        if(decor[_di2].x===tx&&decor[_di2].y===ty){_occupied=true;break;}
+      }
+      if(_occupied)continue;
       var types=BIOME_DECOR[biome.name]||['rock','crack','log','grass','torch'];
       decor.push({x:tx,y:ty,type:pick(types),seed:gameRNG(),s:0.85+gameRNG()*0.3});
     }
@@ -6431,6 +6733,8 @@ function _spawnElderDoor(stRoom,finalFloor){
   if(!finalFloor)return;
   if(!player || !player._runLore)return;
   if(!player._runLore['elder25'])return;
+  /* v8.6.1 — защита от дубля щели на одной клетке. */
+  if(_elderDoors.length > 0) return;
   var _doorX=0,_doorY=0,_found=false;
   for(var _try=0;_try<40;_try++){
     var _side=randi(0,3);var _dx,_dy;
@@ -6739,7 +7043,13 @@ function _spawnVignettes(){
   }}
 }
 function _showVignette(item){
-  if(!item||!item._data)return;for(var i=0;i<groundItems.length;i++)if(groundItems[i]===item){groundItems.splice(i,1);break;}
+  if(!item)return;
+  /* v8.6.1 — если _data битый, всё равно убираем предмет с пола. */
+  if(!item._data || !item._data.id){
+    for(var _vi=0;_vi<groundItems.length;_vi++){if(groundItems[_vi]===item){groundItems.splice(_vi,1);break;}}
+    return;
+  }
+  for(var i=0;i<groundItems.length;i++)if(groundItems[i]===item){groundItems.splice(i,1);break;}
   if(!stats.vignettesSeen)stats.vignettesSeen=[];if(stats.vignettesSeen.indexOf(item._data.id)<0){stats.vignettesSeen.push(item._data.id);saveStats();}
   SfxPlay('pickup');showModal('<h2>'+item._data.icon+' '+item._data.name+'</h2><div class="lore-text">'+item._data.text+'</div><button class="btn gold" onclick="closeModal()">Оставить здесь</button>');
 }
@@ -6939,7 +7249,14 @@ function finishElderFinal(){
   closeModalAll();
   if(player)player._elderFinalLock=false;
   var _ov=document.getElementById('deathOverlay');
-  if(_ov){_ov.style.opacity='0';_ov.style.transition='opacity 1s';setTimeout(function(){_ov.style.display='none';},1000);}
+  if(_ov){
+    _ov.style.opacity='0';
+    _ov.style.transition='opacity 1s';
+    setTimeout(function(){
+      _ov.style.display='none';
+      _ov.style.background='#3b101a';   /* сброс на дефолт смерти */
+    },1000);
+  }
   meta.bank+=2000;saveMeta();
   endRun('victory');showHub();
 }
@@ -7205,7 +7522,7 @@ function buildForest(){
     else if(roll < 0.55) dt = 'bush';
     else if(roll < 0.70) dt = 'rock';
     else if(roll < 0.85) dt = 'log';
-    else if(roll < 0.95) dt = 'mushroom';
+    else if(roll < 0.98) dt = 'mushroom';
     else dt = 'grass';
 
     decor.push({x: tx, y: ty, type: dt, seed: gameRNG(), s: 0.9 + gameRNG()*0.2});
@@ -7218,6 +7535,28 @@ function buildForest(){
   }
   /* v7.0 — доп. декор леса */
   _spawnNewDecor(100, true);
+
+  /* v9.0.3 — ГРИБЫ НЕ ДОЛЖНЫ ТЕРЯТЬСЯ СРЕДИ КРУПНЫХ ДЕРЕВЬЕВ.
+     Ставим отдельные видимые группы после листвы: только свободные клетки,
+     без наложения на декор и без больших деревьев в соседних клетках. */
+  var _forestMushroomsPlaced=0, _forestMushroomsTarget=40;
+  for(var _fmTry=0;_fmTry<1200&&_forestMushroomsPlaced<_forestMushroomsTarget;_fmTry++){
+    var _fmX=randi(4,MAP_W-5),_fmY=randi(4,MAP_H-5);
+    if(!map[_fmY]||map[_fmY][_fmX]!==0)continue;
+    if(Math.abs(_fmX-_cX)<5&&Math.abs(_fmY-_cY)<5)continue;
+    var _fmBlocked=false;
+    for(var _fmd=0;_fmd<decor.length;_fmd++){
+      var _fmo=decor[_fmd];
+      if(_fmo.x===_fmX&&_fmo.y===_fmY){_fmBlocked=true;break;}
+      if(Math.abs(_fmo.x-_fmX)<=1&&Math.abs(_fmo.y-_fmY)<=1&&
+         (_fmo.type==='tree'||_fmo.type==='tree2'||_fmo.type==='treeGreen'||_fmo.type==='pine'||_fmo.type==='dead_tree')){
+        _fmBlocked=true;break;
+      }
+    }
+    if(_fmBlocked)continue;
+    decor.push({x:_fmX,y:_fmY,type:gameRNG()<0.38?'glow_mushroom':'mushroom',s:1.05+gameRNG()*0.18,seed:gameRNG()});
+    _forestMushroomsPlaced++;
+  }
 
   /* v5.9.0 — Пень в центре леса. Тирион срубил это дерево первым. */
   var _stumpX = _cX + 3;
@@ -7234,28 +7573,6 @@ function buildForest(){
   var _entryX = _cX;
   var _entryY = _cY + 8;   // 8 клеток вниз от центра — на краю поляны
 
-  if(!player){
-    var startHp = BALANCE.player.baseHp;
-    player = {
-      x: _entryX*TILE, y: _entryY*TILE, r: 12, speed: 2.8,
-      hp: startHp, maxHp: startHp, lvl: 1, xp: 0, xpToNext: 23,
-      lvlDmgBonus: 0, gold: 0, kills: 0, keys: 0,
-      facing: 0, atkCd: 0, atkAnim: 0, invuln: 0, bounceY: 0,
-      weapon: 'sword', armor: null, potions: 0,
-      potionTypes: {30:0, 70:0, 100:0},
-      scrollSlots: [null, null, null],
-      equippedAccessory: null, consumables: [],
-      critChance: 0, luckBonus: 0, vampireHit: 0,
-      poisonImmune: false, regen: 0, weaponXp: 0, invisUsed: false,
-      potionsUsedOnFloor: false,
-      class: meta.playerClass || 'warrior',
-      subclass: meta.playerSubclass || null,
-      craftInv: {ruby:0, sapphire:0, emerald:0, gold:0, potion:0, scroll:0}
-    };
-  } else {
-    player.x = _entryX*TILE;
-    player.y = _entryY*TILE;
-  }
 
   /* Сброс всего, что относится к локации */
   
@@ -7409,6 +7726,38 @@ decor.push({x: _castleX, y: _castleY + 3, type: 'forestPath', s: 1.0, seed: game
         color: pick([PAL.tLeaf1, PAL.tLeaf2, PAL.tLeaf3, PAL.tLeaf4])
       });
     }
+
+  /* v9.0.4 — ФИКС: игрок создаётся ПОСЛЕ всего декора,
+     чтобы гарантированно не оказаться внутри препятствия. */
+  var _fStartHp = BALANCE.player.baseHp;
+  if(!player){
+    player = {
+      x: _entryX*TILE, y: _entryY*TILE, r: 12, speed: 2.8,
+      hp: _fStartHp, maxHp: _fStartHp, lvl: 1, xp: 0, xpToNext: 23,
+      lvlDmgBonus: 0, gold: 0, kills: 0, keys: 0,
+      facing: 0, atkCd: 0, atkAnim: 0, invuln: 0, bounceY: 0,
+      weapon: 'sword', armor: null, potions: 0,
+      potionTypes: {30:0, 70:0, 100:0},
+      scrollSlots: [null, null, null],
+      equippedAccessory: null, consumables: [],
+      critChance: 0, luckBonus: 0, vampireHit: 0,
+      poisonImmune: false, regen: 0, weaponXp: 0, invisUsed: false,
+      potionsUsedOnFloor: false,
+      class: meta.playerClass || 'warrior',
+      subclass: meta.playerSubclass || null,
+      craftInv: {ruby:0, sapphire:0, emerald:0, gold:0, potion:0, scroll:0}
+    };
+  } else {
+    player.x = _entryX*TILE;
+    player.y = _entryY*TILE;
+  }
+  if(collideCircle(player.x,player.y,player.r) || _decorCollides(player.x,player.y,player.r)){
+    for(var _sftyF=1;_sftyF<=8 && (collideCircle(player.x,player.y,player.r)||_decorCollides(player.x,player.y,player.r));_sftyF++){
+      player.x=_entryX*TILE + _sftyF*TILE;
+      if(!collideCircle(player.x,player.y,player.r) && !_decorCollides(player.x,player.y,player.r))break;
+      player.y=_entryY*TILE + _sftyF*TILE;
+    }
+  }
 }
 /* v8.0.0 — Круг друидов */
 function buildDruidCircle(){
@@ -8505,15 +8854,10 @@ function spawnBoss(x,y,type){
   var _hp = _hpBase + (floorNum-1) * _hpPerF;
   if(isNaN(_hp) || _hp < 1) _hp = _hpBase;
 
-  /* Золото: goldMin/goldMax ИЛИ gold. */
-  var _gold;
-  if(typeof _t.gold === 'number'){
-    _gold = _t.gold;
-  } else {
-    var _gmin = (typeof _t.goldMin === 'number') ? _t.goldMin : 100;
-    var _gmax = (typeof _t.goldMax === 'number') ? _t.goldMax : 200;
-    _gold = randi(_gmin, _gmax);
-  }
+  /* Золото: goldMin/goldMax (все боссы используют этот формат). */
+  var _gmin = (typeof _t.goldMin === 'number') ? _t.goldMin : 100;
+  var _gmax = (typeof _t.goldMax === 'number') ? _t.goldMax : 200;
+  var _gold = randi(_gmin, _gmax);
 
   /* Базовый объект. */
   var _e = {
@@ -9093,18 +9437,19 @@ function hasLineOfSight(x1,y1,x2,y2){
 function solidAt(px,py){var tx=Math.floor(px/TILE),ty=Math.floor(py/TILE);if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H)return true;if(!map[ty])return true;var t=map[ty][tx];return t===1||t===2||t===3||t===6;}
 /* v5.9.0 — Твёрдый декор: деревья, камни, брёвна, дома, ворота */
 var _SOLID_DECOR = {
-  tree: 1, tree2: 1, treeGreen: 1, rock: 1, log: 1, boulder: 1, druidStone: 1,
+  tree: 1, tree2: 1, treeGreen: 1, pine: 1, rock: 1, log: 1, boulder: 1, druidStone: 1,
   dead_tree: 1, house: 1, well: 1, forestGate: 1,
   giantMush: 1, frozen_pillar: 1, glacier: 1,
   /* v6.0.1 — Твёрдый декор замка и леса */
   throne: 1, pillar: 1, bookshelf: 1,
-  stump: 1,                    /* пень в лесу — теперь твёрдый */
-  alchemyTable: 1,             /* стол алхимика */
-  cauldron: 1,                 /* котёл */
-  telescope: 1,                /* телескоп */
-  bed: 1,                      /* кровать (в комнате матери и спальне) */
-  emptyChest: 1                /* пустой сундук */
+  stump: 1,
+  alchemyTable: 1,
+  cauldron: 1,
+  telescope: 1,
+  bed: 1,
+  emptyChest: 1
   /* carpet — НЕ твёрдый, по нему ходим */
+  /* v9.0.4 — fallenTree/berryBush/trailDirt/towerRuin НЕ твёрдые */
 };
 
 /* Проверка: пересекается ли круг (x, y, r) с твёрдым декором */
@@ -9112,6 +9457,13 @@ function _decorCollides(x, y, r){
   for(var i = 0; i < decor.length; i++){
     var d = decor[i];
     if(!_SOLID_DECOR[d.type]) continue;
+    /* v9.0.4 — в деревне и лесу все деревья/пни/кусты декоративные:
+       сквозь них можно ходить, как в подземелье.
+       Твёрдыми остаются только дома, колодцы, ворота, камни-руины и т.п. */
+    if((currentLocation==='forest'||currentLocation==='village'||currentLocation==='grove') &&
+       (d.type==='tree'||d.type==='tree2'||d.type==='treeGreen'||d.type==='pine'||
+        d.type==='dead_tree'||d.type==='stump'||d.type==='fallenTree'||
+        d.type==='berryBush'||d.type==='trailDirt')) continue;
     var cx = d.x * TILE + TILE/2;
     var cy = d.y * TILE + TILE/2;
     var dx = x - cx, dy = y - cy;
@@ -9559,7 +9911,13 @@ function showHub(){
   /* Не переносим табло смерти из прошлого забега поверх следующего. */
   if(_deathStatsTimer){clearTimeout(_deathStatsTimer);_deathStatsTimer=null;}
   var _oldGameOver=document.getElementById('gameover');if(_oldGameOver)_oldGameOver.classList.remove('show');
-  var _oldDeathOverlay=document.getElementById('deathOverlay');if(_oldDeathOverlay){_oldDeathOverlay.style.display='none';_oldDeathOverlay.style.opacity='0';}
+  var _oldDeathOverlay=document.getElementById('deathOverlay');
+  if(_oldDeathOverlay){
+    _oldDeathOverlay.style.display='none';
+    _oldDeathOverlay.style.opacity='0';
+    _oldDeathOverlay.style.background='#3b101a';
+    _oldDeathOverlay.style.transition='opacity 1.5s ease-in';
+  }
   toasts.length=0;
   /* v7.9.10 — проверяем ачивки при входе в хаб после очистки старых тостов */
   if(typeof checkAchievements==='function')checkAchievements();
@@ -9578,6 +9936,7 @@ function showHub(){
   el=document.getElementById('comboLabel');if(el)el.style.display='none';
   el=document.getElementById('deathOverlay');if(el){el.style.display='none';el.style.opacity='0';}
   el=document.getElementById('curseLabel');if(el)el.classList.remove('show');
+  el=document.getElementById('statusIcons');if(el)el.textContent='';
   stopMusic();updateHubBank();updatePrestigeDisplay();
   var modeBtns=document.querySelectorAll('#hub .modeBtn[data-mode], #hub .mode-card[data-mode]');
   for(var i=0;i<modeBtns.length;i++){
@@ -9721,7 +10080,7 @@ function goToHub(){
 function _collectRunData(){
   if(!player) return null;
   return {
-    version: '8.6.1',
+    version: '8.6.17',
     savedAt: Date.now(),
     player: {
       x: player.x, y: player.y,
@@ -9754,7 +10113,8 @@ function _collectRunData(){
       /* v8.5.7 — ФИКС: дневник и сюжетные реакции не повторяются после continueRun. */
       _diaryShown: player._diaryShown || {},
       _druidLoreShown: !!player._druidLoreShown,
-      _priestessElderShown: !!player._priestessElderShown
+      _priestessElderShown: !!player._priestessElderShown,
+      _tirionEchoSeen: !!player._tirionEchoSeen
     },
     world: {
       floorNum: floorNum,
@@ -9908,6 +10268,64 @@ function _transferCraftInvToMeta(){
   saveMeta();
 }
 
+/* v9.0.2 PERF — предпрогрев кеша спрайтов.
+   Используется только существующий арт v8.6.23; палитры и спрайты не меняются. */
+function _prewarmSpriteCache(){
+  if(typeof drawSprite!=='function'||_spriteCacheReady)return;
+  _spriteCacheReady=true;
+  var _combos=[
+    [SPR_ELF,PAL_ELF,SPRITE_SCALE,false],[SPR_ELF,PAL_ELF,SPRITE_SCALE,true],
+    [SPR_ELF_ATK,PAL_ELF,SPRITE_SCALE,false],[SPR_ELF_ATK_BIG,PAL_ELF,SPRITE_SCALE,false],
+    [SPR_GOBLIN,PAL_GOBLIN,SPRITE_SCALE,false],[SPR_GOBLIN,PAL_GOBLIN,SPRITE_SCALE,true],
+    [SPR_GOB_ARCHER,PAL_GOB_ARCHER,SPRITE_SCALE,false],[SPR_ORC,PAL_ORC,SPRITE_SCALE,false],
+    [SPR_ORC,PAL_ORC,SPRITE_SCALE,true],[SPR_ORC_ARCHER,PAL_ORC_ARCHER,SPRITE_SCALE,false],
+    [SPR_SHAMAN,PAL_SHAMAN,SPRITE_SCALE,false],[SPR_WOLF,PAL_WOLF,SPRITE_SCALE,false],
+    [SPR_WOLF,PAL_AUTUMN_WOLF,SPRITE_SCALE,false],[SPR_SKELETON,PAL_SKELETON,SPRITE_SCALE,false],
+    [SPR_SKELETON,PAL_SKELETON,SPRITE_SCALE,true],[SPR_GHOST,PAL_GHOST,SPRITE_SCALE,false],
+    [SPR_SPIDER,PAL_SPIDER,SPRITE_SCALE,false],[SPR_LEAF_SPIRIT,PAL_LEAF_SPIRIT,SPRITE_SCALE,false],
+    [SPR_GHOST_KNIGHT,PAL_GHOST_KNIGHT,SPRITE_SCALE,false],[SPR_SHADOW,PAL_SHADOW,SPRITE_SCALE,false],
+    [SPR_GOLEM,PAL_GOLEM,SPRITE_SCALE+1,false],[SPR_SCORPION,PAL_SCORPION,SPRITE_SCALE,false],
+    [SPR_IMP,PAL_IMP,SPRITE_SCALE,false],[SPR_SWORDFISH,PAL_SWORDFISH,SPRITE_SCALE,false],
+    [SPR_MUSHMAN,PAL_MUSHMAN,SPRITE_SCALE,false],[SPR_SKEL_ELF,PAL_SKEL_ELF,SPRITE_SCALE,false],
+    [SPR_BOSS,PAL_BOSS,SPRITE_SCALE+1,false],[SPR_MAGE,PAL_MAGE,SPRITE_SCALE+1,false],
+    [SPR_DRAGON,PAL_DRAGON,SPRITE_SCALE+1,false],[SPR_BONELORD,PAL_BONELORD,SPRITE_SCALE+1,false],
+    [SPR_QSPIDER,PAL_QSPIDER,SPRITE_SCALE+1,false],
+    [SPR_ARROW,PAL_ARROW,2,false],[SPR_ARROW_HUNTER,PAL_ARROW_HUNTER,2,false],
+    [SPR_FIREBALL,PAL_FIREBALL,3,false],[SPR_ICEBALL,PAL_ICEBALL,3,false],
+    [SPR_SHADOWBALL,PAL_SHADOWBALL,3,false],[SPR_HOLYBALL,PAL_HOLYBALL,3,false],
+    [SPR_MAGEBALL,PAL_MAGEBALL,2,false],[SPR_COIN,PAL_COIN,2,false],[SPR_POTION,PAL_POTION,2,false],
+    [SPR_SCROLL,PAL_SCROLL,2,false],[SPR_CHEST,PAL_CHEST,SPRITE_SCALE,false],
+    [SPR_CHEST_OPEN,PAL_CHEST_OPEN,SPRITE_SCALE,false],[SPR_KEY,PAL_KEY,2,false],
+    [SPR_DOOR,PAL_DOOR,SPRITE_SCALE,false],[SPR_STAIRS,PAL_STAIRS,SPRITE_SCALE,false],
+    [SPR_CAVE,PAL_CAVE,SPRITE_SCALE+1,false],[SPR_NPC,PAL_NPC,SPRITE_SCALE,false],
+    [SPR_NPC,PAL_NPC2,SPRITE_SCALE,false],[SPR_TRADER,PAL_TRADER,SPRITE_SCALE,false],
+    [SPR_MERC,PAL_MERC,SPRITE_SCALE,false],[SPR_MUSH,PAL_MUSH,SPRITE_SCALE,false],
+    [SPR_BUSH,PAL_BUSH,SPRITE_SCALE,false],[SPR_ROCK,PAL_ROCK,SPRITE_SCALE,false],
+    [SPR_LOG,PAL_LOG,SPRITE_SCALE,false],[SPR_TORCH,PAL_TORCH,SPRITE_SCALE,false],
+    [SPR_ALTAR,PAL_ALTAR,SPRITE_SCALE,false],[SPR_LORE,PAL_LORE,SPRITE_SCALE,false],
+    [SPR_ELDER_LETTER,PAL_ELDER_LETTER,SPRITE_SCALE,false],[SPR_BOOK_PAGE,PAL_BOOK_PAGE,3,false],
+    [SPR_LILY,PAL_LILY,SPRITE_SCALE,false],[SPR_REED,PAL_REED,SPRITE_SCALE,false],
+    [SPR_BARREL,PAL_BARREL,SPRITE_SCALE,false],[SPR_WEB,PAL_WEB,SPRITE_SCALE,false],
+    [SPR_SPIKE,PAL_SPIKE,2.5,false],[SPR_DEAD_CANDLE,PAL_DEAD_CANDLE,SPRITE_SCALE,false],
+    [SPR_BOOK_OPEN,PAL_BOOK_OPEN,SPRITE_SCALE,false],[SPR_STATUE_BROKEN,PAL_STATUE_BROKEN,SPRITE_SCALE,false],
+    [SPR_LAVA_CRACK,PAL_LAVA_CRACK,SPRITE_SCALE,false],[SPR_OBSIDIAN_SHARD,PAL_OBSIDIAN_SHARD,SPRITE_SCALE,false],
+    [SPR_BURNT_SKELETON,PAL_BURNT_SKELETON,SPRITE_SCALE,false],[SPR_ICICLE,PAL_ICICLE,SPRITE_SCALE,false],
+    [SPR_FROZEN_CORPSE,PAL_FROZEN_CORPSE,SPRITE_SCALE,false],[SPR_ICE_CRACK,PAL_ICE_CRACK,SPRITE_SCALE,false],
+    [SPR_SUNKEN_LOG,PAL_SUNKEN_LOG,SPRITE_SCALE,false],[SPR_BROKEN_BOAT,PAL_BROKEN_BOAT,SPRITE_SCALE,false],
+    [SPR_ALGAE,PAL_ALGAE,SPRITE_SCALE,false],[SPR_MUSH_BLUE,PAL_MUSH_BLUE,SPRITE_SCALE,false],
+    [SPR_MUSH_RED,PAL_MUSH_RED,SPRITE_SCALE,false],[SPR_GLOW_MOLD,PAL_GLOW_MOLD,SPRITE_SCALE,false],
+    [SPR_GIANT_MUSH,PAL_GIANT_MUSH,SPRITE_SCALE,false],
+    [SPR_SKELETON_THRONE,PAL_SKELETON_THRONE,SPRITE_SCALE,false],
+    [SPR_BROKEN_ALTAR,PAL_BROKEN_ALTAR,SPRITE_SCALE,false],
+    [SPR_FROZEN_FALL,PAL_FROZEN_FALL,SPRITE_SCALE,false],
+    [SPR_BLOOD_FOUNTAIN,PAL_BLOOD_FOUNTAIN,SPRITE_SCALE,false]
+  ];
+  for(var i=0;i<_combos.length;i++){
+    try{var c=_combos[i];if(c[0]&&c[1])drawSprite(c[0],c[1],-9999,-9999,c[2],c[3]);}catch(e){}
+  }
+  try{if(typeof _log==='function')_log('[DungeonElf] Sprite cache prewarmed:',_spriteCacheCount);}catch(e){}
+}
+
 function startRun(mode){
   /* v4.9.70 — убран guardAction: он блокировал рестарт после смерти */
   /* FIX v4.9.17 — жёстко сбрасываем состояние перед стартом */
@@ -9984,6 +10402,7 @@ function startRun(mode){
   
   currentLocation='village';
   buildFloor();
+  _prewarmSpriteCache();   /* v9.0.2 PERF */
 
   if(player){
     player._runLore = player._runLore || {};
@@ -14063,38 +14482,105 @@ function updateCamera(){
 /* =====================================================================
    [SECTION 17] РЕНДЕР
    ===================================================================== */
-function drawWallTile(sx,sy){if(wallCanvas)ctx.drawImage(wallCanvas,sx,sy);}
+/* v9.0.17 — органичный ремастер стен. Только отрисовка: координаты карты и коллизии не меняются. */
+function drawWallTile(sx,sy,tx,ty,wt){
+  var name=(biome&&biome.name)||'';
+  var p={base:'#33291f',mid:'#514234',light:'#75604a',dark:'#211a14',accent:'#5e6540',seam:'#18140f'};
+  if(name.indexOf('Осенний')>=0||name.indexOf('Деревня')>=0||currentLocation==='forest')p={base:'#3b3025',mid:'#594638',light:'#806247',dark:'#211a15',accent:'#6d663e',seam:'#1b1510'};
+  else if(name.indexOf('Каменист')>=0)p={base:'#393632',mid:'#555149',light:'#777366',dark:'#201f1d',accent:'#69704c',seam:'#171715'};
+  else if(name.indexOf('Катакомб')>=0||currentLocation==='castle')p={base:'#292522',mid:'#403a33',light:'#5d5549',dark:'#171513',accent:'#51463b',seam:'#100f0e'};
+  else if(name.indexOf('Ржав')>=0)p={base:'#3c2a20',mid:'#60402c',light:'#875638',dark:'#1e1511',accent:'#9a542b',seam:'#1a110d'};
+  else if(name.indexOf('Лавов')>=0)p={base:'#301b18',mid:'#51251d',light:'#753326',dark:'#120c0b',accent:'#b74720',seam:'#0d0807'};
+  else if(name.indexOf('Ледян')>=0||name.indexOf('Льда')>=0)p={base:'#293c4a',mid:'#3b5668',light:'#638093',dark:'#14232e',accent:'#8db5c7',seam:'#12202a'};
+  else if(name.indexOf('Затоплен')>=0)p={base:'#263943',mid:'#35505a',light:'#52717a',dark:'#121f25',accent:'#5b8586',seam:'#101b20'};
+  else if(name.indexOf('Грибн')>=0||name.indexOf('Гигантск')>=0)p={base:'#33283b',mid:'#4d3a55',light:'#705675',dark:'#1b1520',accent:'#8c657c',seam:'#17111b'};
+  else if(name.indexOf('Паутин')>=0)p={base:'#302f3a',mid:'#454452',light:'#686879',dark:'#17171f',accent:'#8b8998',seam:'#121219'};
+  else if(currentLocation==='druid')p={base:'#29382c',mid:'#3d5138',light:'#5f7148',dark:'#131d16',accent:'#a18a4e',seam:'#111912'};
+  /* Coordinate hash gives stable variety without touching gameRNG/Math.random. */
+  var h=Math.abs(((tx+17)*73856093)^((ty+31)*19349663)^((floorNum+7)*83492791));
+  function pick(a){h=(h*1664525+1013904223)>>>0;return a[h%a.length];}
+  var x=sx,y=sy,T=TILE;
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle=p.base;ctx.fillRect(x,y,T,T);
+  /* Uneven weathered stone face: broad patches rather than a flat square. */
+  ctx.fillStyle=p.mid;ctx.fillRect(x+1,y+2,T-2,Math.max(5,T*0.42|0));
+  ctx.fillStyle=p.dark;ctx.fillRect(x,y+T-4,T,4);
+  ctx.fillStyle=p.light;ctx.fillRect(x+2,y+2,T-5,2);
+  ctx.fillStyle=p.seam;ctx.fillRect(x,y,T,2);ctx.fillRect(x,y,2,T);
+  /* Irregular chips and mineral bands; positions are tile-stable. */
+  for(var i=0;i<4;i++){
+    var px=x+3+(Math.abs(pick([3,7,11,15,19,23,27,31]))%(T-8));
+    var py=y+4+(Math.abs(pick([2,5,8,12,16,20,24,28]))%(T-9));
+    ctx.fillStyle=i%2?p.dark:p.light;
+    ctx.fillRect(px,py,2+(i%3),1+(i%2));
+  }
+  /* Offset broken joints: never a uniform grid across adjacent tiles. */
+  var jointY=5+(Math.abs((tx*7+ty*11)%13));
+  ctx.fillStyle=p.seam;ctx.fillRect(x+2,y+jointY,T-5,2);
+  var jointX=4+(Math.abs((tx*13+ty*5)%17));
+  ctx.fillRect(x+jointX,y+2,2,Math.max(3,jointY-2));
+  ctx.fillStyle=p.light;ctx.fillRect(x+jointX+2,y+jointY+2,Math.max(2,T-jointX-5),1);
+  /* Biome-specific organic growth / frost / rust / lava veins. */
+  if(name.indexOf('Осенний')>=0||name.indexOf('Деревня')>=0||currentLocation==='forest'){
+    ctx.fillStyle='rgba(118,76,39,0.92)';ctx.fillRect(x+5,y+T-10,4,2);ctx.fillRect(x+7,y+T-12,2,3);
+    ctx.fillStyle='rgba(171,91,39,0.90)';if(h%3!==0)ctx.fillRect(x+T-11,y+7,3,2);
+    ctx.fillStyle='rgba(116,119,63,0.72)';if((tx+ty)%3===0){ctx.fillRect(x+2,y+T-7,5,3);ctx.fillRect(x+5,y+T-9,3,2);}
+  }else if(name.indexOf('Ледян')>=0||name.indexOf('Льда')>=0){
+    ctx.fillStyle='rgba(174,221,239,0.75)';ctx.fillRect(x+5,y+5,2,7);ctx.fillRect(x+7,y+10,5,2);ctx.fillRect(x+T-9,y+T-12,2,6);
+  }else if(name.indexOf('Лавов')>=0){
+    ctx.fillStyle='rgba(16,5,4,0.95)';ctx.fillRect(x+T-12,y+8,3,12);ctx.fillRect(x+T-15,y+17,6,3);
+    ctx.fillStyle='rgba(232,79,24,0.88)';ctx.fillRect(x+T-11,y+10,1,7);ctx.fillRect(x+T-13,y+18,3,1);
+  }else if(name.indexOf('Ржав')>=0){
+    ctx.fillStyle='rgba(164,76,35,0.78)';ctx.fillRect(x+5,y+8,5,3);ctx.fillRect(x+T-13,y+T-11,7,4);
+    ctx.fillStyle='rgba(213,130,61,0.55)';ctx.fillRect(x+6,y+8,2,1);
+  }else if(name.indexOf('Грибн')>=0||name.indexOf('Гигантск')>=0){
+    ctx.fillStyle='rgba(113,77,131,0.7)';ctx.fillRect(x+4,y+T-9,5,3);ctx.fillRect(x+7,y+T-12,3,4);
+    ctx.fillStyle='rgba(181,130,196,0.7)';ctx.fillRect(x+5,y+T-9,2,1);
+  }else if(name.indexOf('Затоплен')>=0){
+    ctx.fillStyle='rgba(105,161,171,0.55)';ctx.fillRect(x+4,y+T-8,7,1);ctx.fillRect(x+7,y+T-6,4,1);
+  }else if(currentLocation==='druid'){
+    ctx.fillStyle='rgba(166,147,77,0.8)';ctx.fillRect(x+T-10,y+5,2,2);ctx.fillRect(x+T-8,y+7,2,2);
+    ctx.fillStyle='rgba(82,133,75,0.75)';ctx.fillRect(x+2,y+T-8,5,3);
+  }
+  /* Fine cracks on selected tiles, using deterministic hash only. */
+  if(h%3!==0){
+    var cx=x+6+(h%Math.max(1,T-14)),cy=y+7+((h>>>4)%Math.max(1,T-17));
+    ctx.strokeStyle='rgba(12,10,9,0.78)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+3,cy+4);ctx.lineTo(cx+1,cy+8);ctx.stroke();
+    ctx.strokeStyle='rgba(190,169,137,0.25)';ctx.beginPath();ctx.moveTo(cx+1,cy);ctx.lineTo(cx+4,cy+4);ctx.stroke();
+  }
+  ctx.restore();
+}
 /* v5.4.17 — простые спрайт-декорации: рисуются одним drawSprite. */
 /* v8.5.8-FIX — объявления спрайтов, используемых DECOR_SPRITES,
    размещены до объекта, который на них ссылается. */
 var SPR_CAMPFIRE=['..KKK...KKK..','.K.........K.','K...........K','K....FFF....K','K...FFFFF...K','K...FHHHF...K','K...FFFFF...K','K....FFF....K','K...........K','.K.........K.','..KKK...KKK..','.............'];
-var PAL_CAMPFIRE={'K':'#5a5048','F':'#ff6020','H':'#ffd060'};
+var PAL_CAMPFIRE={'K':'#51483f','F':'#ff7525','H':'#ffe58a'};
 var SPR_CAMPFIRE_DEAD=['..KKK...KKK..','.K.........K.','K...........K','K...........K','K....CCC....K','K...CCCCC...K','K....CCC....K','K...........K','K...........K','.K.........K.','..KKK...KKK..','.............'];
 var PAL_CAMPFIRE_DEAD={'K':'#5a5048','C':'#2a1a10'};
 var SPR_BACKPACK=['.BBBBBBBB.','BBLLLLLLBB','BLLLLLLLLB','BLLDDDDLLB','BLLDDDDLLB','BLLLLLLLLB','BBLLLLLLBB','.BBBBBBBB.','..BBBBBB..'];
 var PAL_BACKPACK={'B':'#4a2a10','L':'#8a5030','D':'#2a1a08'};
 var SPR_FLOWER=['.P.P.','PPPPP','.PHP.','PPPPP','.P.P.','..S..','..S..'];
-var PAL_FLOWER={'P':'#e060a0','H':'#ffd060','S':'#3a6a30'};
+var PAL_FLOWER={'P':'#ee70b2','H':'#ffe18a','S':'#477a39'};
 var SPR_GRAVESTONE=['...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSCCCSS','.SSSSSSCCCCS','.SSSSSSCCCSS','.SSSSSSSSSS.','.GGSSSSSSGG.','.GGGGGGGGGG.'];
-var PAL_GRAVESTONE={'S':'#7a7068','C':'#3a3028','G':'#3a5a2a'};
+var PAL_GRAVESTONE={'S':'#90999a','C':'#3c3836','G':'#4b7137'};
 var SPR_CART=['..WWWWWWWW..','.WWWWWWWWWW.','WWWWWWWWWWWW','WWDDDDDDDDWW','WWDDDDDDDDWW','WWWWWWWWWWWW','WWWWWWWWWWWW','WWD......DWW','.CC......CC.','.CC......CC.','.CC......CC.','.............'];
 var PAL_CART={'W':'#6a4828','D':'#4a2a10','C':'#3a2410'};
 var SPR_CRATE=['.WWWWWWWW.','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','.WWWWWWWW.'];
 var PAL_CRATE={'W':'#6a4828','D':'#4a2a10'};
 var SPR_BONES=['...BBBB..','..BBBBBB.','..BBBBBB.','.BB.BB.BB','.BB.BB.BB','.B..BB..B','.....BB..'];
-var PAL_BONES={'B':'#d0c8a8'};
+var PAL_BONES={'B':'#e0d3b3'};
 var SPR_BROKEN_SWORD=['..M..','.MMM.','.MMM.','.MMM.','..M..','..W..','..W..','..W..','.WWW.','.....'];
 var PAL_BROKEN_SWORD={'M':'#8a8a90','W':'#5a4020'};
 var SPR_BLOOD_STAIN=['..RRR...','.RRRRRR.','RRRRRRRR','RRRRRRRR','.RRRRRR.','..RRR...'];
-var PAL_BLOOD_STAIN={'R':'#5a1010'};
+var PAL_BLOOD_STAIN={'R':'#711b24'};
 var SPR_RITUAL_CIRCLE=['..CCCCCCCC..','.CC......CC.','C..SSSSSS..C','C.S......S.C','C.S..KK..S.C','C.S.KKKK.S.C','C.S..KK..S.C','C.S......S.C','C..SSSSSS..C','.CC......CC.','..CCCCCCCC..'];
-var PAL_RITUAL_CIRCLE={'C':'#8a2020','S':'#5a1010','K':'#c02020'};
+var PAL_RITUAL_CIRCLE={'C':'#a13a35','S':'#5a1820','K':'#e34a43'};
 var SPR_RITUAL_CANDLE=['..F..','.FFF.','.FHF.','..F..','..W..','..W..','..W..','.WWW.'];
-var PAL_RITUAL_CANDLE={'F':'#ff6020','H':'#ffd060','W':'#e0d0c0'};
+var PAL_RITUAL_CANDLE={'F':'#ff7a2b','H':'#ffe18a','W':'#e5d9c8'};
 var SPR_GRAVE_SMALL=['...SSSS...','..SSSSSS..','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','..GGGGGG..','..GGGGGG..'];
-var PAL_GRAVE_SMALL={'S':'#6a6058','G':'#3a5a2a'};
+var PAL_GRAVE_SMALL={'S':'#879091','G':'#4b7137'};
 var SPR_GRAVE_CROSS=['...SSS....','...SSS....','.SSSSSSS..','.SSSSSSS..','...SSS....','...SSS....','...SSS....','...SSS....','..GGGGGG..'];
-var PAL_GRAVE_CROSS={'S':'#7a7068','G':'#3a5a2a'};
+var PAL_GRAVE_CROSS={'S':'#a0a5a0','G':'#4b7137'};
 var SPR_RAVEN=['..BBB..','.BBBBB.','BBWBBWB','.BBBBB.','..BBB..','..B.B..','..B.B..','.Y...Y.'];
 var PAL_RAVEN={'B':'#1a1a1a','W':'#f0e0c0','Y':'#c8a040'};
 var SPR_SKELETON_SIT=['..HHHH..','.HHHHHH.','.HEEEHH.','.HHHHHH.','..HHHH..','.BBBBBB.','BBBBBBBB','B.BBBB.B','B.B..B.B','..B..B..'];
@@ -14104,25 +14590,25 @@ var PAL_OLD_BACKPACK={'B':'#3a2010','L':'#6a4020','D':'#2a1a08'};
 var SPR_CANTEEN=['.MMM.','M...M','M...M','M...M','.MMM.'];
 var PAL_CANTEEN={'M':'#8a7050'};
 var SPR_SHRINE_ALTAR=['..SSSSSSSS..','.SGGGGGGGGS.','.SGCCCCCCGS.','.SGCCCCCCGS.','.SGGGGGGGGS.','..SSSSSSSS..','...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','SSSSSSSSSSSS'];
-var PAL_SHRINE_ALTAR={'S':'#7a6a58','G':'#c8a040','C':'#a0d0ff'};
+var PAL_SHRINE_ALTAR={'S':'#8a8174','G':'#e0b84e','C':'#a9e2ff'};
 var SPR_SHRINE_STATUE=['..HHHH..','.HHHHHH.','HHSEESHH','HHSSSSHH','.HSSSSH.','..CCCC..','.CCCCCC.','CCCCCCCC','CCCCCCCC','.CC..CC.','.CC..CC.'];
-var PAL_SHRINE_STATUE={'H':'#8a7a62','S':'#c8bb9a','E':'#a0d0ff','C':'#6a5a48'};
+var PAL_SHRINE_STATUE={'H':'#88775e','S':'#d8ccb0','E':'#a9e2ff','C':'#5d5146'};
 var SPR_PRAYER_BOOK=['.PPPP.','PIIIIP','PIWIIP','PIIWIP','PIIIIP','.PPPP.'];
 var PAL_PRAYER_BOOK={'P':'#4a2a10','I':'#f0e0c0','W':'#8a6a30'};
 var SPR_CHALICE=['.GGG.','G...G','G...G','GGGGG','.GGG.','..G..','..G..','.GGG.'];
-var PAL_CHALICE={'G':'#c8a040'};
+var PAL_CHALICE={'G':'#e2bd58'};
 var SPR_CANDLE_TALL=['..F..','.FHF.','.FHF.','..F..','..W..','..W..','..W..','..W..','..W..','..W..','.WWW.'];
-var PAL_CANDLE_TALL={'F':'#ff8020','H':'#ffe080','W':'#e0d0c0'};
+var PAL_CANDLE_TALL={'F':'#ff8a2b','H':'#fff0a0','W':'#e7d8c6'};
 var SPR_SPIDER_WEB_TREE=['W..W..W..W','.W.W.W.W.W','..WWWWWW..','.W.W.W.W.W','W..W..W..W'];
-var PAL_SPIDER_WEB_TREE={'W':'rgba(230,230,240,0.45)'};
+var PAL_SPIDER_WEB_TREE={'W':'rgba(222,234,255,0.62)'};
 var SPR_AURORA_SPOT=['..GG..PP..','.GGGG.PPP.','GGGGGGPPP.','.GGGG.PPP.','..GG..PP..'];
-var PAL_AURORA_SPOT={'G':'rgba(120,255,180,0.35)','P':'rgba(200,140,255,0.35)'};
+var PAL_AURORA_SPOT={'G':'rgba(100,255,184,0.48)','P':'rgba(205,145,255,0.48)'};
 var SPR_FISH_BONES=['...B..B..','.BBB.BBB.','B.BB.B.B.','.B.BB.B..','..BBBBB..','...BBB...','....B....'];
-var PAL_FISH_BONES={'B':'#d0c8a8'};
+var PAL_FISH_BONES={'B':'#d9e0d8'};
 var SPR_SLIME_PUDDLE=['..GGGG..','.GGGGGG.','GGGGGGGG','GGGGGGGG','.GGGGGG.'];
-var PAL_SLIME_PUDDLE={'G':'rgba(140,220,80,0.35)'};
+var PAL_SLIME_PUDDLE={'G':'rgba(153,235,88,0.48)'};
 var SPR_ROTTING_REMAINS=['..BBBB..','.BGGGGB.','BGKGGKGB','BGGGGGGB','.BGGGGB.','..BBBB..'];
-var PAL_ROTTING_REMAINS={'B':'#3a2a1a','G':'#5a6a3a','K':'#1a1a10'};
+var PAL_ROTTING_REMAINS={'B':'#4b3321','G':'#71864a','K':'#191a12'};
 
 var DECOR_SPRITES={
   memoryShrine:{spr:SPR_MEMORY_SHRINE,pal:PAL_MEMORY_SHRINE,yOff:0,scaleOff:1},
@@ -14335,16 +14821,38 @@ if(npcs[ni]&&Math.floor(npcs[ni].x/TILE)===tx&&Math.floor(npcs[ni].y/TILE)===ty)
 }
 if(stairs&&Math.floor(stairs.x/TILE)===tx&&Math.floor(stairs.y/TILE)===ty)return true;
 if(trader&&Math.floor(trader.x/TILE)===tx&&Math.floor(trader.y/TILE)===ty)return true;
+/* v9.0.4 — наёмник тоже занимает клетку. */
+if(typeof merc!=='undefined'&&merc){
+  var _mercList=Array.isArray(merc)?merc:[merc];
+  for(var _mi=0;_mi<_mercList.length;_mi++){
+    var _m=_mercList[_mi];
+    if(_m&&Math.floor(_m.x/TILE)===tx&&Math.floor(_m.y/TILE)===ty)return true;
+  }
+}
 if(caveEntrance){
 var _cex1=Math.floor(caveEntrance.x/TILE)-1,_cey1=Math.floor(caveEntrance.y/TILE)-1;
 var _cex2=Math.floor((caveEntrance.x+caveEntrance.w)/TILE)+1,_cey2=Math.floor((caveEntrance.y+caveEntrance.h)/TILE)+1;
 if(tx>=_cex1&&tx<=_cex2&&ty>=_cey1&&ty<=_cey2)return true;
 }
+/* v9.0.4 — вход в лес и вход в замок тоже не перекрываем. */
+if(typeof forestEntrance!=='undefined'&&forestEntrance){
+var _fex1=Math.floor(forestEntrance.x/TILE)-1,_fey1=Math.floor(forestEntrance.y/TILE)-1;
+var _fex2=Math.floor((forestEntrance.x+forestEntrance.w)/TILE)+1,_fey2=Math.floor((forestEntrance.y+forestEntrance.h)/TILE)+1;
+if(tx>=_fex1&&tx<=_fex2&&ty>=_fey1&&ty<=_fey2)return true;
+}
+if(typeof castleEntrance!=='undefined'&&castleEntrance){
+var _caex1=Math.floor(castleEntrance.x/TILE)-1,_caey1=Math.floor(castleEntrance.y/TILE)-1;
+var _caex2=Math.floor((castleEntrance.x+castleEntrance.w)/TILE)+1,_caey2=Math.floor((castleEntrance.y+castleEntrance.h)/TILE)+1;
+if(tx>=_caex1&&tx<=_caex2&&ty>=_caey1&&ty<=_caey2)return true;
+}
+/* v9.0.4 — и на игрока тоже не ставим (страховка). */
+if(player&&Math.floor(player.x/TILE)===tx&&Math.floor(player.y/TILE)===ty)return true;
 for(var j=0;j<decor.length;j++){
 if(decor[j].x===tx&&decor[j].y===ty)return true;
 }
 return false;
 }
+
 function _pickSceneForBiome(biomeName){
 var _available=[];
 for(var i=0;i<_SCENES.length;i++){
@@ -14397,9 +14905,7 @@ function _spawnScenes(){
     }
   }
 }
-function _spawnBiomeClusters(){
-if(!rooms||!rooms.length||!biome||!map)return;
-var _clusterTypes={
+var _BIOME_CLUSTER_TYPES={
 'Осенний Эльфийский Лес':['grove','meadow'],
 'Каменистые Тропы':['boulders','grove'],
 'Тёмные Катакомбы':['bones','cracks'],
@@ -14413,8 +14919,7 @@ var _clusterTypes={
 'Ледяные Пещеры':['iceSpikes','glaciers'],
 'Замок Тириона':['candles','rubble']
 };
-var _types=_clusterTypes[biome.name]||['rubble','grove'];
-var _decorMap={
+var _BIOME_DECOR_MAP={
 grove:['tree','tree2','bush'],meadow:['grass','flower','bush'],
 boulders:['rock','boulder','rock'],bones:['bones','bone_pile','skull_pile'],
 cracks:['crack','rock'],rubble:['rock','brokenSword','crate'],
@@ -14425,6 +14930,10 @@ webs:['web','cobweb'],cocoons:['cocoon','egg_sac'],
 giantMushrooms:['giantMush','mushroom'],spores:['spore_pod','glow_mushroom'],
 glaciers:['glacier','ice_crystal'],candles:['candle','torch']
 };
+function _spawnBiomeClusters(){
+if(!rooms||!rooms.length||!biome||!map)return;
+var _types=_BIOME_CLUSTER_TYPES[biome.name]||['rubble','grove'];
+var _decorMap=_BIOME_DECOR_MAP;
 var _clusterCount=randi(3,5);
 for(var i=0;i<_clusterCount;i++){
 var _room=rooms[randi(0,rooms.length-1)];
@@ -14446,6 +14955,8 @@ if(Math.floor(chests[_ci].x/TILE)===_tx&&Math.floor(chests[_ci].y/TILE)===_ty){_
 }
 if(_overlap)continue;
 if(stairs&&Math.floor(stairs.x/TILE)===_tx&&Math.floor(stairs.y/TILE)===_ty)continue;
+/* v9.0.4 — не ставим на NPC/торговца/наёмника/входы/игрока. */
+if(typeof _isBlockedByEntity==='function' && _isBlockedByEntity(_tx,_ty))continue;
 decor.push({x:_tx,y:_ty,type:_pool[Math.floor(gameRNG()*_pool.length)],s:0.9+gameRNG()*0.2,seed:gameRNG()});
 }
 }
@@ -14459,17 +14970,138 @@ decor.push({x:_tx,y:_ty,type:_pool[Math.floor(gameRNG()*_pool.length)],s:0.9+gam
 var DECOR_DRAWERS={
 
   tree:function(ctx,cx,cy,d){
-    var sc=d.s||1;
-    ctx.fillStyle='rgba(0,0,0,0.35)';
-    ctx.beginPath();ctx.arc(cx,cy+24*sc,20*sc,0,Math.PI*2);ctx.fill();
-    drawSprite(SPR_TREE,PAL_TREE,cx,cy-8,SPRITE_SCALE*sc*1.3);
+    /* v8.6.7 — крупное осеннее дерево: широкая многослойная крона, минимум зелёного. */
+    var sc=(d.s||1)*1.38, u=Math.max(2,Math.round(TILE/16)), seed=d.seed||0;
+    function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+    ctx.save();
+    ctx.fillStyle='rgba(10,12,10,0.42)';ctx.beginPath();ctx.ellipse(cx,cy+u*5.5*sc,u*9.5*sc,u*2.3*sc,0,0,Math.PI*2);ctx.fill();
+    /* Ветви и ствол */
+    b(-2,-1,4,9,'#3d2a20');b(-1,0,2,8,'#795039');b(-7,1,6,2,'#513522');b(1,-1,6,2,'#513522');
+    b(-10,-7,7,6,'#713b24');b(-7,-11,7,6,'#8c4827');b(-1,-10,8,6,'#a65329');b(4,-6,7,6,'#733820');
+    b(-11,-3,7,5,'#a64f27');b(-5,-6,8,6,'#bd602b');b(1,-4,8,5,'#d0782e');b(-5,-1,8,4,'#8c3e22');b(4,-1,6,4,'#a54a24');
+    /* Верхние солнечные пласты */
+    b(-7,-13,7,4,'#a9562a');b(-2,-14,7,4,'#c66b2b');b(3,-11,5,4,'#b85a26');
+    /* Кластеры листьев: охра, янтарь, медь и бордо */
+    b(-9,-9,3,3,'#d18a35');b(-5,-12,3,3,'#e2a846');b(-1,-10,3,3,'#efbd55');
+    b(3,-8,3,3,'#e7a13a');b(7,-5,3,3,'#c8792d');b(-10,-3,3,3,'#c56a2c');
+    b(-4,-4,3,3,'#e3a13c');b(0,-6,3,3,'#f0bd52');b(4,-3,3,3,'#d58a32');
+    b(-7,-7,2,2,'#8d3025');b(1,-12,2,2,'#f1c85c');b(6,-7,2,2,'#963722');
+    b(-3,-8,2,2,'#f3ca63');b(-8,-1,2,2,'#e4a13a');b(2,-1,2,2,'#bd5527');
+    /* Несколько листьев падающего цвета, не зелёная крапинка */
+    b(-12,-5,2,2,'#b94c28');b(9,-2,2,2,'#e5a13a');b(-2,-15,2,2,'#f2c75c');
+    ctx.restore();
   },
 
   tree2:function(ctx,cx,cy,d){
-    var sc=d.s||1;
-    ctx.fillStyle='rgba(0,0,0,0.35)';
-    ctx.beginPath();ctx.arc(cx,cy+24*sc,20*sc,0,Math.PI*2);ctx.fill();
-    drawSprite(SPR_TREE2,PAL_TREE2,cx,cy-8,SPRITE_SCALE*sc*1.3);
+    /* Вторая осенняя порода: выше и уже, с тёмно-медной листвой. */
+    var sc=(d.s||1)*1.32, u=Math.max(2,Math.round(TILE/16));
+    function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+    ctx.save();
+    ctx.fillStyle='rgba(10,12,10,0.4)';ctx.beginPath();ctx.ellipse(cx,cy+u*5*sc,u*8*sc,u*2*sc,0,0,Math.PI*2);ctx.fill();
+    b(-1,-1,3,9,'#3b2920');b(0,0,2,8,'#6a442c');b(-5,1,5,2,'#4b3020');b(1,0,5,2,'#4b3020');
+    b(-5,-10,7,5,'#71391f');b(-4,-14,6,5,'#8b4323');b(-1,-18,6,5,'#9c4b25');b(2,-13,6,5,'#74351f');
+    b(-8,-7,7,5,'#963f22');b(-4,-8,8,5,'#b55327');b(2,-7,7,5,'#a24722');b(-3,-3,8,4,'#8b3b21');
+    b(-3,-17,3,3,'#d17b31');b(1,-15,3,3,'#e3a03d');b(-6,-10,3,3,'#c96a2b');b(4,-9,3,3,'#d47a2e');
+    b(-2,-11,3,3,'#f0b94e');b(0,-5,3,3,'#d88a34');b(-6,-5,2,2,'#8c3022');b(5,-5,2,2,'#e5a13d');
+    ctx.restore();
+  },
+
+  treeGreen:function(ctx,cx,cy,d){
+    /* v8.6.7 — зелёные вечнозелёные деревья Круга друидов: крупные, но с холодной зелёной палитрой. */
+    var sc=(d.s||1)*1.28, u=Math.max(2,Math.round(TILE/16));
+    function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+    ctx.save();
+    ctx.fillStyle='rgba(8,14,10,0.4)';ctx.beginPath();ctx.ellipse(cx,cy+u*5*sc,u*7.5*sc,u*2*sc,0,0,Math.PI*2);ctx.fill();
+    b(-2,0,4,8,'#3b2c20');b(-1,1,2,7,'#705039');
+    b(-7,-3,5,4,'#254d32');b(2,-3,5,4,'#20452e');b(-5,-7,5,5,'#2f6138');b(0,-8,5,5,'#285632');
+    b(-3,-12,5,5,'#356c3e');b(-2,-15,4,4,'#285b36');
+    b(-5,-5,4,3,'#3d7942');b(1,-6,4,3,'#39723d');b(-2,-9,4,3,'#4c8547');
+    b(-1,-13,2,2,'#76a85a');b(-4,-7,2,2,'#5a984d');b(3,-3,2,2,'#487c3e');
+    ctx.restore();
+  },
+  bush:function(ctx,cx,cy,d){
+    /* v8.6.8 — кустарник: несколько округлых объёмов, тёплая осенняя листва и ягодки. */
+    var sc=(d.s||1)*1.18, u=Math.max(2,Math.round(TILE/18)), seed=d.seed||0;
+    function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+    ctx.save();
+    ctx.fillStyle='rgba(12,12,10,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+u*3.5*sc,u*7.5*sc,u*1.8*sc,0,0,Math.PI*2);ctx.fill();
+    /* woody stems visible between foliage */
+    b(-1,-1,2,5,'#493321');b(-5,1,3,2,'#61402a');b(2,0,3,2,'#61402a');
+    /* dark undergrowth silhouette */
+    b(-7,-2,6,5,'#633a25');b(-4,-4,6,5,'#7e4728');b(0,-3,6,5,'#8b4b28');b(3,-1,4,4,'#613722');
+    /* layered leaf clusters */
+    b(-6,-4,4,3,'#a84f27');b(-3,-6,4,4,'#c66b2c');b(1,-5,4,3,'#d27a2e');b(4,-3,3,3,'#a94b25');
+    b(-5,-1,4,3,'#d28b35');b(-1,-2,4,3,'#e2a341');b(2,0,3,2,'#c36a2d');
+    b(-3,-4,2,2,'#f0bd54');b(1,-4,2,2,'#f2c65d');b(-6,-2,2,2,'#8e3424');b(4,-1,2,2,'#e9a23d');
+    /* small red berries, seeded position for variety */
+    ctx.fillStyle='#a72f2b';
+    var bx=(seed>0.5?2:-3), by=(seed>0.25?-2:0);
+    ctx.fillRect(Math.round(cx+bx*u*sc),Math.round(cy+by*u*sc),Math.max(2,Math.round(1.2*u*sc)),Math.max(2,Math.round(1.2*u*sc)));
+    ctx.fillStyle='#e3a45a';ctx.fillRect(Math.round(cx+(bx+1)*u*sc),Math.round(cy+(by-1)*u*sc),Math.max(1,Math.round(u*sc)),Math.max(1,Math.round(u*sc)));
+    ctx.restore();
+  },
+
+  /* v8.6.9 — ремастер камней: гранёные силуэты, блики и мох */
+  rock:function(ctx,cx,cy,d){
+    var sc=(d.s||1)*1.12, seed=d.seed||0;
+    ctx.save();
+    ctx.fillStyle='rgba(10,12,10,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+8*sc,13*sc,4*sc,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#383b38';ctx.beginPath();ctx.moveTo(cx-13*sc,cy+5*sc);ctx.lineTo(cx-10*sc,cy-5*sc);ctx.lineTo(cx-3*sc,cy-11*sc);ctx.lineTo(cx+6*sc,cy-9*sc);ctx.lineTo(cx+13*sc,cy-1*sc);ctx.lineTo(cx+10*sc,cy+7*sc);ctx.lineTo(cx-7*sc,cy+9*sc);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#666b60';ctx.beginPath();ctx.moveTo(cx-10*sc,cy-5*sc);ctx.lineTo(cx-3*sc,cy-11*sc);ctx.lineTo(cx+6*sc,cy-9*sc);ctx.lineTo(cx+1*sc,cy-2*sc);ctx.lineTo(cx-7*sc,cy+1*sc);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#92917a';ctx.fillRect(cx-4*sc,cy-8*sc,5*sc,2*sc);ctx.fillRect(cx-9*sc,cy-3*sc,3*sc,2*sc);
+    ctx.fillStyle='#4f6b3b';ctx.fillRect(cx+3*sc,cy-1*sc,4*sc,2*sc);ctx.fillRect(cx+5*sc,cy-3*sc,2*sc,2*sc);
+    ctx.fillStyle='#292f2c';ctx.fillRect(cx-2*sc,cy+2*sc,3*sc,2*sc);
+    ctx.restore();
+  },
+
+  /* v8.6.9 — полевые цветы: листва, стебли и яркие лепестки */
+  flower:function(ctx,cx,cy,d){
+    var sc=(d.s||1)*1.08, seed=d.seed||0;
+    ctx.save();
+    ctx.fillStyle='rgba(12,15,10,0.2)';ctx.beginPath();ctx.ellipse(cx,cy+5*sc,7*sc,2*sc,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#41633a';ctx.fillRect(cx-1*sc,cy-2*sc,2*sc,7*sc);
+    ctx.fillStyle='#5d8543';ctx.fillRect(cx-5*sc,cy+1*sc,4*sc,2*sc);ctx.fillRect(cx+1*sc,cy,4*sc,2*sc);
+    var colors=['#e8a94a','#d87543','#c96b8a','#e4d28a'];
+    var col=colors[Math.abs(Math.floor(seed*1000))%colors.length];
+    ctx.fillStyle=col;
+    ctx.fillRect(cx-4*sc,cy-7*sc,3*sc,3*sc);ctx.fillRect(cx+1*sc,cy-7*sc,3*sc,3*sc);
+    ctx.fillRect(cx-5*sc,cy-3*sc,3*sc,3*sc);ctx.fillRect(cx+2*sc,cy-3*sc,3*sc,3*sc);
+    ctx.fillRect(cx-1*sc,cy-9*sc,3*sc,3*sc);ctx.fillRect(cx-1*sc,cy-2*sc,3*sc,2*sc);
+    ctx.fillStyle='#ffe08a';ctx.fillRect(cx-1*sc,cy-5*sc,3*sc,3*sc);
+    ctx.restore();
+  },
+
+  /* v8.6.9 — колодец из старого камня с водой и деревянной перекладиной */
+  well:function(ctx,cx,cy,d){
+    var sc=(d.s||1)*1.12;
+    ctx.save();
+    ctx.fillStyle='rgba(8,10,9,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+10*sc,17*sc,5*sc,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#3c403d';ctx.fillRect(cx-13*sc,cy-1*sc,26*sc,10*sc);
+    ctx.fillStyle='#77776a';ctx.fillRect(cx-12*sc,cy-3*sc,24*sc,5*sc);
+    ctx.fillStyle='#55594f';ctx.fillRect(cx-10*sc,cy+3*sc,20*sc,4*sc);
+    ctx.fillStyle='#202d30';ctx.fillRect(cx-8*sc,cy-2*sc,16*sc,6*sc);
+    ctx.fillStyle='#4e7d83';ctx.fillRect(cx-6*sc,cy-1*sc,12*sc,3*sc);
+    ctx.fillStyle='#9bb6a1';ctx.fillRect(cx-4*sc,cy-1*sc,5*sc,1.5*sc);
+    ctx.fillStyle='#513724';ctx.fillRect(cx-12*sc,cy-17*sc,3*sc,16*sc);ctx.fillRect(cx+9*sc,cy-17*sc,3*sc,16*sc);
+    ctx.fillStyle='#795337';ctx.fillRect(cx-13*sc,cy-18*sc,26*sc,3*sc);
+    ctx.fillStyle='#b17b45';ctx.fillRect(cx-11*sc,cy-18*sc,22*sc,1.5*sc);
+    ctx.fillStyle='#3e2a1c';ctx.fillRect(cx-1*sc,cy-17*sc,2*sc,9*sc);
+    ctx.fillStyle='#bca16c';ctx.fillRect(cx+1*sc,cy-14*sc,1.5*sc,7*sc);
+    ctx.restore();
+  },
+
+  /* v8.6.9 — костёр с объёмными поленьями и живым многослойным пламенем */
+  campfire:function(ctx,cx,cy,d){
+    var seed=d.seed||0, pulse=(Math.sin(Date.now()*0.008+seed*12)+1)*0.5, sc=(d.s||1)*1.08;
+    ctx.save();
+    ctx.fillStyle='rgba(255,105,30,'+(0.10+pulse*0.08)+')';ctx.beginPath();ctx.arc(cx,cy,19*sc,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(12,10,8,0.35)';ctx.beginPath();ctx.ellipse(cx,cy+7*sc,14*sc,4*sc,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#493022';ctx.lineWidth=4*sc;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx-10*sc,cy+4*sc);ctx.lineTo(cx+9*sc,cy-2*sc);ctx.moveTo(cx-8*sc,cy-2*sc);ctx.lineTo(cx+10*sc,cy+5*sc);ctx.stroke();
+    ctx.strokeStyle='#a66a3a';ctx.lineWidth=1.5*sc;ctx.beginPath();ctx.moveTo(cx-8*sc,cy+2*sc);ctx.lineTo(cx+6*sc,cy-2*sc);ctx.moveTo(cx-6*sc,cy-1*sc);ctx.lineTo(cx+7*sc,cy+4*sc);ctx.stroke();
+    ctx.fillStyle='#a93e20';ctx.beginPath();ctx.moveTo(cx-7*sc,cy+3*sc);ctx.lineTo(cx-4*sc,cy-5*sc);ctx.lineTo(cx,cy-1*sc);ctx.lineTo(cx+3*sc,cy-9*sc);ctx.lineTo(cx+7*sc,cy+3*sc);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#f0782b';ctx.beginPath();ctx.moveTo(cx-4*sc,cy+2*sc);ctx.lineTo(cx-2*sc,cy-5*sc);ctx.lineTo(cx+1*sc,cy-1*sc);ctx.lineTo(cx+3*sc,cy-7*sc-pulse*3*sc);ctx.lineTo(cx+5*sc,cy+2*sc);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#ffd46a';ctx.beginPath();ctx.moveTo(cx-2*sc,cy+2*sc);ctx.lineTo(cx,cy-3*sc-pulse*2*sc);ctx.lineTo(cx+3*sc,cy+2*sc);ctx.closePath();ctx.fill();
+    ctx.restore();
   },
 
   web:function(ctx,cx,cy,d){
@@ -14505,11 +15137,23 @@ var DECOR_DRAWERS={
   },
 
   house:function(ctx,cx,cy,d){
-    var sc=d.s||1;
-    var variant=d.variant||1;
-    drawSprite(variant===2?SPR_HOUSE2:SPR_HOUSE,
-               variant===2?PAL_HOUSE2:PAL_HOUSE,
-               cx,cy-8,SPRITE_SCALE*sc*1.2);
+    /* v8.6.6 — уютные эльфийские домики: деревянный фасад, крутая крыша и осенние детали. */
+    var sc=(d.s||1)*1.28, variant=d.variant||1, u=Math.max(2,Math.round(TILE/18));
+    function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+    ctx.save();
+    ctx.fillStyle='rgba(12,13,11,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+u*6*sc,u*9*sc,u*2*sc,0,0,Math.PI*2);ctx.fill();
+    /* каменный цоколь и тёплые брёвна */
+    b(-8,0,16,6,'#514538');b(-7,-1,14,6,variant===2?'#806044':'#8b6847');
+    b(-7,1,14,1,'#a17b51');b(-7,4,14,1,'#60452f');b(-8,5,16,1,'#38362d');
+    /* дверь и оконные проёмы */
+    b(-2,1,4,5,'#493326');b(-1,2,2,4,'#69452e');b(4,1,2,2,'#263b3b');b(4,1,1,2,'#d8a85c');b(-6,1,2,2,'#263b3b');b(-6,1,1,2,'#d8a85c');
+    /* широкая крыша с заметным силуэтом */
+    b(-9,-2,18,2,'#46332b');b(-8,-4,16,2,variant===2?'#754b35':'#754b31');b(-6,-6,12,2,variant===2?'#98613b':'#98613a');
+    b(-4,-8,8,2,'#a46b3d');b(-2,-10,4,2,'#b27a43');b(-8,-3,2,2,'#5a4130');b(6,-3,2,2,'#5a4130');
+    b(-5,-4,2,1,'#c08a4c');b(1,-7,2,1,'#c08a4c');
+    /* мох и листва на карнизе */
+    b(-7,-1,2,1,'#69713b');b(5,-2,2,1,'#69713b');b(-8,-2,1,1,'#bd8038');b(7,-3,1,1,'#d09a4c');
+    ctx.restore();
   },
 
   torch:function(ctx,cx,cy,d){
@@ -14762,12 +15406,313 @@ var DECOR_DRAWERS={
 /* v7.0 (из v6.6.5-ATMO): drawDecor — единая точка рендера декора.
 Эффекты (свечение, пульсация, призраки) вынесены в отдельные функции.
 Убраны 4 IIFE-обёртки патчей — теперь всё в одной чистой функции. */
+/* v8.6.10 — ремастер редкого декора: алтари, святилища, друидские камни, пни и хвойные деревья.
+   Рисуем в существующем canvas-рендерере: игровые объекты и взаимодействия не меняются. */
+DECOR_DRAWERS.altar=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.08, pulse=(Math.sin(Date.now()*0.0035+(d.seed||0)*8)+1)*0.5;
+  ctx.save();
+  ctx.fillStyle='rgba(20,28,38,0.38)';ctx.beginPath();ctx.ellipse(cx,cy+10*sc,21*sc,6*sc,0,0,Math.PI*2);ctx.fill();
+  /* ступени из древнего камня */
+  ctx.fillStyle='#34383a';ctx.fillRect(cx-19*sc,cy+3*sc,38*sc,7*sc);
+  ctx.fillStyle='#66665e';ctx.fillRect(cx-17*sc,cy+3*sc,34*sc,2*sc);
+  ctx.fillStyle='#494b47';ctx.fillRect(cx-15*sc,cy-5*sc,30*sc,9*sc);
+  ctx.fillStyle='#8a8270';ctx.fillRect(cx-13*sc,cy-5*sc,26*sc,2*sc);
+  ctx.fillStyle='#5b5a50';ctx.fillRect(cx-11*sc,cy-13*sc,22*sc,9*sc);
+  ctx.fillStyle='#a49a7d';ctx.fillRect(cx-10*sc,cy-13*sc,20*sc,2*sc);
+  /* руническая чаша / камень */
+  ctx.fillStyle='#292f34';ctx.beginPath();ctx.moveTo(cx-8*sc,cy-13*sc);ctx.lineTo(cx-6*sc,cy-22*sc);ctx.lineTo(cx+6*sc,cy-22*sc);ctx.lineTo(cx+8*sc,cy-13*sc);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#8f7440';ctx.fillRect(cx-5*sc,cy-20*sc,10*sc,2*sc);
+  ctx.fillStyle='rgba(130,205,255,'+(0.20+pulse*0.22)+')';ctx.beginPath();ctx.ellipse(cx,cy-17*sc,13*sc,10*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#a8e8ff';ctx.fillRect(cx-1*sc,cy-20*sc,2*sc,7*sc);ctx.fillRect(cx-4*sc,cy-17*sc,8*sc,2*sc);
+  ctx.fillStyle='#d7bd70';ctx.fillRect(cx-15*sc,cy-2*sc,3*sc,2*sc);ctx.fillRect(cx+12*sc,cy-2*sc,3*sc,2*sc);
+  ctx.restore();
+};
+DECOR_DRAWERS.shrineAltar=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.05,p=(Math.sin(Date.now()*0.0028+(d.seed||0)*6)+1)*0.5;
+  ctx.save();ctx.fillStyle='rgba(15,22,32,0.38)';ctx.beginPath();ctx.ellipse(cx,cy+10*sc,22*sc,5*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3e4144';ctx.fillRect(cx-20*sc,cy+2*sc,40*sc,8*sc);ctx.fillStyle='#858071';ctx.fillRect(cx-18*sc,cy+2*sc,36*sc,2*sc);
+  ctx.fillStyle='#5b5b58';ctx.fillRect(cx-16*sc,cy-7*sc,32*sc,10*sc);ctx.fillStyle='#b2a987';ctx.fillRect(cx-15*sc,cy-7*sc,30*sc,2*sc);
+  ctx.fillStyle='#3b4146';ctx.fillRect(cx-12*sc,cy-14*sc,24*sc,8*sc);ctx.fillStyle='#8b7950';ctx.fillRect(cx-11*sc,cy-14*sc,22*sc,2*sc);
+  ctx.fillStyle='rgba(120,205,255,'+(0.18+p*0.2)+')';ctx.beginPath();ctx.ellipse(cx,cy-13*sc,16*sc,13*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#8fe1ff';ctx.lineWidth=Math.max(1,2*sc);ctx.beginPath();ctx.moveTo(cx,cy-19*sc);ctx.lineTo(cx+5*sc,cy-13*sc);ctx.lineTo(cx,cy-7*sc);ctx.lineTo(cx-5*sc,cy-13*sc);ctx.closePath();ctx.stroke();
+  ctx.fillStyle='#e8d49a';ctx.fillRect(cx-16*sc,cy-4*sc,3*sc,2*sc);ctx.fillRect(cx+13*sc,cy-4*sc,3*sc,2*sc);ctx.restore();
+};
+DECOR_DRAWERS.shrineStatue=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.04,p=(Math.sin(Date.now()*0.003+(d.seed||0)*9)+1)*0.5;
+  ctx.save();ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.ellipse(cx,cy+9*sc,12*sc,4*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#4a4b46';ctx.fillRect(cx-10*sc,cy+2*sc,20*sc,7*sc);ctx.fillStyle='#928c79';ctx.fillRect(cx-9*sc,cy+2*sc,18*sc,2*sc);
+  ctx.fillStyle='#7d7868';ctx.fillRect(cx-7*sc,cy-7*sc,14*sc,10*sc);ctx.fillStyle='#b0a58a';ctx.fillRect(cx-6*sc,cy-7*sc,12*sc,2*sc);
+  ctx.fillStyle='#c0b397';ctx.fillRect(cx-6*sc,cy-17*sc,12*sc,10*sc);ctx.fillRect(cx-8*sc,cy-14*sc,3*sc,7*sc);ctx.fillRect(cx+5*sc,cy-14*sc,3*sc,7*sc);
+  ctx.fillStyle='#343b40';ctx.fillRect(cx-4*sc,cy-13*sc,3*sc,2*sc);ctx.fillRect(cx+1*sc,cy-13*sc,3*sc,2*sc);
+  ctx.fillStyle='rgba(125,220,255,'+(0.22+p*0.2)+')';ctx.beginPath();ctx.arc(cx,cy-12*sc,9*sc,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#b5efff';ctx.fillRect(cx-3*sc,cy-13*sc,2*sc,2*sc);ctx.fillRect(cx+2*sc,cy-13*sc,2*sc,2*sc);
+  ctx.fillStyle='#6b6b5e';ctx.fillRect(cx-3*sc,cy-3*sc,6*sc,2*sc);ctx.restore();
+};
+DECOR_DRAWERS.memoryShrine=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.05,p=(Math.sin(Date.now()*0.002+(d.seed||0)*7)+1)*0.5;
+  ctx.save();ctx.fillStyle='rgba(20,14,30,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+9*sc,20*sc,5*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#393342';ctx.fillRect(cx-18*sc,cy+1*sc,36*sc,8*sc);ctx.fillStyle='#76678a';ctx.fillRect(cx-16*sc,cy+1*sc,32*sc,2*sc);
+  ctx.fillStyle='#50465c';ctx.fillRect(cx-13*sc,cy-8*sc,26*sc,10*sc);ctx.fillStyle='#9a83b3';ctx.fillRect(cx-12*sc,cy-8*sc,24*sc,2*sc);
+  ctx.fillStyle='rgba(180,135,255,'+(0.16+p*0.2)+')';ctx.beginPath();ctx.ellipse(cx,cy-12*sc,17*sc,13*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0b8ff';ctx.lineWidth=Math.max(1,1.5*sc);ctx.beginPath();ctx.arc(cx,cy-12*sc,7*sc,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#e6d9ff';ctx.fillRect(cx-1*sc,cy-18*sc,2*sc,12*sc);ctx.fillRect(cx-5*sc,cy-13*sc,10*sc,2*sc);
+  ctx.fillStyle='#d9c37b';ctx.fillRect(cx-14*sc,cy-4*sc,2*sc,2*sc);ctx.fillRect(cx+12*sc,cy-4*sc,2*sc,2*sc);ctx.restore();
+};
+DECOR_DRAWERS.druidStone=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.05,p=(Math.sin(Date.now()*0.0026+(d.seed||0)*8)+1)*0.5;
+  ctx.save();ctx.fillStyle='rgba(7,16,12,0.4)';ctx.beginPath();ctx.ellipse(cx,cy+13*sc,22*sc,6*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#343a32';ctx.beginPath();ctx.moveTo(cx-17*sc,cy+11*sc);ctx.lineTo(cx-15*sc,cy-7*sc);ctx.lineTo(cx-7*sc,cy-18*sc);ctx.lineTo(cx+5*sc,cy-20*sc);ctx.lineTo(cx+15*sc,cy-8*sc);ctx.lineTo(cx+18*sc,cy+10*sc);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#626a54';ctx.beginPath();ctx.moveTo(cx-15*sc,cy-7*sc);ctx.lineTo(cx-7*sc,cy-18*sc);ctx.lineTo(cx+5*sc,cy-20*sc);ctx.lineTo(cx+2*sc,cy-5*sc);ctx.lineTo(cx-7*sc,cy+1*sc);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(100,210,160,'+(0.18+p*0.2)+')';ctx.beginPath();ctx.ellipse(cx,cy-5*sc,11*sc,14*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#9ee9b0';ctx.lineWidth=Math.max(1,2*sc);ctx.beginPath();ctx.moveTo(cx,cy-15*sc);ctx.lineTo(cx,cy+5*sc);ctx.moveTo(cx-6*sc,cy-5*sc);ctx.lineTo(cx,cy-1*sc);ctx.lineTo(cx+6*sc,cy-5*sc);ctx.stroke();
+  ctx.fillStyle='#a6c17b';ctx.fillRect(cx-13*sc,cy+4*sc,4*sc,2*sc);ctx.fillRect(cx+10*sc,cy+2*sc,4*sc,2*sc);ctx.restore();
+};
+DECOR_DRAWERS.stump=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.12,seed=d.seed||0;
+  ctx.save();ctx.fillStyle='rgba(15,12,8,0.38)';ctx.beginPath();ctx.ellipse(cx,cy+8*sc,16*sc,5*sc,0,0,Math.PI*2);ctx.fill();
+  /* обломанная кора, широкие корни и годовые кольца */
+  ctx.fillStyle='#3b2518';ctx.beginPath();ctx.moveTo(cx-13*sc,cy+5*sc);ctx.lineTo(cx-10*sc,cy-5*sc);ctx.lineTo(cx-7*sc,cy-10*sc);ctx.lineTo(cx-3*sc,cy-6*sc);ctx.lineTo(cx+2*sc,cy-11*sc);ctx.lineTo(cx+7*sc,cy-5*sc);ctx.lineTo(cx+11*sc,cy-3*sc);ctx.lineTo(cx+13*sc,cy+6*sc);ctx.lineTo(cx+7*sc,cy+8*sc);ctx.lineTo(cx+3*sc,cy+5*sc);ctx.lineTo(cx-4*sc,cy+8*sc);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#79502d';ctx.fillRect(cx-9*sc,cy-5*sc,18*sc,10*sc);ctx.fillStyle='#a8733b';ctx.fillRect(cx-8*sc,cy-5*sc,16*sc,2*sc);ctx.fillRect(cx-10*sc,cy-1*sc,3*sc,5*sc);ctx.fillRect(cx+7*sc,cy,3*sc,4*sc);
+  ctx.fillStyle='#c39254';ctx.beginPath();ctx.ellipse(cx,cy-6*sc,9*sc,5*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#6b4328';ctx.beginPath();ctx.ellipse(cx,cy-6*sc,6.5*sc,3.3*sc,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#d0a267';ctx.lineWidth=Math.max(1,1.2*sc);ctx.beginPath();ctx.ellipse(cx,cy-6*sc,4*sc,1.8*sc,0,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#3c6a37';ctx.fillRect(cx-8*sc,cy-9*sc,4*sc,2*sc);ctx.fillRect(cx+4*sc,cy-8*sc,3*sc,2*sc);
+  if(seed>0.35){ctx.fillStyle='#c7a35b';ctx.fillRect(cx+2*sc,cy-10*sc,2*sc,2*sc);}ctx.restore();
+};
+/* Отдельный хвойный силуэт. Тип treeGreen также используется для друидских рощ, поэтому оставляем его зелёным, а pine готов для редких хвойных точек. */
+DECOR_DRAWERS.pine=function(ctx,cx,cy,d){
+  var sc=(d.s||1)*1.18,u=Math.max(2,Math.round(TILE/18)),seed=d.seed||0;
+  function b(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*u*sc),Math.round(cy+y*u*sc),Math.max(1,Math.round(w*u*sc)),Math.max(1,Math.round(h*u*sc)));}
+  ctx.save();ctx.fillStyle='rgba(8,13,10,0.38)';ctx.beginPath();ctx.ellipse(cx,cy+u*5*sc,u*8*sc,u*2*sc,0,0,Math.PI*2);ctx.fill();
+  b(-1,0,3,8,'#493322');b(0,1,2,7,'#805332');
+  b(-2,-17,4,4,'#39764a');b(-4,-14,8,4,'#2d663f');b(-6,-11,12,4,'#245738');b(-8,-8,16,4,'#1e4b32');b(-10,-5,20,4,'#1b422d');b(-12,-2,24,4,'#163a29');
+  b(-1,-16,2,2,'#8ab66b');b(-3,-12,3,2,'#57945a');b(2,-9,3,2,'#4d8850');b(-7,-6,3,2,'#3f7948');b(5,-3,3,2,'#397145');
+  if(seed>0.6){b(4,-11,2,2,'#b66b35');b(-5,-4,2,2,'#c7833e');}ctx.restore();
+};
+
+/* v8.6.11 — FULL DECOR REMASTER: дополнительные процедурные пиксельные спрайты.
+   Только визуальный слой: типы объектов, координаты и игровые взаимодействия не меняются. */
+(function(){
+  function box(ctx,cx,cy,sc,rects){for(var i=0;i<rects.length;i++){var r=rects[i];ctx.fillStyle=r[4];ctx.fillRect(Math.round(cx+r[0]*sc),Math.round(cy+r[1]*sc),Math.max(1,Math.round(r[2]*sc)),Math.max(1,Math.round(r[3]*sc)));}}
+  function shadow(ctx,cx,cy,rx,ry,sc){ctx.fillStyle='rgba(9,12,9,.34)';ctx.beginPath();ctx.ellipse(cx,cy+ry*0.8*sc,rx*sc,ry*.45*sc,0,0,Math.PI*2);ctx.fill();}
+  DECOR_DRAWERS.log=function(ctx,cx,cy,d){var s=(d.s||1)*1.05;ctx.save();shadow(ctx,cx,cy,16,5,s);box(ctx,cx,cy,s,[[-15,-4,30,10,'#493020'],[-13,-6,26,8,'#75482b'],[-12,-5,22,3,'#9a6538'],[-10,1,20,2,'#3f2a1c'],[-15,-3,3,7,'#35251b'],[11,-3,3,7,'#35251b'],[-14,-4,2,6,'#b27b45'],[12,-4,2,6,'#b27b45']]);ctx.fillStyle='#c18b52';ctx.beginPath();ctx.ellipse(cx-13*s,cy,3*s,4*s,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#5a3823';ctx.beginPath();ctx.ellipse(cx-13*s,cy,1.5*s,2.5*s,0,0,Math.PI*2);ctx.fill();ctx.restore();};
+  DECOR_DRAWERS.barrel=function(ctx,cx,cy,d){var s=(d.s||1)*1.05;ctx.save();shadow(ctx,cx,cy,12,5,s);box(ctx,cx,cy,s,[[-9,-9,18,18,'#4a2e1d'],[-7,-10,14,18,'#8c5b32'],[-5,-10,3,18,'#b17a43'],[3,-10,3,18,'#6c4328'],[-10,-7,20,3,'#55534a'],[-10,5,20,3,'#55534a'],[-9,-6,18,1,'#a7a08a'],[-9,6,18,1,'#a7a08a'],[-1,-8,2,14,'#d3a260']]);ctx.restore();};
+  DECOR_DRAWERS.well=function(ctx,cx,cy,d){var s=(d.s||1)*1.02,p=(Math.sin(Date.now()*.002+(d.seed||0)*8)+1)*.5;ctx.save();shadow(ctx,cx,cy,22,7,s);box(ctx,cx,cy,s,[[-18,-1,36,10,'#4a4b43'],[-16,-4,32,7,'#747568'],[-14,-4,28,2,'#aaa48c'],[-12,-8,24,5,'#55584f'],[-10,-8,20,2,'#9c9a83'],[-13,-3,4,5,'#3b4443'],[-8,-3,16,4,'#153c4b'],[-7,-3,14,2,'#286b7a'],[-15,-19,3,19,'#65452b'],[12,-19,3,19,'#65452b'],[-16,-20,5,3,'#9b7041'],[11,-20,5,3,'#9b7041'],[-14,-22,28,3,'#76502e'],[-12,-23,24,2,'#b0834e']]);ctx.fillStyle='rgba(120,225,255,'+(.12+p*.15)+')';ctx.fillRect(cx-7*s,cy-3*s,14*s,3*s);ctx.strokeStyle='#3d2b20';ctx.lineWidth=Math.max(1,s);ctx.beginPath();ctx.moveTo(cx,cy-20*s);ctx.lineTo(cx+2*s,cy-8*s);ctx.stroke();ctx.restore();};
+  /* v9.0.11: ранняя версия mushroom удалена; активная реализация находится ниже в remaster-блоке. */
+  /* v9.0.11: ранняя версия giantMush удалена; активная реализация находится ниже в remaster-блоке. */
+  DECOR_DRAWERS.dead_tree=function(ctx,cx,cy,d){var s=(d.s||1)*1.12;ctx.save();shadow(ctx,cx,cy,16,5,s);box(ctx,cx,cy,s,[[-3,-2,6,13,'#4a3020'],[-2,-15,4,15,'#67452c'],[-2,-12,3,5,'#9b7951'],[-2,-10,11,3,'#60432b'],[5,-13,3,5,'#60432b'],[-9,-8,8,3,'#6b4a2d'],[-11,-11,3,5,'#5b3c27'],[-1,-19,3,7,'#755332'],[-3,-21,3,4,'#5a3d27'],[-1,2,3,2,'#b28a5b']]);ctx.restore();};
+  DECOR_DRAWERS.gravestone=function(ctx,cx,cy,d){var s=(d.s||1)*1.05,p=(Math.sin(Date.now()*.002+(d.seed||0)*4)+1)*.5;ctx.save();shadow(ctx,cx,cy,13,4,s);box(ctx,cx,cy,s,[[-10,-1,20,10,'#41433f'],[-8,-13,16,14,'#62675f'],[-6,-17,12,5,'#777c70'],[-7,-11,3,8,'#4a514c'],[-1,-10,2,7,'#c4bd9d'],[-4,-7,8,2,'#c4bd9d'],[-5,0,3,2,'#71805c']]);ctx.globalAlpha=.22+p*.18;ctx.fillStyle='#9ce6ff';ctx.fillRect(cx-2*s,cy-12*s,4*s,8*s);ctx.restore();};
+  DECOR_DRAWERS.ritualCircle=function(ctx,cx,cy,d){var s=(d.s||1)*1.02,p=(Math.sin(Date.now()*.002+(d.seed||0)*7)+1)*.5;ctx.save();ctx.strokeStyle='rgba(190,95,220,'+(.48+p*.28)+')';ctx.lineWidth=Math.max(1,1.3*s);ctx.beginPath();ctx.ellipse(cx,cy+2*s,17*s,7*s,0,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='rgba(240,190,255,'+(.3+p*.25)+')';ctx.beginPath();ctx.ellipse(cx,cy+2*s,11*s,4*s,0,0,Math.PI*2);ctx.stroke();box(ctx,cx,cy,s,[[-1,-5,2,5,'#e9c7ff'],[-5,-2,4,2,'#b87bd7'],[2,1,4,2,'#b87bd7'],[-13,1,2,2,'#e9c7ff'],[11,0,2,2,'#e9c7ff']]);ctx.restore();};
+  DECOR_DRAWERS.ritualCandle=function(ctx,cx,cy,d){var s=(d.s||1)*1.0,p=(Math.sin(Date.now()*.01+(d.seed||0)*9)+1)*.5;ctx.save();shadow(ctx,cx,cy,7,3,s);box(ctx,cx,cy,s,[[-5,0,10,3,'#4b392b'],[-3,-8,6,9,'#d7c9a0'],[-2,-8,4,2,'#fff0c7'],[-1,-11,2,4,'#ff9b43'],[-2,-13,3,3,'#ffe49a']]);ctx.globalAlpha=.2+p*.18;ctx.fillStyle='#ffbf62';ctx.beginPath();ctx.arc(cx,cy-9*s,7*s,0,Math.PI*2);ctx.fill();ctx.restore();};
+  DECOR_DRAWERS.throne=function(ctx,cx,cy,d){var s=(d.s||1)*1.0;ctx.save();shadow(ctx,cx,cy,15,5,s);box(ctx,cx,cy,s,[[-12,-8,24,15,'#4a2e26'],[-10,-17,4,14,'#6b4930'],[6,-17,4,14,'#6b4930'],[-8,-19,16,4,'#a7793f'],[-7,-5,14,8,'#743b36'],[-5,-14,10,9,'#9b5145'],[-2,-13,4,5,'#e0bd69'],[-11,5,22,3,'#a7793f']]);ctx.restore();};
+  DECOR_DRAWERS.pillar=function(ctx,cx,cy,d){var s=(d.s||1)*1.0;ctx.save();shadow(ctx,cx,cy,10,4,s);box(ctx,cx,cy,s,[[-9,-16,18,4,'#777568'],[-7,-13,14,17,'#545750'],[-5,-12,3,15,'#858373'],[-9,4,18,4,'#777568'],[-6,-9,2,2,'#b2a98b'],[4,-3,2,3,'#343a36']]);ctx.restore();};
+  DECOR_DRAWERS.cauldron=function(ctx,cx,cy,d){var s=(d.s||1)*1.0,p=(Math.sin(Date.now()*.003+(d.seed||0)*5)+1)*.5;ctx.save();shadow(ctx,cx,cy,13,4,s);box(ctx,cx,cy,s,[[-10,-5,20,10,'#292f30'],[-8,-8,16,4,'#59635b'],[-8,3,16,3,'#171e20'],[-6,-2,12,4,'#245d55'],[-4,-4,8,2,'#5fd4a1'],[-12,-6,3,3,'#7e765c'],[9,-6,3,3,'#7e765c']]);ctx.globalAlpha=.2+p*.3;ctx.fillStyle='#70ffc2';ctx.beginPath();ctx.arc(cx,cy-3*s,10*s,0,Math.PI*2);ctx.fill();ctx.restore();};
+  DECOR_DRAWERS.bones=function(ctx,cx,cy,d){var s=(d.s||1)*1.0;ctx.save();shadow(ctx,cx,cy,12,3,s);box(ctx,cx,cy,s,[[-9,-3,18,3,'#bdb69b'],[-7,-5,4,7,'#d9d1b6'],[4,-5,4,7,'#d9d1b6'],[-2,-8,4,10,'#c9c0a4'],[-8,1,5,2,'#827d6b'],[4,1,5,2,'#827d6b']]);ctx.restore();};
+  DECOR_DRAWERS.brokenSword=function(ctx,cx,cy,d){var s=(d.s||1)*1.0;ctx.save();shadow(ctx,cx,cy,9,3,s);box(ctx,cx,cy,s,[[-1,-12,3,10,'#c8d4d5'],[-3,-13,3,3,'#eef5ed'],[1,-3,2,6,'#6b492b'],[-4,-4,9,2,'#b08a4e'],[-1,2,3,3,'#4c3424'],[0,-2,2,2,'#e7f0ef']]);ctx.restore();};
+})();
+
+
+/* v8.6.18 — AUDIT FIX: isolate decoration draw errors so the frame/player/minimap survive. */
+/* v8.6.12 — FOUR-STAGE DECOR REMASTER
+   Stage 1: epic dungeon sacred tree + relics.
+   Stage 2: ruin/architecture detailing.
+   Stage 3: natural underground flora.
+   Stage 4: bounded, low-cost ambient effects.
+   This tree is deliberately separate from the Sacred Grove tree (sacredTree). */
+DECOR_DRAWERS.dungeonSacredTree=function(ctx,cx,cy,d){
+  var s=(d.s||1), seed=d.seed||0, pulse=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.0014+seed*9);
+  function r(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(cx+x*s),Math.round(cy+y*s),Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s)));}
+  ctx.save();
+  /* Roots and cast shadow */
+  ctx.fillStyle='rgba(5,14,12,.52)';ctx.beginPath();ctx.ellipse(cx,cy+20*s,34*s,8*s,0,0,Math.PI*2);ctx.fill();
+  r(-25,12,17,4,'#34271f');r(-18,15,13,3,'#51372a');r(8,12,20,4,'#30251f');r(4,15,17,3,'#4c3426');
+  /* Ancient trunk, bark and luminous heart */
+  r(-8,-15,16,33,'#30271e');r(-5,-18,10,34,'#62452c');r(-3,-16,3,29,'#8b6940');
+  r(-12,-4,8,4,'#4a3827');r(4,-8,10,4,'#4a3827');r(-17,5,12,3,'#443025');r(7,4,13,3,'#443025');
+  r(-2,-8,4,16,'#8be0a0');r(-1,-7,2,13,'#d0ffb2');
+  /* Broad layered canopy */
+  r(-8,-43,16,8,'#173f35');r(-18,-38,18,10,'#1d5140');r(0,-39,20,11,'#245a43');
+  r(-27,-30,20,12,'#194735');r(-13,-32,25,13,'#28694a');r(8,-31,21,12,'#1e563e');
+  r(-22,-23,18,10,'#205b3e');r(-6,-25,20,12,'#337b4e');r(10,-23,16,9,'#246442');
+  r(-14,-17,15,8,'#286744');r(1,-18,17,8,'#20583c');
+  /* Leaf highlights */
+  r(-14,-35,6,3,'#70a85a');r(-2,-39,7,3,'#83bd67');r(9,-32,6,3,'#5b9c53');
+  r(-23,-27,5,3,'#4d8c4b');r(-5,-28,6,3,'#8acb70');r(13,-23,5,3,'#63a75a');
+  r(-10,-20,5,3,'#9ad477');r(3,-21,5,3,'#6dbb67');
+  /* Ancient rune stones embedded in roots */
+  r(-24,5,5,8,'#59675a');r(-23,6,3,5,'#a6d9a0');r(20,4,5,9,'#4b5d51');r(21,6,2,4,'#b5e8a0');
+  ctx.restore();
+};
+DECOR_DRAWERS.brokenAltar=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.08,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*7);
+  ctx.save();shadow(ctx,cx,cy,19,6,s);
+  box(ctx,cx,cy,s,[[-16,-2,32,10,'#3c3936'],[-14,-6,28,6,'#65645b'],[-12,-8,24,3,'#858274'],[-9,-14,18,7,'#514c43'],[-6,-17,4,7,'#777365'],[5,-15,4,5,'#777365'],[-2,-10,4,8,'#a38a50'],[-1,-9,2,6,'#f3d78c'],[-11,1,5,3,'#343330'],[7,0,6,3,'#343330']]);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.13+p*.16;ctx.fillStyle='#ffd879';ctx.beginPath();ctx.arc(cx,cy-7*s,18*s,0,Math.PI*2);ctx.fill();ctx.restore();
+};
+DECOR_DRAWERS.shrineAltar=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.04,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*5);
+  /* Локальные помощники: прежние box/shadow объявлены внутри другой IIFE и здесь недоступны. */
+  function box(ctx,cx,cy,sc,rects){for(var i=0;i<rects.length;i++){var r=rects[i];ctx.fillStyle=r[4];ctx.fillRect(Math.round(cx+r[0]*sc),Math.round(cy+r[1]*sc),Math.max(1,Math.round(r[2]*sc)),Math.max(1,Math.round(r[3]*sc)));}}
+  function shadow(ctx,cx,cy,rx,ry,sc){ctx.fillStyle='rgba(9,12,9,.34)';ctx.beginPath();ctx.ellipse(cx,cy+ry*0.8*sc,rx*sc,ry*.45*sc,0,0,Math.PI*2);ctx.fill();}
+  ctx.save();shadow(ctx,cx,cy,17,5,s);
+  box(ctx,cx,cy,s,[[-14,-1,28,9,'#343c3b'],[-12,-5,24,5,'#66746a'],[-9,-11,18,7,'#414c45'],[-6,-14,12,4,'#87937c'],[-2,-12,4,7,'#c4df9b'],[-1,-10,2,4,'#f0ffc2'],[-11,2,6,2,'#272f2b'],[5,2,6,2,'#272f2b']]);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.12+p*.13;ctx.fillStyle='#a7ffb0';ctx.beginPath();ctx.arc(cx,cy-7*s,20*s,0,Math.PI*2);ctx.fill();ctx.restore();
+};
+/* Stage 2: richer architecture props, preserving the existing footprint. */
+DECOR_DRAWERS.pillar=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.04;ctx.save();shadow(ctx,cx,cy,12,4,s);
+  box(ctx,cx,cy,s,[[-10,-18,20,4,'#77786d'],[-8,-15,16,18,'#454b47'],[-5,-14,3,16,'#8b8b79'],[2,-14,3,16,'#666c61'],[-10,3,20,4,'#858475'],[-8,-19,16,2,'#b2ad94'],[-6,-8,2,2,'#c4c2a6'],[4,-2,2,3,'#c4c2a6'],[-2,-11,4,2,'#344e46']]);ctx.restore();
+};
+DECOR_DRAWERS.throne=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.04;ctx.save();shadow(ctx,cx,cy,16,5,s);
+  box(ctx,cx,cy,s,[[-13,-8,26,16,'#3c2926'],[-11,-20,5,16,'#694333'],[6,-20,5,16,'#694333'],[-8,-23,16,4,'#b08a4b'],[-7,-15,14,10,'#743d3b'],[-4,-14,8,7,'#a65a4c'],[-2,-13,4,4,'#e8d38a'],[-12,6,24,3,'#b08a4b'],[-15,-17,3,10,'#7f5b3e'],[12,-17,3,10,'#7f5b3e']]);ctx.restore();
+};
+/* Stage 3: layered fungi and stone/moss micro-detail. */
+DECOR_DRAWERS.glow_mushroom=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.5,seed=d.seed||0,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+seed*11);
+  ctx.save();shadow(ctx,cx,cy,14,5,s);
+  box(ctx,cx,cy,s,[[-4,-6,8,12,'#e0dfc8'],[-6,2,12,3,'#b0b29a'],[-11,-13,22,6,'#2d757e'],[-9,-18,18,6,'#38a8b5'],[-4,-20,9,3,'#8ae6d5'],[-8,-13,4,3,'#d0fff0'],[4,-15,4,3,'#c0f8f0'],[-1,-9,3,3,'#e0fff8']]);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.20+p*.15;ctx.fillStyle='#69ffe5';ctx.beginPath();ctx.arc(cx,cy-11*s,20*s,0,Math.PI*2);ctx.fill();ctx.restore();
+};
+DECOR_DRAWERS.mushroom=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.5,seed=d.seed||0,cap=seed>.66?'#e8664a':seed>.33?'#d88adf':'#e07040';
+  ctx.save();shadow(ctx,cx,cy,14,5,s);
+  box(ctx,cx,cy,s,[[-4,-7,8,14,'#e8d0a8'],[-7,3,14,4,'#c8b088'],[-11,-14,22,7,cap],[-8,-18,16,5,cap],[-4,-20,8,3,'#ffd88a'],[-7,-13,4,3,'#ffe8c8'],[4,-15,3,3,'#ffe8c8'],[-2,-9,4,3,'#fff8d8']]);ctx.restore();
+};
+DECOR_DRAWERS.giantMush=function(ctx,cx,cy,d){
+  var s=(d.s||1)*1.6,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.0018+(d.seed||0)*6);
+  ctx.save();shadow(ctx,cx,cy,22,6,s);
+  box(ctx,cx,cy,s,[[-6,-7,12,15,'#d9d2b7'],[-9,1,18,4,'#9e9277'],[-15,-16,30,10,'#8e3f8e'],[-12,-21,24,7,'#bd61b1'],[-6,-24,12,4,'#e5a0db'],[-10,-14,4,3,'#f6d9ee'],[5,-17,4,3,'#f6d9ee'],[-2,-11,4,3,'#baffdf']]);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.10+p*.12;ctx.fillStyle='#a0ffd9';ctx.beginPath();ctx.arc(cx,cy-12*s,28*s,0,Math.PI*2);ctx.fill();ctx.restore();
+};
+DECOR_DRAWERS.rock=function(ctx,cx,cy,d){
+  var s=(d.s||1),seed=d.seed||0;ctx.save();shadow(ctx,cx,cy,13,4,s);
+  box(ctx,cx,cy,s,[[-10,-2,20,8,'#454b48'],[-8,-8,16,8,'#6c746e'],[-4,-12,9,5,'#8e9589'],[-6,-7,4,3,'#b6b6a0'],[1,-5,5,3,'#555f58'],[-9,3,6,2,'#343b38'],[5,1,4,2,'#343b38']]);
+  if(seed>.38){ctx.fillStyle='#668a58';ctx.fillRect(cx-5*s,cy-5*s,4*s,2*s);ctx.fillRect(cx+2*s,cy-2*s,3*s,2*s);}
+  ctx.restore();
+};
+DECOR_DRAWERS.moss=function(ctx,cx,cy,d){
+  var s=(d.s||1),seed=d.seed||0;ctx.save();ctx.globalAlpha=.95;
+  box(ctx,cx,cy,s,[[-9,0,18,3,'#254a32'],[-7,-2,5,3,'#3c7041'],[-2,-4,5,4,'#54884b'],[3,-2,5,3,'#34663b'],[-4,1,3,2,'#8db45b']]);
+  if(seed>.5){ctx.fillStyle='#b6d86a';ctx.fillRect(cx+3*s,cy-3*s,2*s,2*s);}ctx.restore();
+};
+/* Stage 4: epic aura is shared by isEpic objects in drawDecor; keep effects soft and bounded. */
+
+/* v9.0.8 — контекстные камни-заглушки: природные в лесу, рунические у друидов. */
+function _drawFallbackStone(ctx,cx,cy,d,runic){
+  var s=Math.max(.75,Math.min(1.12,(d&&d.s)||1)), seed=(d&&d.seed)||0;
+  var pulse=.5+.5*Math.sin(Date.now()*.0018+seed*8);
+  ctx.save();
+  /* мягкая тень и трава у основания */
+  ctx.fillStyle='rgba(7,13,8,.36)';ctx.beginPath();ctx.ellipse(cx,cy+10*s,17*s,5*s,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#284a2e';ctx.fillRect(Math.round(cx-16*s),Math.round(cy+5*s),7*s,2*s);ctx.fillRect(Math.round(cx+7*s),Math.round(cy+6*s),8*s,2*s);
+  if(runic){
+    /* Камень друидов: вытянутый древний менгир, мох и мягкие зелёные руны. */
+    ctx.fillStyle='#303b32';ctx.beginPath();ctx.moveTo(cx-13*s,cy+8*s);ctx.lineTo(cx-12*s,cy-9*s);ctx.lineTo(cx-5*s,cy-21*s);ctx.lineTo(cx+4*s,cy-23*s);ctx.lineTo(cx+13*s,cy-10*s);ctx.lineTo(cx+14*s,cy+8*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#626e59';ctx.beginPath();ctx.moveTo(cx-10*s,cy-9*s);ctx.lineTo(cx-5*s,cy-19*s);ctx.lineTo(cx+3*s,cy-21*s);ctx.lineTo(cx+1*s,cy-5*s);ctx.lineTo(cx-6*s,cy+1*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#7d8b6a';ctx.fillRect(Math.round(cx-4*s),Math.round(cy-18*s),3*s,7*s);ctx.fillRect(Math.round(cx-9*s),Math.round(cy-8*s),3*s,5*s);
+    ctx.fillStyle='#315b3b';ctx.fillRect(Math.round(cx-11*s),Math.round(cy+1*s),5*s,3*s);ctx.fillRect(Math.round(cx+6*s),Math.round(cy+3*s),5*s,2*s);
+    ctx.globalAlpha=.18+pulse*.18;ctx.fillStyle='#71f5a0';ctx.beginPath();ctx.ellipse(cx,cy-5*s,16*s,21*s,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle='#a8efad';ctx.lineWidth=Math.max(1,1.5*s);ctx.beginPath();ctx.moveTo(cx,cy-15*s);ctx.lineTo(cx+3*s,cy-9*s);ctx.lineTo(cx-2*s,cy-4*s);ctx.lineTo(cx+2*s,cy+3*s);ctx.moveTo(cx-6*s,cy-7*s);ctx.lineTo(cx,cy-4*s);ctx.lineTo(cx+6*s,cy-8*s);ctx.stroke();
+    ctx.fillStyle='#d0ffc0';ctx.globalAlpha=.5+pulse*.4;ctx.fillRect(Math.round(cx-1*s),Math.round(cy-10*s),2*s,2*s);ctx.globalAlpha=1;
+  }else{
+    /* Небольшой валун, вросший в траву: неровный силуэт и моховые пятна. */
+    ctx.fillStyle='#353f3a';ctx.beginPath();ctx.moveTo(cx-16*s,cy+6*s);ctx.lineTo(cx-14*s,cy-3*s);ctx.lineTo(cx-8*s,cy-9*s);ctx.lineTo(cx-2*s,cy-14*s);ctx.lineTo(cx+6*s,cy-11*s);ctx.lineTo(cx+14*s,cy-5*s);ctx.lineTo(cx+16*s,cy+5*s);ctx.lineTo(cx+9*s,cy+9*s);ctx.lineTo(cx-10*s,cy+9*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#68766b';ctx.beginPath();ctx.moveTo(cx-13*s,cy-3*s);ctx.lineTo(cx-7*s,cy-8*s);ctx.lineTo(cx-2*s,cy-12*s);ctx.lineTo(cx+5*s,cy-9*s);ctx.lineTo(cx+1*s,cy-2*s);ctx.lineTo(cx-7*s,cy+1*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#8b9784';ctx.fillRect(Math.round(cx-3*s),Math.round(cy-10*s),5*s,2*s);ctx.fillRect(Math.round(cx-8*s),Math.round(cy-5*s),3*s,2*s);
+    ctx.fillStyle='#416b40';ctx.fillRect(Math.round(cx-11*s),Math.round(cy+1*s),5*s,3*s);ctx.fillRect(Math.round(cx+4*s),Math.round(cy-1*s),6*s,3*s);ctx.fillRect(Math.round(cx+9*s),Math.round(cy+3*s),4*s,2*s);
+    ctx.fillStyle='#9bb65e';ctx.fillRect(Math.round(cx-9*s),Math.round(cy+1*s),3*s,1*s);ctx.fillRect(Math.round(cx+5*s),Math.round(cy-1*s),3*s,1*s);
+    /* пара травинок поверх нижнего края */
+    ctx.fillStyle='#527b3f';ctx.fillRect(Math.round(cx-14*s),Math.round(cy+4*s),2*s,4*s);ctx.fillRect(Math.round(cx+12*s),Math.round(cy+3*s),2*s,5*s);
+  }
+  ctx.restore();
+}
+/* v8.6.18 — SAFE DECOR RENDER: a faulty decorative drawer must never abort the whole frame. */
+var _decorRenderErrors=Object.create(null);
+function _safeDrawDecor(d){
+  try { drawDecor(d); }
+  catch(_decorErr){
+    var _key=(d&&d.type)||'unknown';
+    if(!_decorRenderErrors[_key]){
+      _decorRenderErrors[_key]=true;
+      try{ console.warn('[Dungeon Elf] decor renderer skipped:',_key,_decorErr); }catch(_ignore){}
+    }
+    /* Restore the common canvas state so one bad prop cannot hide the player/HUD. */
+    try{ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.setLineDash([]);}catch(_ignore2){}
+    /* v9.0.8: если сломался спрайт твёрдого декора — рисуем подходящий камень, а не коричневый прямоугольник. */
+    try{
+      if(d&&typeof _SOLID_DECOR!=='undefined'&&_SOLID_DECOR[d.type]){
+        ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+        var _runicFallback=(d.type==='druidStone'||/rune|druid.?stone/i.test(String(d.type||'')));
+        _drawFallbackStone(ctx,d.x*TILE-cam.x+TILE/2,d.y*TILE-cam.y+TILE/2,d,_runicFallback);
+      }
+    }catch(_fallbackErr){}
+  }
+}
+
+/* v8.6.23 — EPIC DECOR RESTORE + PIXEL REMASTER
+   Every epic type now has a dedicated, self-contained pixel-art drawer.
+   Geometry is cosmetic only: spawn tiles, collisions, saves and sorting are untouched. */
+(function(){
+  function epicShadow(ctx,cx,cy,rx,ry,a){ctx.fillStyle='rgba(4,8,10,'+(a||0.42)+')';ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();}
+  function px(ctx,cx,cy,s,items){for(var i=0;i<items.length;i++){var q=items[i];ctx.fillStyle=q[4];ctx.fillRect(Math.round(cx+q[0]*s),Math.round(cy+q[1]*s),Math.max(1,Math.round(q[2]*s)),Math.max(1,Math.round(q[3]*s)));}}
+  DECOR_DRAWERS.glowTree=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.05,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*8);
+    ctx.save();epicShadow(ctx,cx,cy+15*s,28*s,7*s,.48);
+    var g=ctx.createRadialGradient(cx,cy-22*s,2,cx,cy-22*s,47*s);g.addColorStop(0,'rgba(159,255,129,'+(.19+p*.1)+')');g.addColorStop(1,'rgba(100,255,140,0)');ctx.fillStyle=g;ctx.fillRect(cx-48*s,cy-70*s,96*s,100*s);
+    px(ctx,cx,cy,s,[[-5,-15,10,31,'#38271e'],[-3,-16,4,29,'#805334'],[-1,-12,2,24,'#c38a4e'],[-13,-42,15,12,'#174b35'],[-24,-33,20,13,'#1c5c3d'],[-12,-31,23,15,'#267446'],[4,-35,21,15,'#1d623f'],[-20,-22,18,12,'#246d42'],[-5,-24,20,13,'#34884b'],[10,-22,14,11,'#287748'],[-13,-14,16,8,'#21603a'],[2,-14,16,8,'#1b5636'],[-18,-34,6,4,'#69a957'],[-6,-39,7,4,'#9be66b'],[8,-32,7,4,'#7fd45d'],[1,-26,6,4,'#b6ff7b'],[-11,-23,5,4,'#8ee56a'],[11,-18,4,3,'#b7ff85'],[-2,-8,4,9,'#72d98b'],[-1,-7,2,7,'#d3ffad']]);
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.25+p*.22;ctx.fillStyle='#caff9c';ctx.fillRect(cx-2*s,cy-9*s,4*s,13*s);ctx.globalAlpha=1;ctx.restore();
+  };
+  DECOR_DRAWERS.bloomMeadow=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.12,seed=Math.floor((d.seed||0)*997),p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*9);
+    ctx.save();epicShadow(ctx,cx,cy+3*s,25*s,6*s,.32);
+    px(ctx,cx,cy,s,[[-24,0,48,3,'#315a36'],[-19,-3,9,4,'#477c3d'],[-8,-5,8,5,'#588e42'],[4,-4,9,4,'#477c3d'],[15,-2,7,3,'#315a36'],[-13,-10,2,10,'#44753b'],[-2,-13,2,13,'#4e8540'],[10,-9,2,9,'#477b3a'],[19,-7,2,7,'#3b6c36']]);
+    var colors=['#ff9fc9','#f4d66f','#c7a4ff','#ff744f','#f3f1d2','#8ce4c1'];
+    for(var i=0;i<11;i++){var a=(i*2.399+seed*.017),r=(3+(i%4)*4)*s,x=cx+Math.cos(a)*r,y=cy-5*s+Math.sin(a)*r*.42;var c=colors[(i+seed)%colors.length];ctx.fillStyle='rgba(255,190,220,'+(.12+p*.08)+')';ctx.fillRect(x-5*s,y-5*s,10*s,10*s);ctx.fillStyle=c;ctx.fillRect(Math.round(x-3*s),Math.round(y-1*s),Math.max(2,Math.round(3*s)),Math.max(2,Math.round(3*s)));ctx.fillRect(Math.round(x-1*s),Math.round(y-3*s),Math.max(2,Math.round(3*s)),Math.max(2,Math.round(3*s)));ctx.fillStyle='#fff0a2';ctx.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(2*s)),Math.max(1,Math.round(2*s)));}
+    ctx.restore();
+  };
+  DECOR_DRAWERS.skeletonThrone=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.08,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*5);
+    ctx.save();epicShadow(ctx,cx,cy+13*s,25*s,6*s,.5);
+    px(ctx,cx,cy,s,[[-20,-19,5,29,'#40352c'],[15,-19,5,29,'#40352c'],[-17,-25,34,7,'#594832'],[-14,-22,28,3,'#b28a4b'],[-15,-16,30,20,'#3d4038'],[-12,-13,24,14,'#9b9b81'],[-10,-10,20,9,'#353831'],[-17,1,34,5,'#625039'],[-22,6,44,5,'#332b24'],[-18,10,36,3,'#9a7948'],[-12,-25,4,7,'#d8c69b'],[8,-25,4,7,'#d8c69b'],[-7,-7,4,4,'#171c1a'],[4,-7,4,4,'#171c1a'],[-4,-1,8,2,'#d7cba8'],[-2,-4,4,3,'#f1e4c2'],[-23,-14,5,9,'#b4a98b'],[18,-14,5,9,'#b4a98b']]);
+    ctx.globalAlpha=.18+p*.18;ctx.fillStyle='#ffd36b';ctx.beginPath();ctx.ellipse(cx,cy-8*s,25*s,30*s,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  };
+  DECOR_DRAWERS.brokenAltar=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.12,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*7);
+    ctx.save();epicShadow(ctx,cx,cy+12*s,25*s,6*s,.48);
+    px(ctx,cx,cy,s,[[-22,3,44,8,'#343b3c'],[-19,1,38,3,'#77786d'],[-16,-7,32,10,'#4c514e'],[-13,-10,26,4,'#98917b'],[-11,-17,10,10,'#5a5c53'],[2,-18,12,11,'#454a47'],[-9,-20,6,5,'#77776a'],[5,-22,5,6,'#8e8873'],[-3,-14,7,14,'#9a7842'],[-1,-15,3,13,'#f1cf72'],[-16,-3,6,3,'#272e30'],[11,-4,7,3,'#272e30']]);
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.12+p*.17;ctx.fillStyle='#ffd778';ctx.beginPath();ctx.ellipse(cx,cy-12*s,19*s,17*s,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  };
+  DECOR_DRAWERS.frozenFall=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.05,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.002+(d.seed||0)*4);
+    ctx.save();epicShadow(ctx,cx,cy+15*s,25*s,6*s,.38);
+    var g=ctx.createLinearGradient(cx-18*s,cy-38*s,cx+18*s,cy+15*s);g.addColorStop(0,'rgba(218,248,255,.95)');g.addColorStop(.5,'rgba(107,194,230,.86)');g.addColorStop(1,'rgba(44,111,159,.9)');ctx.fillStyle=g;
+    ctx.beginPath();ctx.moveTo(cx-19*s,cy-29*s);ctx.lineTo(cx-14*s,cy-36*s);ctx.lineTo(cx+15*s,cy-36*s);ctx.lineTo(cx+20*s,cy-27*s);ctx.lineTo(cx+17*s,cy+8*s);ctx.lineTo(cx+9*s,cy+14*s);ctx.lineTo(cx-14*s,cy+13*s);ctx.lineTo(cx-19*s,cy+5*s);ctx.closePath();ctx.fill();
+    px(ctx,cx,cy,s,[[-13,-31,4,38,'#d5f7ff'],[-5,-32,3,42,'#8fd9f5'],[4,-30,4,40,'#b6edff'],[12,-28,3,35,'#6db9df'],[-16,-24,4,3,'#efffff'],[7,-21,4,2,'#f4ffff'],[-8,0,5,2,'#e7fbff']]);
+    ctx.globalAlpha=.18+p*.15;ctx.fillStyle='#b9f7ff';ctx.beginPath();ctx.arc(cx,cy-12*s,31*s,0,Math.PI*2);ctx.fill();ctx.restore();
+  };
+  DECOR_DRAWERS.bloodFountain=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.08,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.003+(d.seed||0)*6);
+    ctx.save();epicShadow(ctx,cx,cy+14*s,25*s,6*s,.52);
+    px(ctx,cx,cy,s,[[-20,3,40,10,'#353538'],[-17,1,34,4,'#77716b'],[-14,-3,28,6,'#4b4a4a'],[-12,-8,24,5,'#8b8177'],[-9,-13,18,6,'#393b3b'],[-7,-17,14,5,'#a39a8a'],[-5,-21,10,5,'#47494a'],[-3,-25,6,5,'#706d67'],[-2,-28,4,4,'#a0202b'],[-1,-31,2,5,'#d43b40'],[-10,-5,4,4,'#b8202c'],[6,-5,4,4,'#b8202c'],[-8,4,16,3,'#9e2028'],[-5,6,10,2,'#d74a46']]);
+    ctx.globalAlpha=.18+p*.2;ctx.fillStyle='#e22e3b';ctx.beginPath();ctx.ellipse(cx,cy-9*s,18*s,18*s,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  };
+  /* Dungeon sacred tree is intentionally distinct from the Sacred Grove tree. */
+  DECOR_DRAWERS.dungeonSacredTree=function(ctx,cx,cy,d){
+    var s=(d.s||1)*1.12,p=.5+.5*Math.sin((typeof tickTime!=='undefined'?tickTime:Date.now())*.0016+(d.seed||0)*8);
+    ctx.save();epicShadow(ctx,cx,cy+21*s,37*s,9*s,.55);
+    var glow=ctx.createRadialGradient(cx,cy-19*s,2,cx,cy-19*s,58*s);glow.addColorStop(0,'rgba(103,255,172,'+(.23+p*.12)+')');glow.addColorStop(1,'rgba(36,173,111,0)');ctx.fillStyle=glow;ctx.fillRect(cx-60*s,cy-80*s,120*s,115*s);
+    px(ctx,cx,cy,s,[[-30,12,18,5,'#2c2921'],[-23,15,18,4,'#4b3426'],[8,13,25,5,'#2a271f'],[7,16,20,3,'#503625'],[-10,-17,20,38,'#30271f'],[-7,-20,14,38,'#62452d'],[-3,-17,5,33,'#967044'],[-20,-8,13,4,'#443127'],[6,-12,14,4,'#443127'],[-18,5,14,4,'#3d3024'],[7,4,17,4,'#3d3024'],[-14,-47,25,12,'#143c31'],[-27,-37,25,13,'#194c36'],[-13,-36,28,14,'#286846'],[8,-38,24,14,'#1b5439'],[-30,-28,22,12,'#1b4b35'],[-15,-27,28,14,'#2d7548'],[8,-27,24,13,'#205d3d'],[-23,-18,21,11,'#205c3d'],[-5,-20,23,12,'#38834d'],[13,-18,15,10,'#286744'],[-13,-13,17,8,'#286a43'],[3,-13,18,8,'#21583b'],[-18,-40,7,4,'#64a95b'],[-5,-43,8,4,'#9bdf72'],[10,-35,7,4,'#72bf60'],[18,-25,6,4,'#5a9e53'],[-8,-28,7,4,'#a6e77a'],[0,-23,6,4,'#70c86b'],[-2,-9,5,18,'#80e6a3'],[-1,-8,3,15,'#d5ffb7'],[-29,2,7,10,'#506653'],[-28,3,4,7,'#b2e5a1'],[23,2,7,11,'#465b4e'],[24,4,4,7,'#b8f0a6']]);
+    ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.2+p*.2;ctx.fillStyle='#aaffc5';ctx.fillRect(cx-2*s,cy-9*s,4*s,17*s);ctx.restore();
+  };
+})();
+
 function drawDecor(d){
   if(!d||!d.type)return;
   var sx=d.x*TILE-cam.x,sy=d.y*TILE-cam.y;
   // Sacred Tree extends far above its anchor tile: use generous bounds so camera scrolling never culls it mid-screen.
-  var _cullTop = d.isSacredTree ? 620 : 160;
-  var _cullSide = d.isSacredTree ? 300 : 160;
+  var _cullTop = (d.isSacredTree || d.isTowerRuin || d.type==='dungeonSacredTree') ? 620 : ((d.type==='tree'||d.type==='tree2'||d.type==='treeGreen'||d.type==='pine'||d.type==='dead_tree') ? 280 : 180);
+  var _cullSide = (d.isSacredTree || d.isTowerRuin || d.type==='dungeonSacredTree') ? 300 : ((d.type==='tree'||d.type==='tree2'||d.type==='treeGreen'||d.type==='pine'||d.type==='dead_tree') ? 230 : 170);
   if(sx < -_cullSide || sy < -_cullTop || sx > VW+_cullSide || sy > VH+160)return;
   var cx=sx+TILE/2,cy=sy+TILE/2;
 
@@ -14846,6 +15791,18 @@ function drawDecor(d){
     }
   }
 
+  /* Dungeon sacred tree aura is emerald, distinct from the Grove tree. */
+  if(d.type==='dungeonSacredTree'){
+    var _dstPulse=.5+.5*Math.sin(tickTime*.0016+(d.seed||0)*8);
+    var _dstR=76+_dstPulse*10;
+    var _dstGlow=ctx.createRadialGradient(cx,cy-15,2,cx,cy-15,_dstR);
+    _dstGlow.addColorStop(0,'rgba(115,255,171,'+(.17+_dstPulse*.08)+')');
+    _dstGlow.addColorStop(.55,'rgba(54,191,130,'+(.08+_dstPulse*.04)+')');
+    _dstGlow.addColorStop(1,'rgba(35,120,83,0)');
+    ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=_dstGlow;
+    ctx.fillRect(cx-_dstR,cy-15-_dstR,_dstR*2,_dstR*2);ctx.restore();
+  }
+
   /* Эпик-декор: свечение + искры */
   if(d.isEpic){
     var _ep = Math.sin(tickTime*0.003)*0.3+0.7;
@@ -14861,7 +15818,7 @@ function drawDecor(d){
     ctx.arc(cx,cy,38,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
-    if(Math.random()<0.04 && bloodParticles.length<140){
+    if(Math.random()<(d.type==='dungeonSacredTree'?0.018:0.025) && bloodParticles.length<100){
       bloodParticles.push({
         x: d.x*TILE + TILE/2 + (Math.random()-0.5)*30,
         y: d.y*TILE + TILE/2 + (Math.random()-0.5)*20,
@@ -14914,12 +15871,28 @@ function drawDecor(d){
     ctx.restore();
   }
 
+  /* v8.6.4 — Руины эльфийской башни: настоящий процедурный pixel-art, без PNG.
+     Компактный силуэт, палитра под обычный декор Dungeon Elf, жёсткие пиксели. */
+  if(d.isTowerRuin){ _drawTowerRuinPixel(cx,cy,d); }
+
   /* Отрисовка спрайта */
   var _fn=DECOR_DRAWERS[t];
-  if(_fn){_fn(ctx,cx,cy,d);}
+  if(d.isTowerRuin){ /* процедурный спрайт уже нарисован выше */ }
+  /* v9.0.12: ritualCircle/shrineAltar have dedicated DECOR_DRAWERS, but those
+     overrides replace the actual pixel sprites in DECOR_SPRITES. Prefer the
+     original sprite for these two interactable lore objects; the glow and lore
+     effects below still run normally. */
+  else if((t==='ritualCircle'||t==='shrineAltar')&&_def){
+    var _renderPal = d.isSacredTree ? _sacredTreePal : _def.pal;
+    drawSprite(_def.spr,_renderPal,cx,cy+_yOff,_sc);
+  }
+  else if(_fn){_fn(ctx,cx,cy,d);}
   else if(_def){
     var _renderPal = d.isSacredTree ? _sacredTreePal : _def.pal;
     drawSprite(_def.spr,_renderPal,cx,cy+_yOff,_sc);
+  } else if(typeof _SOLID_DECOR!=='undefined' && _SOLID_DECOR[t]){
+    /* v9.0.8 — естественный мшистый валун; друидские рунические типы получают менгир. */
+    _drawFallbackStone(ctx,cx,cy,d,(t==='druidStone'||/rune|druid.?stone/i.test(String(t))));
   }
 
   // v8.2.1 — оставляем у рунических камней только мягкое пульсирующее свечение,
@@ -15027,6 +16000,10 @@ function drawDecor(d){
       _drawGhostSilhouette(cx,sy-20,d.seed);
     }
   }
+
+  /* v9.0.11 — пиксельные акценты для декора, проходящего через drawDecor.
+     Грибы намеренно рисуются отдельным передним проходом и эту функцию не вызывают. */
+  _drawEnvironmentPixelAccents(d, cx, cy);
 }
 
 /* ============================================================
@@ -15053,6 +16030,11 @@ function _drawSoftShadow(x, y, rx, ry, alpha){
     _cctx.beginPath();
     _cctx.ellipse(_cw/2, _ch/2, rx, ry, 0, 0, Math.PI * 2);
     _cctx.fill();
+    /* v8.6.1 — ограничение кеша теней. */
+    var _shadowKeys = Object.keys(_shadowCache);
+    if(_shadowKeys.length >= 30){
+      for(var _ski=0;_ski<15;_ski++){delete _shadowCache[_shadowKeys[_ski]];}
+    }
     _shadowCache[_key] = _cached;
   }
   ctx.drawImage(_cached, Math.round(x - _cached.width/2), Math.round(y - _cached.height/2));
@@ -15126,7 +16108,7 @@ function _biomeAmbientTick(){
   }
 }
 
-function _drawElfHeldWeapon(sx,sy,w,flipX,isMoving){
+function _drawElfHeldWeapon(sx,sy,w,flipX){
   if(!w||!w.sprite||!w.pal)return;
   var now=Date.now();
   var facing=(typeof player.facing==='number'&&isFinite(player.facing))?player.facing:0;
@@ -15205,7 +16187,14 @@ function _syncAttackIcon(){
   };
   el.setAttribute('data-weapon-icon',kind);
   var tint=kind==='bow'?'#d7dfb1':kind==='dagger'?'#d2b7e7':kind==='staff'?'#d8bd8c':'#e7d9b8';
-  el.innerHTML='<img class="game-icon-original" alt="" aria-hidden="true" width="23" height="23" src="'+iconUrls[kind]+'">';
+  var _iconSrc = iconUrls[kind];
+  if(!_iconSrc){
+    /* v8.6.1 — защита от неизвестного типа оружия. */
+    el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 3.2l3 3-10.7 11-3.2-3.2z"/><path d="M7.2 13.8l3.1 3.1-4.1 4.1-3.1-3.1z"/></svg>';
+    el.style.color=tint;
+    return;
+  }
+  el.innerHTML='<img class="game-icon-original" alt="" aria-hidden="true" width="23" height="23" src="'+_iconSrc+'">';
   el.style.color=tint;
   var iconImg=el.querySelector('.game-icon-original');if(iconImg){iconImg.style.width='23px';iconImg.style.height='23px';iconImg.style.objectFit='contain';iconImg.style.mixBlendMode='screen';iconImg.style.filter='none';iconImg.style.background='transparent';iconImg.onerror=function(){iconImg.style.display='none';el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 3.2l3 3-10.7 11-3.2-3.2z"/><path d="M7.2 13.8l3.1 3.1-4.1 4.1-3.1-3.1z"/></svg>';};}
 }
@@ -15250,14 +16239,26 @@ function drawElf(){
   var attackOffset=0;
   if(player.atkAnim>0&&!_isRangedWeapon){var k=player.atkAnim/12;attackOffset=(1-k)*2;}
   drawSprite(sprite,PAL_ELF,Math.round(sx+attackOffset),Math.round(sy),SPRITE_SCALE,flipX);
-  _drawElfHeldWeapon(sx+attackOffset,sy,w,flipX,_isMoving);
+  _drawElfHeldWeapon(sx+attackOffset,sy,w,flipX);
   _syncAttackIcon();
   ctx.restore();
 }
 
 /* v7.8.2 — enemy sprite polish: purely visual overlays; combat/state logic unchanged. */
+var _polishTypeCache={};
 function _drawEnemyPolish(e,sx,sy,bounceY){
-  var t=e.type, y=sy+bounceY, px=Math.max(1,Math.round(SPRITE_SCALE/2));
+  if(!e)return;
+  var t=e.type;
+  var _hasPolish=_polishTypeCache[t];
+  if(_hasPolish===undefined){
+    _hasPolish=!!(t==='skeleton'||t==='elfTraitor'||t==='elfTraitorMage'||t==='elfTraitorCaptain'||
+      t==='goblin'||t==='goblinArcher'||t==='orc'||t==='orcArcher'||t==='golem'||
+      t==='spider'||t==='qspider'||t==='ghost'||t==='ghostKnight'||t==='shadow'||
+      t==='mage'||t==='shaman');
+    _polishTypeCache[t]=_hasPolish;
+  }
+  if(!_hasPolish&&!e.ally)return;
+  var y=sy+bounceY, px=Math.max(1,Math.round(SPRITE_SCALE/2));
   ctx.save();
   ctx.globalAlpha=0.9;
   ctx.lineCap='square';
@@ -15277,7 +16278,7 @@ function _drawEnemyPolish(e,sx,sy,bounceY){
     ctx.fillRect(sx+4*px,y,5*px,px);
   }else if(t==='goblin'||t==='goblinArcher'||t==='orc'||t==='orcArcher'){
     /* Leather/metal accents that distinguish the small raiders. */
-    ctx.fillStyle=t.indexOf('orc')===0?'#d4a16b':'#c4a46c';
+    ctx.fillStyle=(t==='orc'||t==='orcArcher')?'#d4a16b':'#c4a46c';
     ctx.fillRect(sx-5*px,y+2*px,3*px,px);
     ctx.fillRect(sx+2*px,y+2*px,3*px,px);
     ctx.fillStyle='#e0d7b8';
@@ -15518,8 +16519,8 @@ function drawEnemy(e){
     ctx.restore();
   }
   _drawEnemyPolish(e,sx,sy,bounceY);
-  _drawBossPolish(e,sx,sy,bounceY);
-  _drawElitePolish(e,sx,sy,bounceY);
+  if(e.boss||e.isMiniBoss)_drawBossPolish(e,sx,sy,bounceY);
+  if(e.elite)_drawElitePolish(e,sx,sy,bounceY);
   ctx.globalAlpha=1;
   if(e.burning>0){for(var b=0;b<3;b++){ctx.fillStyle='rgba(255,100,30,'+(0.5+gameRNG()*0.4)+')';ctx.fillRect(sx-8+b*8,sy-32+gameRNG()*4,4,6);}}
   if(e.poisoned>0){ctx.fillStyle='rgba(120,255,60,0.3)';ctx.beginPath();ctx.arc(sx,sy,e.r+3,0,Math.PI*2);ctx.fill();}
@@ -15656,6 +16657,67 @@ function drawLootBeam(x,y,color){
 }
 /* v7.9.2 — crisp pixel accents for treasure, firelight and dungeon dust.
    Decorative only: does not alter world state or gameplay. */
+function _drawTowerRuinPixel(cx, cy, d){
+  /* v8.6.5 — немного крупнее, но всё ещё в масштабе деревенских тайлов. */
+  var u=Math.max(2,Math.round(TILE/9));
+  var baseY=Math.round(cy+TILE*0.22);
+  var x=Math.round(cx);
+  var pulse=0.5+0.5*Math.sin(Date.now()*0.001+(d.seed||0));
+  function px(rx,ry,w,h,col){ctx.fillStyle=col;ctx.fillRect(Math.round(x+rx*u),Math.round(baseY+ry*u),Math.max(1,Math.round(w*u)),Math.max(1,Math.round(h*u)));}
+  ctx.save();
+  /* v8.6.6 — тень от парящей башни: разорванный контур и холодный магический рефлекс. */
+  ctx.save();
+  ctx.globalAlpha=0.72;
+  ctx.fillStyle='rgba(13,16,18,0.48)';
+  ctx.beginPath();
+  ctx.ellipse(x, baseY+u*3.2, u*9.2, u*2.0, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha=0.52;
+  ctx.fillStyle='#526f70';
+  ctx.fillRect(x-u*5,baseY+u*2,u*3,u);
+  ctx.fillRect(x+u*2,baseY+u*3,u*3,u);
+  ctx.globalAlpha=0.28+0.12*pulse;
+  ctx.fillStyle='#83b9a9';
+  ctx.fillRect(x-u*2,baseY+u*1,u*4,Math.max(1,u/2));
+  ctx.restore();
+  /* Воздушный зазор под каменным основанием — тень лежит ниже руин. */
+  /* Основание из старых камней. */
+  px(-7,-2,14,2,'#393b35'); px(-6,-3,12,2,'#66665a');
+  px(-5,-4,4,1,'#858273'); px(1,-4,4,1,'#858273'); px(-1,-4,3,1,'#484b43');
+  /* Корпус башни: тёмная задняя масса и тёплый каменный фасад. */
+  px(-5,-5,10,2,'#45483f'); px(-5,-7,2,3,'#777565'); px(3,-7,2,3,'#363a34');
+  px(-4,-9,8,3,'#5c5e51'); px(-3,-10,6,1,'#8b8774');
+  px(-4,-13,8,3,'#4c5047'); px(-3,-14,6,1,'#827e6b');
+  px(-3,-17,6,3,'#55584c'); px(-2,-18,4,1,'#928a73');
+  /* Разрушенная корона — разные по высоте остатки стен, не идеальная башенка. */
+  px(-4,-21,2,4,'#55584d'); px(-4,-22,1,1,'#938a72');
+  px(-1,-20,2,3,'#777362'); px(-1,-21,1,1,'#aaa087');
+  px(2,-22,2,5,'#454940'); px(3,-23,1,1,'#8e856e');
+  /* Сломанные перекрытия и трещины. */
+  px(-6,-15,2,1,'#343931'); px(4,-12,2,1,'#33382f');
+  px(-5,-8,1,2,'#99917a'); px(4,-17,1,2,'#8a826c');
+  /* Узкие магические окна, приглушённые и пиксельные. */
+  ctx.globalAlpha=0.55+pulse*0.18;
+  px(-1,-17,2,2,'#397b79'); px(-1,-16,1,1,'#78aaa0');
+  px(1,-12,1,2,'#397b79'); px(1,-12,1,1,'#8bb4a7');
+  px(-2,-8,2,2,'#356b6b'); px(-2,-8,1,1,'#78aaa0');
+  ctx.globalAlpha=1;
+  /* Осенняя листва и мох: тёплые пиксельные кластеры, без гладких кистей. */
+  px(-7,-9,2,2,'#75543a'); px(-8,-8,2,1,'#a06c3b'); px(-6,-10,1,1,'#b27c3d');
+  px(4,-6,2,2,'#684c35'); px(5,-7,2,1,'#93633a'); px(4,-8,1,1,'#b07b3e');
+  px(-4,-13,2,1,'#7b773f'); px(2,-18,2,1,'#777443');
+  /* Небольшие свисающие гроздья ржаво-золотых листьев на разрушенных уступах. */
+  px(-6,-19,2,1,'#9b6937'); px(-7,-18,2,2,'#b17a3b'); px(-6,-17,1,1,'#d09a4c');
+  px(3,-15,2,1,'#895b32'); px(4,-14,2,2,'#ad7437'); px(5,-13,1,1,'#d19a45');
+  px(-4,-6,2,1,'#a86f35'); px(-3,-5,2,1,'#c08a3f');
+  /* Листья у основания — отдельные пиксели, а не крупные декоративные пятна. */
+  px(-8,-1,1,1,'#bd8038'); px(-6,-2,1,1,'#d0a04a'); px(-3,-1,1,1,'#a96632');
+  px(2,-1,1,1,'#c38a3e'); px(5,-2,1,1,'#d0a04a'); px(8,-1,1,1,'#a96632');
+  /* Малые обломки у подножия — остаются внутри собственной площадки. */
+  px(-9,-2,2,1,'#666457'); px(7,-2,2,1,'#5c5c50'); px(-8,-3,1,1,'#89816e');
+  ctx.restore();
+}
+
 function _drawEnvironmentPixelAccents(d, sx, sy){
   if(!d||!d.type)return;
   var t=d.type, phase=(Date.now()*0.004+((d.seed||0)*1.73));
@@ -16058,9 +17120,13 @@ function drawLighting(){
 
 /* v4.9.44 — render разбит на подфункции */
 function render(){
+  if(inHub)return;
+  /* v7.0 (из v6.5.5): расширенный гард */
+  if(!player||!map||MAP_W<=0||MAP_H<=0)return;
+  ctx.fillStyle=PAL.black;ctx.fillRect(0,0,VW,VH);
 
-  /* v7.0.1 — ATMO: отрисовка призрака */
-  if(_ghostSilhouette && player && !inHub && !gameOver && !gamePaused){
+  /* v7.0.1 — ATMO: отрисовка призрака (перенесено после гардов) */
+  if(_ghostSilhouette && !gameOver && !gamePaused){
     var _gx = _ghostSilhouette.x - cam.x;
     var _gy = _ghostSilhouette.y - cam.y;
     if(_gx > -100 && _gy > -100 && _gx < VW+100 && _gy < VH+100){
@@ -16076,10 +17142,6 @@ function render(){
       ctx.beginPath(); ctx.arc(_gx, _gy, 30, 0, Math.PI*2); ctx.fill();
     }
   }
-  if(inHub)return;
-  /* v7.0 (из v6.5.5): расширенный гард */
-  if(!player||!map||MAP_W<=0||MAP_H<=0)return;
-  ctx.fillStyle=PAL.black;ctx.fillRect(0,0,VW,VH);
   var x0=Math.floor(cam.x/TILE),y0=Math.floor(cam.y/TILE);
   var x1=x0+Math.ceil(VW/TILE)+1,y1=y0+Math.ceil(VH/TILE)+1;
   _renderFloor(x0,y0,x1,y1);
@@ -16185,10 +17247,11 @@ function _renderGroundLayer(){
   }
 
   var _decorLen=decor.length;
+  /* v9.0.9 FIX: flower is depth-sorted with entities below, not drawn in the flat ground pass. */
   for(var g=0;g<_decorLen;g++){
     var dg=decor[g];
     var t2=dg.type;
-    if(t2!=='grass'&&t2!=='leafpile'&&t2!=='crack'&&t2!=='lily'&&t2!=='web'&&t2!=='spikeTrap'&&t2!=='water_puddle'&&t2!=='moss'&&t2!=='cobweb'&&t2!=='snow_pile'&&t2!=='water_lily'&&t2!=='druidTeleport')continue;
+    if(t2!=='grass'&&t2!=='leafpile'&&t2!=='crack'&&t2!=='lily'&&t2!=='web'&&t2!=='spikeTrap'&&t2!=='water_puddle'&&t2!=='moss'&&t2!=='cobweb'&&t2!=='snow_pile'&&t2!=='water_lily'&&t2!=='druidTeleport'&&t2!=='trailDirt')continue;
     var _dx=dg.x*TILE-cam.x,_dy=dg.y*TILE-cam.y;
     if(_dx<-160||_dy<-160||_dx>VW+160||_dy>VH+160)continue;
 
@@ -16213,9 +17276,10 @@ function _renderGroundLayer(){
       continue;
     }
 
-    drawDecor(dg);
-    /* _drawEnvironmentPixelAccents вызывается отдельно: drawDecor сам его не вызывает. */
-    _drawEnvironmentPixelAccents(dg, dg.x*TILE-cam.x+TILE/2, dg.y*TILE-cam.y+TILE/2);
+    _safeDrawDecor(dg);
+    /* v8.6.1 — пиксельные акценты вызываются для ВСЕХ типов декора,
+       поддерживающих их. Раньше вызов был только для «плоского»
+       декора, а акценты есть у факелов/кристаллов — они в entity-слое. */
     // v8.0.0 — пульсация синего телепорта друидов.
     if(dg.type === 'druidTeleport'){
       var _tpx = dg.x*TILE - cam.x + TILE/2;
@@ -16322,6 +17386,10 @@ function _pushDrawItem(drawList, wl, y, kind, ref, x, y2){
   }
 }
 
+/* v9.0.2 PERF — bucket sort drawList с точным порядком по Y внутри бакета.
+   Использует переиспользуемые массивы; порядок отрисовки не аппроксимируется. */
+var _drawBuckets=[];
+var _drawBucketsMaxY=0;
 function _renderEntityLayer(){
   var _decorLen=decor.length;
   /* v5.4.8 — переиспользуем буфер вместо нового массива каждый кадр */
@@ -16332,10 +17400,14 @@ function _renderEntityLayer(){
   for(var di=0;di<_decorLen;di++){
     var dd=decor[di];
     var ddT=dd.type;
-    if(ddT==='grass'||ddT==='leafpile'||ddT==='crack'||ddT==='lily'||ddT==='web'||ddT==='spikeTrap'||ddT==='water_puddle'||ddT==='moss'||ddT==='cobweb'||ddT==='snow_pile'||ddT==='water_lily')continue;
+    if(ddT==='grass'||ddT==='leafpile'||ddT==='crack'||ddT==='lily'||ddT==='web'||ddT==='spikeTrap'||ddT==='water_puddle'||ddT==='moss'||ddT==='cobweb'||ddT==='snow_pile'||ddT==='water_lily'||ddT==='druidTeleport'||ddT==='trailDirt')continue;
+    /* v9.0.5 — грибы рисуются отдельным передним проходом, чтобы кроны деревьев не скрывали их. */
+    if(ddT==='mushroom'||ddT==='glow_mushroom'||ddT==='giantMush'||ddT==='mushBlue'||ddT==='mushRed'||ddT==='glowMold')continue;
     var _ddx=dd.x*TILE-cam.x,_ddy=dd.y*TILE-cam.y;
     if(_ddx<-160||_ddy<-160||_ddx>VW+160||_ddy>VH+160)continue;
-    _pushDrawItem(drawList,_wl++,dd.y*TILE+TILE,0,dd);
+    /* v9.0.11 — грибы уже пропущены выше и рисуются отдельным передним проходом. */
+    var _decorSortY = dd.y*TILE+TILE;
+    _pushDrawItem(drawList,_wl++,_decorSortY,0,dd);
   }
 
   /* Враги. */
@@ -16395,18 +17467,13 @@ function _renderEntityLayer(){
 
   /* Обрезаем буфер до актуальной длины. */
   if(_wl<drawList.length)drawList.length=_wl;
-  /* v5.2.2 — сортировка раз в 2 кадра: визуально незаметно,
-     но снижает нагрузку на глубоких этажах с 100+ объектами.
-     Кеш сбрасывается при изменении длины списка (новые/удалённые
-     объекты) — чтобы не пропустить появление нового врага. */
-  if(_frameCounter%2===0||_drawListLen!==drawList.length){
-    drawList.sort(function(a,b){return a.y-b.y;});
-    _drawListLen=drawList.length;
-    /* v5.7.9 — _drawListFrame удалён: писался, не читался. */
-  }
-  /* else — используем тот же порядок, что и 2 кадра назад.
-     Буфер уже содержит свежие данные, но в старом порядке.
-     Для визуальной сортировки по Y это незаметно. */
+  /* v9.0.2 DECOR FIX — exact original depth sort; preserves decor overlap order. */
+  drawList.sort(function(a,b){
+    var dy=a.y-b.y;
+    if(Math.abs(dy)>0.01)return dy;
+    return (a.order||0)-(b.order||0);
+  });
+  _drawListLen=drawList.length;
   for(var k=0;k<drawList.length;k++){
     var item=drawList[k];
     var kd=item.kind;
@@ -16440,7 +17507,43 @@ function _renderEntityLayer(){
     else if(kd===7){
       drawSprite(SPR_SKEL_ELF,PAL_SKEL_ELF,item.x-cam.x,item.y2-cam.y,SPRITE_SCALE);
     }
-    else drawDecor(item.ref);
+    else _safeDrawDecor(item.ref);
+  }
+
+  /* v9.0.7 — независимая и уменьшенная отрисовка грибов.
+     В v9.0.5 грибы всё ещё проходили через drawDecor/_safeDrawDecor; если
+     общий drawer/helper падал, отдельный проход тоже ничего не показывал.
+     Здесь рисуем гриб непосредственно на canvas, не используя общие функции. */
+  for(var _mfi=0;_mfi<_decorLen;_mfi++){
+    var _mf=decor[_mfi];
+    if(!_mf||(_mf.type!=='mushroom'&&_mf.type!=='glow_mushroom'&&_mf.type!=='giantMush'&&_mf.type!=='mushBlue'&&_mf.type!=='mushRed'&&_mf.type!=='glowMold'))continue;
+    var _mfx=_mf.x*TILE-cam.x+TILE/2,_mfy=_mf.y*TILE-cam.y+TILE/2;
+    if(_mfx<-100||_mfy<-120||_mfx>VW+100||_mfy>VH+100)continue;
+    var _ms=Math.max(0.52,Math.min(1.12,(_mf.s||1)*0.68)); /* v9.0.7: грибы компактнее на ~32% */
+    var _mt=_mf.type;
+    var _cap=_mt==='mushBlue'?'#4299d1':(_mt==='mushRed'?'#d84d4d':(_mt==='glow_mushroom'||_mt==='glowMold'?'#39b8a7':(_mt==='giantMush'?'#a94bb4':((_mf.seed||0)>.5?'#d86b49':'#c96caa'))));
+    var _glow=(_mt==='glow_mushroom'||_mt==='glowMold'||_mt==='giantMush');
+    ctx.save();
+    ctx.globalAlpha=1;
+    if(_glow){
+      ctx.globalCompositeOperation='lighter';
+      var _gr=_mt==='giantMush'?29*_ms:21*_ms;
+      var _gg=ctx.createRadialGradient(_mfx,_mfy-7*_ms,1,_mfx,_mfy-7*_ms,_gr);
+      _gg.addColorStop(0,_mt==='giantMush'?'rgba(120,255,205,0.38)':'rgba(105,255,225,0.34)');
+      _gg.addColorStop(1,'rgba(80,255,210,0)');
+      ctx.fillStyle=_gg;ctx.fillRect(_mfx-_gr,_mfy-_gr,_gr*2,_gr*2);
+      ctx.globalCompositeOperation='source-over';
+    }
+    ctx.fillStyle='rgba(8,12,10,0.48)';ctx.beginPath();ctx.ellipse(_mfx,_mfy+8*_ms,13*_ms,4*_ms,0,0,Math.PI*2);ctx.fill();
+    var _stemW=(_mt==='giantMush'?12:8)*_ms;
+    ctx.fillStyle='#e8dfc2';ctx.fillRect(Math.round(_mfx-_stemW/2),Math.round(_mfy-7*_ms),Math.max(3,Math.round(_stemW)),Math.round(15*_ms));
+    ctx.fillStyle='#a69a7b';ctx.fillRect(Math.round(_mfx-_stemW/2),Math.round(_mfy+3*_ms),Math.max(3,Math.round(_stemW)),Math.max(2,Math.round(4*_ms)));
+    ctx.fillStyle=_cap;
+    ctx.fillRect(Math.round(_mfx-11*_ms),Math.round(_mfy-15*_ms),Math.max(4,Math.round(22*_ms)),Math.max(3,Math.round(7*_ms)));
+    ctx.fillRect(Math.round(_mfx-8*_ms),Math.round(_mfy-19*_ms),Math.max(4,Math.round(16*_ms)),Math.max(3,Math.round(5*_ms)));
+    ctx.fillStyle=_glow?'#c7fff0':'#ffe0a0';ctx.fillRect(Math.round(_mfx-4*_ms),Math.round(_mfy-20*_ms),Math.max(2,Math.round(8*_ms)),Math.max(2,Math.round(3*_ms)));
+    ctx.fillStyle='rgba(255,245,215,0.95)';ctx.fillRect(Math.round(_mfx-7*_ms),Math.round(_mfy-14*_ms),Math.max(2,Math.round(3*_ms)),Math.max(2,Math.round(2*_ms)));
+    ctx.restore();
   }
 }
 function _renderTopLayer(){
@@ -16456,7 +17559,7 @@ function _renderWalls(x0,y0,x1,y1){
       var wt=wrow[x];
       if(wt!==1&&wt!==6)continue;
       var wx2=x*TILE-cam.x,wy2=y*TILE-cam.y;
-      drawWallTile(wx2,wy2);
+      drawWallTile(wx2,wy2,x,y,wt);
       if(wt===6){
         ctx.strokeStyle='rgba(0,0,0,0.7)';ctx.lineWidth=2;
         ctx.beginPath();
@@ -17242,7 +18345,12 @@ function die(){
   meta.loreShopBought=[];saveMeta();
   lastDeathPos={x:player.x,y:player.y,active:true};
   var do2=document.getElementById('deathOverlay');
-  if(do2){do2.style.display='block';do2.style.opacity='0.7';}
+  if(do2){
+    do2.style.background='#3b101a';
+    do2.style.transition='opacity 1.5s ease-in';
+    do2.style.display='block';
+    do2.style.opacity='0.7';
+  }
   stopMusic();
   if(_deathSfxTimer)clearTimeout(_deathSfxTimer);
   _deathSfxTimer=setTimeout(function(){SfxPlay('descend');},200);
@@ -17379,6 +18487,10 @@ function continueRun(){
   /* v8.5.7 — сохраняем отметки дневника при continueRun, не сбрасываем их. */
   player._diaryShown = (p._diaryShown && typeof p._diaryShown === 'object' && !Array.isArray(p._diaryShown)) ? p._diaryShown : {};
   player._sellCount = p._sellCount || null;
+  /* v8.6.1 — восстановление флагов, иначе диалоги повторятся */
+  player._priestessElderShown = !!p._priestessElderShown;
+  player._druidLoreShown = !!p._druidLoreShown;
+  player._tirionEchoSeen = !!p._tirionEchoSeen;
   /* v8.4.1 — сохраняем расширение сумки между продолжениями забега. */
   player.bagPurchased = (typeof p.bagPurchased === 'number' && isFinite(p.bagPurchased)) ? p.bagPurchased : 0;
   _repairPlayerVitals();
@@ -17598,6 +18710,16 @@ function handleCanvasTap(clientX,clientY){
   if(!player||inHub)return;
   var _m=document.getElementById('modal');if(_m&&_m.style.display==='flex')return;
   var wx=clientX+cam.x,wy=clientY+cam.y;
+  /* v8.6.2 — осмотр руин башни по тапу. */
+  for(var _tri=0;_tri<decor.length;_tri++){
+    var _trd=decor[_tri];if(!_trd.isTowerRuin)continue;
+    var _trx=_trd.x*TILE+TILE/2,_try_=_trd.y*TILE+TILE/2;
+    if(Math.abs(wx-_trx)<TILE*2.2&&Math.abs(wy-_try_)<TILE*2.2){
+      if(dist2(_trx,_try_,player.x,player.y)<140*140){showModal('<h2 class="lore-title">'+TOWER_RUIN_LORE.title+'</h2><div class="lore-text">'+TOWER_RUIN_LORE.text.replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');SfxPlay('altar');}
+      else showToast('Подойди ближе');return;
+    }
+  }
+
   /* === Щель Старейшины (приоритет) === */
   if(_elderDoors&&_elderDoors.length){
     for(var _edi=0;_edi<_elderDoors.length;_edi++){
@@ -18992,6 +20114,9 @@ function _newRunFromModal(){
   clearRunSave();
   closeModalAll();
   showToast('🗑️ Старое сохранение удалено');
+  setTimeout(function(){
+    startRun(meta.mode || 'classic');
+  }, 250);
 }
 
 try{
