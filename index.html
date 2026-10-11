@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v8.5.4. -->
+<!-- Dungeon Elf v8.6.0. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v8.5.1 — Священная Роща</title>
+<title>Dungeon Elf v8.6.0 — Священная Роща</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -481,7 +481,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='8.5.4';
+var GAME_VERSION='8.6.1';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -637,6 +637,8 @@ function resize(){
     _vignetteCache.grd = null;
   }
   _shadowCache = {};
+  /* v8.5.8-FIX: сброс кэша атмосферной виньетки при resize/orientationchange. */
+  if(typeof _darkAtmoCache !== 'undefined')_darkAtmoCache={w:0,h:0,grd:null};
   try{ctx.setTransform(DPR,0,0,DPR,0,0);}catch(e){ctx.scale(DPR,DPR);}
   ctx.imageSmoothingEnabled=false;
 }
@@ -1129,16 +1131,7 @@ var BESTIARY={
     lore:'Бывший Архимаг эльфов. Врос в корень жизни и стал чудовищем. Всё ещё помнит, кем был. Убей его — это не месть. Это милосердие.',
     quote:'«Он сказал: спасибо, что дошёл. Теперь я могу уйти.» — из записей Аэлиса',deeper:'Он не хотел. Он правда не хотел. Он хотел остановить смерть — для всех. Он забыл, что смерть — часть жизни. Он всё ещё помнит, как смеялся Старейшина. Он плачет — если корни умеют плакать.'},
 
-  /* ===== v4.9.9 — ЭЛЬФЫ-ПРЕДАТЕЛИ ===== */
-  elfTraitor:{name:'Эльф-предатель',desc:'Бывший сородич. Пошёл за Тирионом добровольно.',weak:'огонь и свет',
-    lore:'Он не был порабощён. Он выбрал. Тирион обещал, что смерти больше не будет. Он поверил. Теперь он не мёртв и не жив — просто стоит на пути.',
-    quote:'«Скелеты говорят на древнем. Я понимаю отдельные слова. Они говорят: брат. Они говорят: прости. Я не знаю, кому это. Может, мне. Может — ему.» — Аэлис, запись 10',deeper:'Кузнец пошёл за Тирионом, потому что верил. Тирион обещал: смерти не будет. Смерти правда нет — есть стояние. Кузнец не жалеет. Он просто устал.'},
-  elfTraitorMage:{name:'Эльф-отступник',desc:'Бывший ученик Старейшины. Продал знание корню.',weak:'ближний бой',
-    lore:'Он знал ритуал. Он сам показал Тириону корень. Он думал — вдвоём они остановят смерть. Осталась только осень.',
-    quote:'«Он говорил: мы спасали вас. Я спросил: от чего? Он не ответил.» — из записей Аэлиса',deeper:'Он знал ритуал. Он сам показал корень. Он думал: вдвоём остановим смерть. Теперь он знает: они остановили жизнь. Он не может сказать это вслух — голос врос в камень.'},
-  elfTraitorCaptain:{name:'Капитан стражи',desc:'Бывший защитник деревни. Теперь защищает Тириона.',weak:'дробящее',
-    lore:'Он стоял у ворот, когда Тирион уходил. Он мог остановить. Он не остановил. Теперь он стоит у других ворот — и не пропускает тебя.',
-    quote:'«Он сказал: я не мог его ударить. Он был мне как отец. Я понимаю. Я тоже не могу.» — из записей Аэлиса',deeper:'Он стоял у ворот, когда Тирион уходил. Он не остановил. Он пошёл. Ворота закрылись. Он не помнит, как выглядит деревня. Он помнит только приказ: не пропускай.'},
+  /* v8.5.8-FIX: записи эльфов-предателей перенесены к концу BESTIARY. */
 
   /* v5.2.9 — псевдо-записи для правильной причины смерти от эффектов */
   ожог:{name:'ожог',desc:'',weak:'',lore:'',deeper:''},
@@ -1165,7 +1158,18 @@ var BESTIARY={
     quote:'«Рыцарь не напал первым. Он ждал, пока я подойду. Он был вежлив — даже в смерти.» — Аэлис, запись 25',deeper:'Каждый рыцарь — бывший эльф. У каждого было имя. Они дали клятву служить Тириону до конца. Они сдержали её. Они не знают, что клятва давно кончилась.'},
   shadow:{name:'Тень',desc:'Отражение Тириона. Слабая, но много.',weak:'массовый урон',
     lore:'Тени появились, когда Тирион врос в корень. Они — то, что он потерял. Смех. Радость. Спокойствие. Они бродят по замку, ищут хозяина.',
-    quote:'«Тени не нападают стаями. Они не нападают вообще. Они просто смотрят. Потом — исчезают. Потом — появляются снова.» — Аэлис, запись 26',deeper:'Каждая тень — часть Тириона. Не злая. Просто забытая. Они ищут его. Они не знают, что он уже не тот, кем был. Они ищут — и не находят.'}
+    quote:'«Тени не нападают стаями. Они не нападают вообще. Они просто смотрят. Потом — исчезают. Потом — появляются снова.» — Аэлис, запись 26',deeper:'Каждая тень — часть Тириона. Не злая. Просто забытая. Они ищут его. Они не знают, что он уже не тот, кем был. Они ищут — и не находят.'},
+
+  /* v8.5.8-FIX: уникальные записи эльфов-предателей, без дубликатов. */
+  elfTraitor:{name:'Эльф-предатель',desc:'Бывший сородич. Пошёл за Тирионом добровольно.',weak:'огонь и свет',
+    lore:'Он не был порабощён. Он выбрал. Тирион обещал, что смерти больше не будет. Он поверил. Теперь он не мёртв и не жив — просто стоит на пути.',
+    quote:'«Скелеты говорят на древнем. Я понимаю отдельные слова. Они говорят: брат. Они говорят: прости. Я не знаю, кому это. Может, мне. Может — ему.» — Аэлис, запись 10',deeper:'Кузнец пошёл за Тирионом, потому что верил. Тирион обещал: смерти не будет. Смерти правда нет — есть стояние. Кузнец не жалеет. Он просто устал.'},
+  elfTraitorMage:{name:'Эльф-отступник',desc:'Бывший ученик Старейшины. Продал знание корню.',weak:'ближний бой',
+    lore:'Он знал ритуал. Он сам показал Тириону корень. Он думал — вдвоём они остановят смерть. Осталась только осень.',
+    quote:'«Он говорил: мы спасали вас. Я спросил: от чего? Он не ответил.» — из записей Аэлиса',deeper:'Он знал ритуал. Он сам показал корень. Он думал: вдвоём остановим смерть. Теперь он знает: они остановили жизнь. Он не может сказать это вслух — голос врос в камень.'},
+  elfTraitorCaptain:{name:'Капитан стражи',desc:'Бывший защитник деревни. Теперь защищает Тириона.',weak:'дробящее',
+    lore:'Он стоял у ворот, когда Тирион уходил. Он мог остановить. Он не остановил. Теперь он стоит у других ворот — и не пропускает тебя.',
+    quote:'«Он сказал: я не мог его ударить. Он был мне как отец. Я понимаю. Я тоже не могу.» — из записей Аэлиса',deeper:'Он стоял у ворот, когда Тирион уходил. Он не остановил. Он пошёл. Ворота закрылись. Он не помнит, как выглядит деревня. Он помнит только приказ: не пропускай.'}
 
 };
 var QUEST_POOL=[
@@ -1377,13 +1381,13 @@ var AELIS_DIARY=[
   {floor:13,text:'«Шаман лечит раненого, пока я смотрю. Я не мешаю. Это не бой. Это милосердие. Я не знал, что милосердие бывает таким тихим.»'},
   {floor:14,text:'«Затопленные залы. Я нашёл имя на стене. Не своё. Знакомое. Кто-то из нашей деревни был здесь раньше. Он не вернулся. Теперь я знаю, где он.»'},
   {floor:15,text:'«Призрак прошёл сквозь меня. Холодно. Он прошептал: прости. Я не знаю, кого он просил. Я не стал спрашивать — вдруг меня.»'},
-  {floor:16,text:'«Королева пауков не тронула меня. Она смотрела и молчала. Я понял: она тоже здесь не по своей воле. Она пленница. Как и все мы.»'},
+  {floor:16,text:'«Королева пауков не тронула меня. Она смотрела и молчала. Я понял: она тоже здесь не по своей воле. Она пленница. Как и все мы.\n\nСегодня я понял, почему хороший удар отбрасывает. Клинок не разрубает. Клинок отталкивает. Враг летит назад, падает, встаёт — и в эти полсекунды ты успеваешь решить: ударить ещё или отойти. Оружие даёт тебе время подумать. Я раньше думал, что меч — для убийства. Теперь знаю: меч — для разговора. Ты говоришь врагу: отойди. Он отходит.»'},
   {floor:17,text:'«Укус жжёт. Я выжил. Другие — нет. Не все дошли. Я запомнил это — просто на всякий случай. Не для себя. Для тех, кто пойдёт после.»'},
   {floor:18,text:'«Грибы говорят. Они повторяют моё имя. Я не отвечаю. Если ответить — они узнают, что я живой. Тогда они расскажут ему. Я ещё не готов.»'},
   {floor:19,text:'«Бес кинул в меня огонь и засмеялся. Я засмеялся тоже. Потом убил. Странно. Здесь смех и смерть идут рука об руку. Не знаю, что из них страшнее.»'},
   {floor:20,text:'«Дракон пропустил меня. Он сказал: Иди. Ты не первый. Ты не последний. Это милосердие. Я не понял, что он имел в виду. Теперь понимаю.»'},
   {floor:21,text:'«Ледяной волк не напал. Он замерз в стойке. Я обошёл. Он не двинулся. Я не обернулся. Оба сделали вид, что ничего не было.»'},
-  {floor:22,text:'«Гриб говорил со мной. Голосом учителя. Я почти ответил. Потом понял — это не он. Это то, что осталось. Я не ответил. Он не обиделся. Ему всё равно.»'},
+  {floor:22,text:'«Гриб говорил со мной. Голосом учителя. Я почти ответил. Потом понял — это не он. Это то, что осталось. Я не ответил. Он не обиделся. Ему всё равно.\n\nСегодня я убил пятерых за минуту. Не помню как. Помню только, что когда остановился — руки тряслись. Я не воин. Я не охотник. Я не убийца. Я — тот, кто шёл первым. И вот я стою, и вокруг меня пятеро, которых больше нет. Я не хотел этого. Но оно случилось само. Наверное, так и работает мастерство — оно приходит, когда ты уже не думаешь. И тогда ты начинаешь бояться себя, а не врагов.»'},
   {floor:23,text:'«Я открыл сундук. Он открыл меня. Я выжил. Сундук — нет. Мимик не злой. Он просто голодный. Я тоже голодный. Но я не притворяюсь сундуком.»'},
   {floor:24,text:'«Последняя запись. Я устал. Я не боюсь. Я просто хочу, чтобы кто-то дошёл. Если ты читаешь это — значит, ты до меня. Значит, у тебя есть шанс. Возьми моё оружие. Прости, что не смог.»'},
   {floor:26,text:'«Если ты читаешь это — значит, ты дошёл дальше меня. Значит, ты сделал то, что я не смог. Не благодари. Просто живи. Просто вернись. И скажи Старейшине: я не сержусь. Я просто устал.»'},
@@ -1500,9 +1504,11 @@ var TRAITOR_NOTES=[
    Аэлис боялся и шёл. Таэлир не боялся и всё равно умер. */
 var HUNTER_NOTES=[
   {floor:4,text:'«День 1. Спустился по верёвке. Внизу сыро. Гоблины тут жирные — видно, еды хватает. Убил двоих. Стрелы целы. Иду дальше.»'},
+  {floor:5,text:'«День 2. Нашёл молот. Тяжёлый. Ударил гоблина в висок — он упал, но не умер. Встал через мгновение. Я снова ударил. Снова упал. Встал. Три раза. Потом я понял: молот — это не убийство. Это выигранное время. Бей, пока он падает. Бей, пока он помнит, что стоит.»'},
   {floor:6,text:'«День 3. Стрелы кончаются. Осталось девять. Придётся бить ножом. Не люблю нож — он близко подпускает. Но выбора нет.»'},
   {floor:8,text:'«День 5. Видел дракона. Спит. Я стоял минуту, смотрел. Он дышал ровно — как спящий человек. Не стал будить. Прошёл мимо. Он не проснулся. Думаю, он меня слышал и не стал мешать.»'},
   {floor:10,text:'«День 7. Костяной лорд говорил со мной. Он не врал. Он сказал: Тирион не злой. Он просто не понял. Я не стал его убивать. Прошёл. Он не напал.»'},
+  {floor:11,text:'«День 8. Кинжал — другое. Он не убивает сразу. Он оставляет длинную линию. Гоблин бежит — и за ним тянется красное. Он умирает через десять шагов. Через двадцать. Я не догоняю. Я просто иду следом и считаю. Пять. Четыре. Три. Два. Один.»'},
   {floor:12,text:'«День 9. Что-то не так с моими руками. Они тёплые. Здесь всё тёплое. Камень. Воздух. Стены. Как будто подземелье дышит. Я не хочу знать, что это значит.»'},
   {floor:14,text:'«День 11. Я слышу голос. Он говорит мягко. Он говорит: возвращайся домой, дитя. У меня нет дома. Я иду дальше.»'},
   {floor:15,text:'«День 13. Если ты читаешь это — не ходи дальше. Он ждёт. Он всегда ждёт. Я иду. У меня было имя. Меня звали Таэлир. Скажи маме — я не вернусь. Скажи…»'}
@@ -1516,6 +1522,7 @@ var HUNTER_NOTES=[
 var TRADER_NOTES=[
   {floor:5,text:'«Первый покупатель. Эльф. Молодой. Купил меч за 40. Сказал — идёт вниз. Я сказал — не ходи. Он засмеялся. Через три дня его меч вернулся. Принёс другой эльф. Купил за 40. Хороший бизнес.»'},
   {floor:8,text:'«Спускался. Один раз. Дошёл до 12 этажа. Увидел костяного лорда. Он говорил со мной. Он сказал: ты можешь вернуться. Я вернулся. Я не глупый. Я живой.»'},
+  {floor:10,text:'«Продал эльфу молот. Он спросил: „Он сломает стену?“ Я ответил: „Он сломает всё, если попросить правильно“. Он не понял. Я тоже не понял. Но молот он купил. Через неделю вернулся — молот сломан, эльф жив. Сказал: „Стены помнят“. Я не спросил, что это значит. У меня своя работа.»'},
   {floor:12,text:'«Считаю. За год — 47 мечей продал. Из них — 43 вернулись. Значит, 4 остались внизу. С их хозяевами. Я не считаю хозяев. Только мечи. Мечи возвращаются.»'},
   {floor:16,text:'«Странник. Не эльф. Не гоблин. Кто-то с юга. Спросил: как пройти к Древню. Я сказал: никак. Он пошёл. Он заплатил золотом вперёд. Я взял. Он не вернулся. Я знал, что не вернётся. Я взял золото. Такова жизнь.»'},
   {floor:20,text:'«Сегодня видел девушку. Эльфийка. Молодая. Спросила про брата. Аэлис. Я знал Аэлиса. Он покупал у меня стрелы. 30 стрел. Он не вернулся. Я сказал ей — не знаю. Она ушла. Я не соврал. Я не знаю. Я знаю только, что стрелы не вернулись.»'}
@@ -1998,9 +2005,13 @@ function _showFloorLore(isVillage){
    Каждый забег показывает записи заново.
    В Кодексе — запись сохраняется навсегда. */
 function _showHeroDiary(location, floor){
+  /* v8.5.10-FIX: защита от вызова без player. */
+  if(!player)return;
   var _entry=null;
 
   if(!player._diaryShown)player._diaryShown={};
+  /* v8.5.10-FIX: защита от повреждённого сейва. */
+  if(typeof player._diaryShown!=='object'||Array.isArray(player._diaryShown))player._diaryShown={};
 
   for(var i=0;i<HERO_DIARY.length;i++){
     var d=HERO_DIARY[i];
@@ -2662,7 +2673,9 @@ function checkAchievements(){
      которые сохранялись в localStorage только при loadStats()/saveStats().
      После покупки улучшения saveStats() не звался → stats.upgrades в
      localStorage оставался старым → ачивка 'metaMaster' пропадала после
-     перезапуска. Теперь синхронизируем ПЕРЕД проверкой. */
+     Теперь синхронизируем ПЕРЕД проверкой ачивок. */
+  /* v8.5.10-FIX: защита meta.bank от NaN/отрицательного. */
+  if(typeof meta.bank!=='number'||!isFinite(meta.bank)||meta.bank<0)meta.bank=0;
   stats.upgrades=meta.upgrades;
   stats.unlockedWeapons=meta.unlockedWeapons;
 
@@ -3430,15 +3443,13 @@ var BALANCE={
   },
   /* Скелеты некроманта */
   /* Скелеты некроманта.
-     v5.4.16 — ФИКС: некромант слишком доминировал в лейтгейме.
-     Было: 5 скелетов × (45+floor×12) HP, dmg 6+floor×1.2 → на 20 этаже
-     это 5 × 285 HP, 5 × 30 dmg = 150 dmg/сек. Игрок ничего не делал.
-     Стало: maxCount 3, HP 40+floor×9, dmg 5+floor×0.9.
-     На 20 этаже: 3 × 220 HP, 3 × 23 dmg = 69 dmg/сек. */
+     v5.4.16 — ограничение силы скелетов в поздней игре.
+     v8.5.8-FIX: maxCount 3 → 5, чтобы пассивное поднятие скелетов
+     оставалось полезным после двух активных призывов. */
   skeleton:{
     hpBase:40, hpPerFloor:9,
     dmgBase:5, dmgPerFloor:0.9,
-    maxCount:3,
+    maxCount:5,
     summonCount:2
   },
   /* Сумка — цены в BALANCE.prices. */
@@ -4599,37 +4610,8 @@ var COMPENDIUM=[
   ]}
 ];
 
-/* =====================================================================
-   v6.1.0 — Секретная секция справочника
-   Открывается только после победы над Аэлисом.
-   До этого — «???» с намёком.
-   ===================================================================== */
-
-(function _addSecretCompendiumSection(){
-  var _secretEntries=[];
-  for(var _subId in AELIS_ENDING_BY_SUBCLASS){
-    if(!AELIS_ENDING_BY_SUBCLASS.hasOwnProperty(_subId))continue;
-    var _subData=null;
-    for(var _cls in SUBCLASSES){
-      if(!SUBCLASSES.hasOwnProperty(_cls))continue;
-      for(var _i=0;_i<SUBCLASSES[_cls].length;_i++){
-        if(SUBCLASSES[_cls][_i].id===_subId){_subData=SUBCLASSES[_cls][_i];break;}
-      }
-      if(_subData)break;
-    }
-    if(!_subData)continue;
-    var _won=stats.aelisWins && stats.aelisWins.indexOf(_subId)>=0;
-    _secretEntries.push({
-      name: _subData.icon+' '+_subData.name+(_won?' ✅':' ❓'),
-      desc: _won ? AELIS_ENDING_BY_SUBCLASS[_subId] : 'Финал с ??? для этого пути. Ещё не открыт.',
-      lore: _won ? '' : '«Я знал, что ты придёшь. Ты всегда приходил.» — из дневника Аэлиса, запись 24'
-    });
-  }
-  COMPENDIUM.push({
-    section:'??? — Брат',
-    entries:_secretEntries
-  });
-})();
+/* v8.5.8-FIX: секретная секция справочника перенесена в конец скрипта,
+   после объявления SUBCLASSES. */
 
 WEAPONS.dagger.sprite=SPR_DAGGER;WEAPONS.dagger.pal=PAL_DAGGER;
 WEAPONS.sword.sprite=SPR_SWORD;WEAPONS.sword.pal=PAL_SWORD;
@@ -4736,6 +4718,7 @@ var playerDashDir={x:0,y:0};
 var comboCount=0;
 var comboTimer=0;
 var floorMiniBoss=null;
+var _stairsTimer=null; /* v8.5.8-FIX: предотвращаем повторный таймер лестницы */
 var runStats={dmgDealt:0,dmgTaken:0,potionsUsed:0,chestsOpened:0,roomsCleared:0,elfTraitorsKilled:0,meleeAttacksUsed:0};
 /* v4.0.0: Global systems */
 /* FIX: gameRNG moved to SECTION 0 */
@@ -4748,24 +4731,22 @@ var GLOBAL_STATS={damageMult:1+(ACCOUNT.prestigeLevel*0.01),defenseMult:1+(ACCOU
 /* v5.4.17 — рефакторинг: общая функция сброса предмета рядом с игроком.
    Раньше эта строка дублировалась 10+ раз в dropBagItem, equipFromBag,
    takeItem, swapLegendary. */
-function _dropAtPlayer(item){
-  /* v6.5.3 — ФИКС: предметы не падают в стены.
-     Пробуем 8 раз вокруг игрока, если все в стене — кладём под ноги. */
+function _dropAtPlayer(itemToDrop){
+  if(!itemToDrop || !player) return;
   var _px=player.x, _py=player.y+20;
   for(var _try=0;_try<8;_try++){
     var _ax=player.x+randi(-25,25);
     var _ay=player.y+randi(20,35);
     if(!collideCircle(_ax,_ay,8)){_px=_ax;_py=_ay;break;}
   }
-  /* Финальная проверка: если и под ногами стена — не добавляем. */
   if(collideCircle(_px,_py,8))return;
   groundItems.push({
     x: _px,
     y: _py,
-    kind: item.kind,
-    id: item.id,
-    count: item.count,
-    amount: item.amount
+    kind: itemToDrop.kind,
+    id: itemToDrop.id,
+    count: itemToDrop.count,
+    amount: itemToDrop.amount
   });
 }
 /* v7.3.14 — числа в BALANCE.legendary. Здесь — контент.
@@ -4847,12 +4828,15 @@ function _clearRunState(){
   keys={};
   input.atk=false;
   if(player){
-    player._memoryCounter=0;player._mournBurstDone=false;
-    player._runLore={};
-    player._runBook={};
-    player._forceFirstCrit=false;
-    player._forceFirstCritApplied=false;
-    player.firstCritActive=false;
+    /* v8.5.10-FIX: защита от битого player. */
+    try{
+      player._memoryCounter=0;player._mournBurstDone=false;
+      player._runLore={};
+      player._runBook={};
+      player._forceFirstCrit=false;
+      player._forceFirstCritApplied=false;
+      player.firstCritActive=false;
+    }catch(e){_log('[DungeonElf] _clearRunState: player cleanup skipped',e);}
   }
   input.mx=0;
   input.my=0;
@@ -4896,6 +4880,7 @@ for(var _dk in _diaryLock){if(_diaryLock.hasOwnProperty(_dk))delete _diaryLock[_
   }
   if(_deathSfxTimer){clearTimeout(_deathSfxTimer);_deathSfxTimer=null;}
   if(_deathStatsTimer){clearTimeout(_deathStatsTimer);_deathStatsTimer=null;}
+  if(_stairsTimer){clearTimeout(_stairsTimer);_stairsTimer=null;}
   stats.collapseSurvived = false;
 
   _ghostSilhouette = null;
@@ -4956,12 +4941,14 @@ function _openScrollMenu(slotIdx){
   var html = '<h2>' + title + '</h2>';
 
   /* Текущий свиток в слоте. */
+  /* v8.5.9-UX: убрана кнопка «Применить» — тап по слоту в HUD её и так вызывает.
+     Меню служит только для управления: положить / заменить / убрать. */
   if(existing){
     var _exSc = SCROLLS[existing.id];
     html += '<div class="itemRow">'
       + '<div class="itemIcon" style="font-size:18px">' + _scrollIcon(existing.id) + '</div>'
-      + '<div class="itemInfo"><b>' + _exSc.name + '</b><br><i>' + _exSc.desc + '</i></div>'
-      + '<button class="btn gold small" onclick="useScrollSlot(' + slotIdx + ');closeModal()">Применить</button>'
+      + '<div class="itemInfo"><b>' + _exSc.name + '</b><br><i>' + _exSc.desc + '</i>'
+      + '<br><i style="color:#806040">Тап по слоту в HUD — использовать</i></div>'
       + '</div>';
   }
 
@@ -5241,9 +5228,9 @@ function updateComboLabel(){
 }
 
 function triggerPrestige(){
-  /* v6.5.9 — ФИКС: в режиме "Бесконечный" floorNum может быть > 25,
-     а финала нет. Проверяем, что мы действительно на финале. */
-  if(!gameEndingShown && floorNum !== 25){
+  /* v8.5.9-FIX: в режиме «Бесконечный» floorNum может быть > 25,
+     а финала нет. Проверяем именно флаг победы, а не номер этажа. */
+  if(!gameEndingShown){
     showToast('🌟 Перерождение доступно только после победы');
     return;
   }
@@ -5445,7 +5432,7 @@ function resetFloorTransient(){
 
 
 /* v7.3.15 — восстановление популяции врагов, если генератор вернул пустой массив. */
-function _repairPlayerVitals(){if(!player)return;if(typeof player.maxHp!=='number'||!isFinite(player.maxHp)||player.maxHp<=0){var m=100;try{m=calcMaxHp(0,player.subclass?getSubclassData(player.class,player.subclass):null,getClassStats());}catch(e){}player.maxHp=(typeof m==='number'&&isFinite(m)&&m>0)?m:100;}if(typeof player.hp!=='number'||!isFinite(player.hp))player.hp=player.maxHp;player.hp=clamp(player.hp,0,player.maxHp);if(typeof player.invuln!=='number'||!isFinite(player.invuln)||player.invuln<0)player.invuln=0;}
+function _repairPlayerVitals(){if(!player)return;if(typeof player.maxHp!=='number'||!isFinite(player.maxHp)||player.maxHp<=0){var m=100;try{m=calcMaxHp(0,player.subclass?getSubclassData(player.class,player.subclass):null,getClassStats());}catch(_e){}player.maxHp=(typeof m==='number'&&isFinite(m)&&m>0)?m:100;}if(typeof player.hp!=='number'||!isFinite(player.hp))player.hp=player.maxHp;player.hp=clamp(player.hp,0,player.maxHp);if(typeof player.invuln!=='number'||!isFinite(player.invuln)||player.invuln<0)player.invuln=0;}
 
 function _ensureHostilePopulation(){
   /* v8.5.1 — роща — мирная локация, как деревня. */
@@ -5494,6 +5481,8 @@ function _ensureHostilePopulation(){
     var ex=tx*TILE+TILE/2, ey=ty*TILE+TILE/2;
     if(dist2(ex,ey,player.x,player.y)<120*120) continue;
     if(collideCircle(ex,ey,12)) continue;
+    /* v8.5.9-FIX: не спавним врага внутрь твёрдого декора. */
+    if(typeof _decorCollides==='function' && _decorCollides(ex,ey,12)) continue;
 
     var type=pick(types)||'goblin';
     var enemy=spawnEnemyByType(type,ex,ey);
@@ -5515,6 +5504,8 @@ function _ensureHostilePopulation(){
     if(!map[ty2] || map[ty2][tx2]!==0) continue;
     var ex2=tx2*TILE+TILE/2, ey2=ty2*TILE+TILE/2;
     if(dist2(ex2,ey2,player.x,player.y)<48*48) continue;
+    /* v8.5.9-FIX: не спавним врага внутрь твёрдого декора. */
+    if(typeof _decorCollides==='function' && _decorCollides(ex2,ey2,12)) continue;
     var enemy2=spawnEnemyByType(pick(types)||'goblin',ex2,ey2);
     if(!enemy2) continue;
     enemy2.x=ex2; enemy2.y=ey2;
@@ -6196,6 +6187,8 @@ for(var i=0;i<count;i++){
 var tx=randi(4,MAP_W-5),ty=randi(4,MAP_H-5);
 if(!map[ty]||map[ty][tx]!==0)continue;
 if(skipCenter&&Math.abs(tx-_cx)<3&&Math.abs(ty-_cy)<3)continue;
+/* v8.5.7 — ФИКС: декор не ставится на лестницу/NPC/сундуки/торговца. */
+if(typeof _isBlockedByEntity==='function' && _isBlockedByEntity(tx,ty))continue;
 var _blocked=false;
 for(var d=0;d<decor.length;d++){if(decor[d].x===tx&&decor[d].y===ty){_blocked=true;break;}}
 if(_blocked)continue;
@@ -6460,20 +6453,19 @@ function _spawnElderDoor(stRoom,finalFloor){
     _doorX=_dx;_doorY=_dy;_found=true;break;
   }
   if(!_found){
-    /* v7.2.0 — fallback: если не нашли стену рядом с боссовой комнатой,
-       ставим щель на любую доступную стену. */
-    for(var _fallbackTry = 0; _fallbackTry < 200; _fallbackTry++){
-      var _fx = randi(2, MAP_W-3);
-      var _fy = randi(2, MAP_H-3);
+    var _fallbackRadius = 8;
+    var _fallbackAttempts = 200;
+    for(var _fallbackTry = 0; _fallbackTry < _fallbackAttempts; _fallbackTry++){
+      var _fx = stRoom.cx + randi(-_fallbackRadius, _fallbackRadius);
+      var _fy = stRoom.cy + randi(-_fallbackRadius, _fallbackRadius);
+      if(_fx < 2 || _fy < 2 || _fx >= MAP_W-2 || _fy >= MAP_H-2) continue;
       if(!map[_fy] || map[_fy][_fx] !== 1) continue;
-      /* v8.4.1 — минимум два соседних проходимых тайла. */
       var _floorCount = 0;
       if(map[_fy-1] && map[_fy-1][_fx] === 0) _floorCount++;
       if(map[_fy+1] && map[_fy+1][_fx] === 0) _floorCount++;
       if(map[_fy] && map[_fy][_fx-1] === 0) _floorCount++;
       if(map[_fy] && map[_fy][_fx+1] === 0) _floorCount++;
       if(_floorCount < 2) continue;
-      /* v8.5.6 — хотя бы один соседний проход должен быть свободен и от сущностей. */
       var _neighborsFree = 0;
       if(map[_fy-1] && map[_fy-1][_fx]===0 && !_isBlockedByEntity(_fx,_fy-1)) _neighborsFree++;
       if(map[_fy+1] && map[_fy+1][_fx]===0 && !_isBlockedByEntity(_fx,_fy+1)) _neighborsFree++;
@@ -6483,6 +6475,37 @@ function _spawnElderDoor(stRoom,finalFloor){
       _elderDoors.push({x:_fx, y:_fy, seed:gameRNG()});
       return;
     }
+    /* АВАРИЙНЫЙ ПЛАН: ставим дверь у левой стены боссовой комнаты. */
+    var _emX = stRoom.x - 1;
+    var _emY = stRoom.cy;
+    if(_emX >= 2 && _emY >= 2 && _emX < MAP_W-2 && _emY < MAP_H-2){
+      if(map[_emY] && map[_emY][_emX] === 1){
+        _elderDoors.push({x:_emX, y:_emY, seed:gameRNG()});
+        return;
+      }
+    }
+    /* Если и это не сработало — ищем ЛЮБУЮ стену рядом с боссовой комнатой. */
+    for(var _r=1; _r<=12; _r++){
+      for(var _dx=-_r; _dx<=_r; _dx++){
+        for(var _dy=-_r; _dy<=_r; _dy++){
+          if(Math.abs(_dx)!==_r && Math.abs(_dy)!==_r) continue;
+          var _ex = stRoom.cx + _dx;
+          var _ey = stRoom.cy + _dy;
+          if(_ex < 2 || _ey < 2 || _ex >= MAP_W-2 || _ey >= MAP_H-2) continue;
+          if(!map[_ey] || map[_ey][_ex] !== 1) continue;
+          var _adjFloor = 0;
+          if(map[_ey-1] && map[_ey-1][_ex]===0) _adjFloor++;
+          if(map[_ey+1] && map[_ey+1][_ex]===0) _adjFloor++;
+          if(map[_ey] && map[_ey][_ex-1]===0) _adjFloor++;
+          if(map[_ey] && map[_ey][_ex+1]===0) _adjFloor++;
+          if(_adjFloor >= 1){
+            _elderDoors.push({x:_ex, y:_ey, seed:gameRNG()});
+            return;
+          }
+        }
+      }
+    }
+    _error('[DungeonElf] КРИТИЧНО: щель Старейшины не найдена на 25 этаже!');
     return;
   }
   _elderDoors.push({x:_doorX,y:_doorY,seed:gameRNG()});
@@ -6535,7 +6558,9 @@ for(var ch=0;ch<rooms.length;ch++){if(rooms[ch].isStart)continue;if(ch===6)conti
       }
       var _lcx=rmCh.cx,_lcy=rmCh.cy+2;
       /* v6.5.9 — ФИКС: 40% → 25%. */
-      if(gameRNG()<0.25 && map[_lcy] && map[_lcy][_lcx]===0){
+      /* v8.5.7 — ФИКС: сундук не ставится на декор. */
+      if(gameRNG()<0.25 && map[_lcy] && map[_lcy][_lcx]===0
+         && !(typeof _isBlockedByEntity==='function' && _isBlockedByEntity(_lcx,_lcy))){
         chests.push({x:_lcx*TILE,y:_lcy*TILE,opened:false,secret:true});
       }
     } else if(rmCh.type==='shrine'){
@@ -6818,6 +6843,11 @@ function _openElderLetter(letterObj){
     checkAchievements();
     showToast('📜 Письмо Старейшины найдено');
   }
+  /* v8.5.8-FIX: сохраняем письмо в лоре текущего забега для проверки финала. */
+  if(player){
+    if(!player._runLore)player._runLore={};
+    player._runLore[_key]=true;
+  }
   showModal('<h2 class="lore-title">📜 Письмо Старейшины</h2><div class="lore-text">'+_letterText+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
   SfxPlay('altar');
   if(_isNew){
@@ -6890,10 +6920,7 @@ function _endElderFinal(){
   setTimeout(_showElderEpilogue,6000); /* v8.4.1 */
 }
 function _showElderEpilogue(){
-  /* v7.0.1-FIX: защита от повторного вызова */
-  if(stats.loreRead && stats.loreRead.indexOf('elderFinal')>=0 && _elderEpilogueShown){
-    /* уже показывали — просто возвращаемся в хаб */
-  }
+  /* v8.5.7 — убран пустой блок if. */
   if(!Array.isArray(stats.loreRead))stats.loreRead=[];
   if(stats.loreRead.indexOf('elderFinal')<0){stats.loreRead.push('elderFinal');saveStats();}
   /* v7.2.0 — бонусный эпилог, если игрок собрал весь сюжетный лор. */
@@ -6954,6 +6981,12 @@ function buildGrove(){
       regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',
       subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
   }else{player.x=_entryX*TILE;player.y=_entryY*TILE;}
+  /* v8.5.10-FIX: явная инициализация флагов рощи. */
+  if(player){
+    if(typeof player._grovePrayed==='undefined')player._grovePrayed=false;
+    if(typeof player._groveOfferings==='undefined')player._groveOfferings=false;
+    if(typeof player._grovePriestessTalked==='undefined')player._grovePriestessTalked=false;
+  }
   forestEntrance=null; caveEntrance=null; castleEntrance=null; druidEntrance=null; druidExit=null;
   stairs=null;trader=null;boss=null;npcs=[];enemies=[];chests=[];doors=[];groundItems=[];fallingLeaves=[];
   var _exitX=Math.floor(MAP_W/2),_exitY=MAP_H-5;
@@ -7047,7 +7080,7 @@ function buildGrove(){
     else _type2='grass';
     decor.push({x:_fx2,y:_fy2,type:_type2,s:0.9+gameRNG()*0.2,seed:gameRNG()});
   }
-  /* v8.5.3 — призрачные дети вокруг Древа: клетки и декор очищаются заранее. */
+  /* v8.5.3 — призрачные дети вокруг Древа. Клетки и декор чистятся внутри цикла. */
   var _childPositions=[{dx:-3,dy:3},{dx:3,dy:3},{dx:-2,dy:5},{dx:2,dy:5}];
   for(var _ci=0;_ci<_childPositions.length;_ci++){
     var _chx=_treeX+_childPositions[_ci].dx, _chy=_treeY+_childPositions[_ci].dy;
@@ -7765,6 +7798,16 @@ function buildCastle(){
       text: '«О седьмом Архимаге. Он был последним, кто помнил мир до Тириона. Он ушёл тихо. Он не оставил имени. Только эту книгу».'
     });
   }
+  /* v8.6.0 — лор о критических ударах магией. */
+  var _magicLoreX = _libX + _libW - 2;
+  var _magicLoreY = _libY + _libH - 1;
+  if(map[_magicLoreY] && map[_magicLoreY][_magicLoreX] === 0){
+    decor.push({
+      x: _magicLoreX, y: _magicLoreY,
+      type: 'lore', s: 1.0, seed: gameRNG(),
+      text: '«Седьмой учил: посох — это не оружие. Посох — это вопрос. Ты не бьёшь врага — ты спрашиваешь: „Ты хочешь жить?“ Огонь отвечает за тебя. Иногда ответ — взрыв. Иногда — тишина. Иногда — враг просто исчезает. Седьмой говорил: „Не задавай вопрос, если не готов услышать ответ“.»'
+    });
+  }
 
   /* Свечи по углам библиотеки — внутри комнаты */
   decor.push({x: _libX, y: _libY + 1, type: 'candle', s: 1.0, seed: gameRNG()});
@@ -8124,10 +8167,11 @@ function spawnMimic(x,y){
 }
 function spawnTreant(x,y){
   /* v7.3.7 — числа из BALANCE.bosses.treant. */
-  if(typeof floorNum!=='number'||isNaN(floorNum))floorNum=1;
+  /* v8.5.10-FIX: используем локальную переменную — не мутируем глобальную floorNum. */
+  var _floor = (typeof floorNum==='number'&&!isNaN(floorNum))?floorNum:1;
   var _bt = BALANCE.bosses.treant;
-  var scaledHp  = Math.floor(_bt.hpBase * (1 + floorNum * _bt.hpPerFloor));
-  var scaledDmg = Math.floor(_bt.dmg * (1 + floorNum * _bt.dmgPerFloor));
+  var scaledHp  = Math.floor(_bt.hpBase * (1 + _floor * _bt.hpPerFloor));
+  var scaledDmg = Math.floor(_bt.dmg * (1 + _floor * _bt.dmgPerFloor));
   if(isNaN(scaledHp)||scaledHp<1)scaledHp=_bt.hpBase;
   if(isNaN(scaledDmg)||scaledDmg<1)scaledDmg=_bt.dmg;
   return {type:'treant',boss:true,final:true,x:x,y:y,r:_bt.r,
@@ -8143,10 +8187,11 @@ function spawnTreant(x,y){
    ===================================================================== */
 function spawnAelis(x,y){
   /* v7.3.7 — числа из BALANCE.bosses.aelis. */
-  if(typeof floorNum!=='number'||isNaN(floorNum))floorNum=1;
+  /* v8.5.10-FIX: используем локальную переменную — не мутируем глобальную floorNum. */
+  var _floor = (typeof floorNum==='number'&&!isNaN(floorNum))?floorNum:1;
   var _ba = BALANCE.bosses.aelis;
-  var scaledHp  = Math.floor(_ba.hpBase * (1 + floorNum * _ba.hpPerFloor));
-  var scaledDmg = Math.floor(_ba.dmg * (1 + floorNum * _ba.dmgPerFloor));
+  var scaledHp  = Math.floor(_ba.hpBase * (1 + _floor * _ba.hpPerFloor));
+  var scaledDmg = Math.floor(_ba.dmg * (1 + _floor * _ba.dmgPerFloor));
   if(isNaN(scaledHp)||scaledHp<1)scaledHp=_ba.hpBase;
   if(isNaN(scaledDmg)||scaledDmg<1)scaledDmg=_ba.dmg;
   return {
@@ -9021,7 +9066,8 @@ function getWeaponStats(){
     aoeColor:w.aoeColor,
     shape:w.shape||'arc',
     tempo:tempo,
-    comboBonus:w.comboBonus||0
+    comboBonus:w.comboBonus||0,
+    pierce:w.pierce   /* v8.6.1 — фикс: пробой стрел терялся в getWeaponStats */
   };
 }
 function hasLineOfSight(x1,y1,x2,y2){
@@ -9242,7 +9288,14 @@ function closeModal(){
   }
   if(_loreQueueActive){
     _loreQueueActive=false;
-    _loreProcessing=false; /* v4.9.14 — сброс флага */
+    _loreProcessing=false;
+    /* v8.5.10-FIX: не продолжаем очередь, если начался финал Старейшины
+       или игрок умер/вышел в хаб. */
+    if(_elderFinalActive || gameOver || inHub){
+      _loreQueue.length=0;
+      _lorePausedGame=false;
+      return;
+    }
     setTimeout(_processLoreQueue,50);
     return;
   }
@@ -9668,7 +9721,7 @@ function goToHub(){
 function _collectRunData(){
   if(!player) return null;
   return {
-    version: '8.5.1',
+    version: '8.6.1',
     savedAt: Date.now(),
     player: {
       x: player.x, y: player.y,
@@ -9697,7 +9750,11 @@ function _collectRunData(){
       bagPurchased: player.bagPurchased || 0,
       altarHpBonus: player.altarHpBonus || 0,
       altarDmgBonus: player.altarDmgBonus || 0,
-      _grovePrayed: !!player._grovePrayed
+      _grovePrayed: !!player._grovePrayed,
+      /* v8.5.7 — ФИКС: дневник и сюжетные реакции не повторяются после continueRun. */
+      _diaryShown: player._diaryShown || {},
+      _druidLoreShown: !!player._druidLoreShown,
+      _priestessElderShown: !!player._priestessElderShown
     },
     world: {
       floorNum: floorNum,
@@ -9710,6 +9767,8 @@ function _collectRunData(){
       armorLevel: armorLevel,
       runStartTime: runStartTime,
       lastBossWasAelis: lastBossWasAelis,
+      /* v8.5.10-FIX: не сохраняем промежуточное состояние финала Старейшины. */
+      elderFinalActive: false,
       /* v8.5.1 — сохраняем флаги рощи. */
       grovePriestessTalked: !!(player && player._grovePriestessTalked),
       groveOfferings: !!(player && player._groveOfferings),
@@ -9783,6 +9842,12 @@ function loadRun(){
         if(typeof data.player.invisUsed!=='boolean')data.player.invisUsed=false;
         data.version='8.4.1';
       }
+      /* v8.5.7 — миграция временных баффов алтаря и дневника из старых сейвов. */
+      if(typeof data.player.altarHpBonus!=='number'||!isFinite(data.player.altarHpBonus))data.player.altarHpBonus=0;
+      if(typeof data.player.altarDmgBonus!=='number'||!isFinite(data.player.altarDmgBonus))data.player.altarDmgBonus=0;
+      if(typeof data.player.altarSpeedBonus!=='number'||!isFinite(data.player.altarSpeedBonus))data.player.altarSpeedBonus=0;
+      if(typeof data.player.altarCritBonus!=='number'||!isFinite(data.player.altarCritBonus))data.player.altarCritBonus=0;
+      if(!data.player._diaryShown||typeof data.player._diaryShown!=='object'||Array.isArray(data.player._diaryShown))data.player._diaryShown={};
       /* v8.5.1 — безопасная миграция флагов Священной Рощи. */
       if(typeof data.world.grovePriestessTalked==='undefined')data.world.grovePriestessTalked=false;
       if(typeof data.world.groveOfferings==='undefined')data.world.groveOfferings=false;
@@ -9929,11 +9994,6 @@ function startRun(mode){
   if(player){
     player.class = _pendingClass;
     player.subclass = _pendingSubclass;
-    /* v4.8.2 — копируем материалы в забег (player уже существует) */
-    player.craftInv=JSON.parse(JSON.stringify(meta.craftInv||{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}));
-    /* v5.4.3 — FIX: обнуляем склад меты, иначе камни дублируются между забегами */
-    meta.craftInv={ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0};
-    saveMeta();
     /* v5.7.9 — миграция старых сейвов свитков к {id, count}. */
     _migrateScrolls();
     /* Один раз пересчитываем статы с подклассом */
@@ -9941,6 +10001,13 @@ function startRun(mode){
   }
   
   if(runMode==='cursed'){var _curse=pick(CURSES);if(_curse)activeCurses.push(_curse.id);}
+  /* v8.5.10-FIX: копируем craftInv в player ДО applyStartKits,
+     чтобы наборы могли (в будущем) его использовать. */
+  if(player){
+    player.craftInv=JSON.parse(JSON.stringify(meta.craftInv||{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}));
+    meta.craftInv={ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0};
+    saveMeta();
+  }
   applyStartKits();
   if(player) _repairPlayerVitals();
   /* Наборы на забег уже выданы; теперь очищаем их, чтобы они не повторились. */
@@ -11433,8 +11500,65 @@ function _hitOneEnemyMelee(e,w,ang){
         });
       }
     }
+    _applyCritEffect(e,w,ang);
   }
   return 'hit';
+}
+
+/* v8.6.0 — крит-эффекты по типу оружия. */
+function _applyCritEffect(e,w,ang){
+  if(!e||!w||e.hp<=0||e.boss)return;
+  var _weaponId=String((player&&player.weapon)||'').toLowerCase();
+  var _weaponName=String(w.name||'').toLowerCase();
+  var _magic=w.magic||'';
+  var _shape=w.shape||'arc';
+  var _isRanged=!!w.ranged;
+  var _hasAoe=!!(w.aoe&&w.aoe>0);
+  var _isBlunt=/hammer|mace|club|maul|молот|булав|дубин/.test(_weaponId+' '+_weaponName)||_magic==='stun';
+  var _isPiercing=/dagger|knife|spear|rogue|кинжал|нож|копь|копьё/.test(_weaponId+' '+_weaponName)||(player&&player.subclass==='rogue')||(player&&player.subclass==='sniper');
+  var _isSlashing=/sword|axe|blade|greatsword|executioner|меч|топор|клинок|секир/.test(_weaponId+' '+_weaponName);
+
+  /* Магическое оружие с АоЕ: ограниченный взрыв по соседним врагам. */
+  if(_isRanged&&_hasAoe){
+    var _r2=40*40;
+    for(var _ai=0;_ai<enemies.length;_ai++){
+      var _ae=enemies[_ai];
+      if(!_ae||_ae===e||_ae.hp<=0||_ae.ally)continue;
+      if(dist2(_ae.x,_ae.y,e.x,e.y)<_r2){
+        damageEnemy(_ae,Math.max(1,Math.floor(w.dmg*0.4)));
+        _dmgTextPush(_ae.x,_ae.y-20,'💥',18,'#ffb060');
+      }
+    }
+    for(var _vi=0;_vi<14;_vi++){
+      var _va=gameRNG()*Math.PI*2;
+      bloodParticles.push({x:e.x,y:e.y,vx:Math.cos(_va)*3.5,vy:Math.sin(_va)*3.5,life:22,color:'#ff8040'});
+    }
+    _dmgTextPush(e.x,e.y-50,'СТИХИЯ',22,'#ffd060');
+    SfxPlay('fireball');
+    return;
+  }
+  /* Дробящее: короткое оглушение, только обычных врагов. */
+  if(_isBlunt||(w.big===true&&(_shape==='circle'||_shape==='wide'))){
+    e.stunned=Math.max(e.stunned||0,18);
+    _dmgTextPush(e.x,e.y-50,'⚡ ОГЛУШЁН',22,'#ffe080');
+    SfxPlay('stun');
+    return;
+  }
+  /* Колющее: кровотечение через штатный тикер эффектов врага. */
+  if(_isPiercing){
+    e.bleeding=Math.max(e.bleeding||0,60);
+    e.bleedDmg=Math.max(e.bleedDmg||0,3);
+    e.bleedTick=0;
+    _dmgTextPush(e.x,e.y-50,'🩸',22,'#ff4060');
+    return;
+  }
+  /* Режущее: отталкивание. Элитки и мини-боссы устойчивы к нему. */
+  if(!_isRanged&&_isSlashing&&!_isBlunt&&!_isPiercing&&!(e.elite||e.isMiniBoss)){
+    var _a=(typeof ang==='number')?ang:Math.atan2(e.y-player.y,e.x-player.x);
+    var _kx=Math.cos(_a)*40, _ky=Math.sin(_a)*40;
+    if(e.ghost)moveEntityGhost(e,_kx,_ky);else moveEntity(e,_kx,_ky);
+    _dmgTextPush(e.x,e.y-50,'💨',22,'#a0d0ff');
+  }
 }
 
 /* v5.7.9 — magic-эффекты оружия.
@@ -11674,7 +11798,8 @@ function onEnemyDeath(e){
      onEnemyDeath вызывается дважды, что даёт двойной лут. */
   if(e._dead)return;
   e._dead=true;
-  _drawListLen=-1; /* v7.0 (из v6.5.6): принудительная пересортировка */
+  /* v8.5.7 — _drawListLen не сбрасываем: длина drawList и так
+     пересчитывается в _renderEntityLayer при изменении. */
 
   /* v7.4.0 — Посох Корня: при убийстве держит соседей */
   if(player && player.weapon === 'rootStaff'){
@@ -11716,17 +11841,9 @@ function onEnemyDeath(e){
         }
       }
     }
-    /* Дополнительная защита: убираем миньонов в радиусе 400px. */
-    for(var _mi2 = enemies.length-1; _mi2 >= 0; _mi2--){
-      var _me2 = enemies[_mi2];
-      if(_me2 === e) continue;
-      if(_me2.isPlayerSkeleton || _me2.ally) continue;
-      if(dist2(_me2.x, _me2.y, e.x, e.y) < 400*400){
-        if(_me2.type==='skeleton' || _me2.type==='spider' || _me2.type==='ghost'){
-          enemies.splice(_mi2, 1);
-        }
-      }
-    }
+    /* v8.5.10-FIX: дублирующий цикл удалён.
+       Первый цикл (по _me.room === e.room) корректно убирает только
+       миньонов этого босса, не затрагивая союзников и чужих миньонов. */
   }
 
   _awardKillStats(e);
@@ -11786,6 +11903,10 @@ if(e.boss)stats.bossKills++;
 stats.totalKills++;player.kills++;
 stats.subclassKills=(stats.subclassKills||0)+1;
 if(stats.subclassKills>0&&stats.subclassKills%50===0)saveStats();
+/* v8.6.0 — killstreak только для визуального отклика, без баффов. */
+if(!player._killstreak){player._killstreak=0;player._killstreakTimer=0;}
+player._killstreak++;
+player._killstreakTimer=180;
 /* v7.0 (из v6.5.12): XP чуть больше за убийство — уровни идут быстрее. */
 var _xpGain=e.boss?50:(e.elite?12:6);
 player.xp+=_xpGain;
@@ -11968,27 +12089,12 @@ function _checkRoomClear(e){
     }
   }
 
-  /* Обычный босс — открыть лестницу через 5с. */
-  if(e.boss&&!e.final&&!e.isArenaBoss&&!stairs){
-    var _bossDeathFloor=floorNum;
-    setTimeout(function(){
-      if(_runEnded)return;
-      if(inHub)return;
-      if(gameOver)return;
-      if(floorNum!==_bossDeathFloor)return;
-      if(stairs)return;
-      if(_bossDeathFloor===25)return;
-      if(!rooms[6])return;
-      var _bR2=rooms[6];
-      stairs={x:_bR2.cx*TILE,y:_bR2.cy*TILE,used:false,pulse:0};
-      showToast('🪜 Лестница открылась!');
-    },5000);
-  }
-
   /* Дубль-защита: показать финал через 2с (если первый setTimeout не сработал). */
   if(e.final&&!gameEndingShown&&!gameOver){
     setTimeout(function(){
+      /* v8.5.10-FIX: если игрок уже спустился/вышел — не показываем финал. */
       if(_runEnded||gameEndingShown||gameOver||inHub)return;
+      if(boss)return;  /* финальный босс ещё жив (перезапуск забега) */
       showEnding();
     },2000);
   }
@@ -12428,6 +12534,8 @@ aelis:function(e,dt,d,dx,dy,spd){
 /* v5.4.17 — поведение союзного скелета (некромант).
    Вынесено из updateEnemies. */
 function _updateAllySkeleton(e,dt,_enemiesLen){
+  /* v8.5.7 — ФИКС: защита от null/undefined скелета. */
+  if(!e || typeof e.hp !== 'number' || e.hp <= 0) return;
   e.hurtFlash=Math.max(0,e.hurtFlash-dt);
   e.atkCd=Math.max(0,e.atkCd-dt);
   e.bounce+=0.08;if(e.bounce>6.2832)e.bounce-=6.2832;
@@ -12545,13 +12653,21 @@ function updateEnemies(dt){
   /* v7.0 (из v6.5.5): чистим массив от undefined после splice */
   for(var _ui=enemies.length-1;_ui>=0;_ui--){if(!enemies[_ui])enemies.splice(_ui,1);}
   var anyAggro=false;
-  var _skels=null;
   var _enemiesLen=enemies.length;
-  for(var _si=0;_si<_enemiesLen;_si++){
-    var _se=enemies[_si];
-    if(_se.ally&&_se.hp>0){if(!_skels)_skels=[];_skels.push(_se);}
+  /* v8.5.9-OPT: используем player.skeletons напрямую — это источник истины.
+     Раньше каждый кадр перебирали весь массив enemies ради поиска союзников. */
+  var _skels = null;
+  if(player && Array.isArray(player.skeletons) && player.skeletons.length > 0){
+    /* Отбираем только живых, чтобы не тратить проверки в цикле. */
+    for(var _ski0 = 0; _ski0 < player.skeletons.length; _ski0++){
+      var _sk0 = player.skeletons[_ski0];
+      if(_sk0 && _sk0.hp > 0){
+        if(!_skels) _skels = [];
+        _skels.push(_sk0);
+      }
+    }
   }
-  var _hasSkeletons=!!_skels;
+  var _hasSkeletons = !!_skels && _skels.length > 0;
   for(var i=0;i<_enemiesLen;i++){
     var e=enemies[i];
     if(!e)continue;
@@ -12838,6 +12954,12 @@ function updateProjectiles(dt){
           if(p.petSlow){
             e.slowed=Math.max(e.slowed||0,p.petSlow);
           }
+          if(p.isCrit&&!p._critDirectTarget)p._critDirectTarget=e;
+          if(p.isCrit&&!p._critTextShown){
+            p._critTextShown=true;
+            _dmgTextPush(e.x,e.y-42,'КРИТ!',24,'#f0d040');
+            if(!REDUCED_MOTION)screenShake=Math.max(screenShake,7);
+          }
           if(p.aoe&&p.aoe>0){
             var aoeR2=p.aoe*p.aoe;
             for(var ai=0;ai<enemies.length;ai++){
@@ -12851,6 +12973,43 @@ function updateProjectiles(dt){
                 /* v7.4.0 — Посох Скорби: замедляет врагов в АоЕ */
                 if(p.mournSlow){
                   ae.slowed = Math.max(ae.slowed || 0, 120);
+                }
+              }
+            }
+            /* v8.6.0 — магический крит даёт отдельный взрыв радиусом 40px. */
+            if(p.isCrit&&!e.boss&&!p._critAoeProcessed){
+              p._critAoeProcessed=true;
+              var _critR2=40*40;
+              var _critSplash=Math.max(1,Math.floor(p.dmg*0.4));
+              for(var _cai=0;_cai<enemies.length;_cai++){
+                var _cae=enemies[_cai];
+                if(!_cae||_cae===p._critDirectTarget||_cae.hp<=0||_cae.ally||_cae.type==='mimic'&&_cae.disguised)continue;
+                if(dist2(_cae.x,_cae.y,p.x,p.y)<_critR2){
+                  _cae._attackedByPlayer=true;
+                  damageEnemy(_cae,_critSplash);
+                  _dmgTextPush(_cae.x,_cae.y-32,'💥 '+_critSplash,22,'#ffb060');
+                }
+              }
+              for(var _cpi=0;_cpi<10;_cpi++){
+                var _cpa=gameRNG()*Math.PI*2;
+                bloodParticles.push({x:p.x,y:p.y,vx:Math.cos(_cpa)*3.5,vy:Math.sin(_cpa)*3.5,life:22,color:'#ff8040'});
+              }
+              _dmgTextPush(p.x,p.y-50,'КРИТ · ВЗРЫВ',20,'#ffd060');
+            }
+            /* v8.6.0 — АоЕ-взрыв повреждает ломаемые стены один раз на снаряд. */
+            if(!p._aoeWallsProcessed){
+              p._aoeWallsProcessed=true;
+              for(var _bwi=breakableWalls.length-1;_bwi>=0;_bwi--){
+                var _bw=breakableWalls[_bwi];
+                var _bwx=_bw.x*TILE+TILE/2, _bwy=_bw.y*TILE+TILE/2;
+                if(dist2(_bwx,_bwy,p.x,p.y)<aoeR2){
+                  _bw.hp-=1;
+                  _dmgTextPush(_bwx,_bwy-10,'💥',20,'#c08040');
+                  if(_bw.hp<=0){
+                    if(map[_bw.y]&&map[_bw.y][_bw.x]===6)map[_bw.y][_bw.x]=0;
+                    breakableWalls.splice(_bwi,1);
+                    SfxPlay('door');
+                  }
                 }
               }
             }
@@ -13017,6 +13176,11 @@ function _trySpawnGhost(){
    ===================================================================== */
 function updatePlayer(dt){
   if(!player||inHub)return;
+  /* v8.6.0 — таймер визуальной серии убийств. */
+  if(player._killstreakTimer>0){
+    player._killstreakTimer-=dt;
+    if(player._killstreakTimer<=0){player._killstreakTimer=0;player._killstreak=0;}
+  }
   if(player._memoryRegenT>0){player._memoryRegenT-=dt;player._memoryRegenAcc=(player._memoryRegenAcc||0)+dt;if(player._memoryRegenAcc>=60){player._memoryRegenAcc=0;player.hp=Math.min(player.maxHp,player.hp+(player._memoryRegenRate||1));updateHUD();}if(player._memoryRegenT<=0){player._memoryRegenT=0;player._memoryRegenRate=0;showToast('🕯️ Благословение памяти закончилось');}}
   if(player._memoryWpnBonusT>0){player._memoryWpnBonusT-=dt;if(player._memoryWpnBonusT<=0){player._memoryWpnBonusT=0;if(player._memoryWpnBonus){weaponLevel-=player._memoryWpnBonus;player._memoryWpnBonus=0;}showToast('🕯️ Оружие вернулось к прежней силе');}}
   /* v7.0 (из v6.9.0): блокировка управления во время финала Старейшины */
@@ -13901,6 +14065,65 @@ function updateCamera(){
    ===================================================================== */
 function drawWallTile(sx,sy){if(wallCanvas)ctx.drawImage(wallCanvas,sx,sy);}
 /* v5.4.17 — простые спрайт-декорации: рисуются одним drawSprite. */
+/* v8.5.8-FIX — объявления спрайтов, используемых DECOR_SPRITES,
+   размещены до объекта, который на них ссылается. */
+var SPR_CAMPFIRE=['..KKK...KKK..','.K.........K.','K...........K','K....FFF....K','K...FFFFF...K','K...FHHHF...K','K...FFFFF...K','K....FFF....K','K...........K','.K.........K.','..KKK...KKK..','.............'];
+var PAL_CAMPFIRE={'K':'#5a5048','F':'#ff6020','H':'#ffd060'};
+var SPR_CAMPFIRE_DEAD=['..KKK...KKK..','.K.........K.','K...........K','K...........K','K....CCC....K','K...CCCCC...K','K....CCC....K','K...........K','K...........K','.K.........K.','..KKK...KKK..','.............'];
+var PAL_CAMPFIRE_DEAD={'K':'#5a5048','C':'#2a1a10'};
+var SPR_BACKPACK=['.BBBBBBBB.','BBLLLLLLBB','BLLLLLLLLB','BLLDDDDLLB','BLLDDDDLLB','BLLLLLLLLB','BBLLLLLLBB','.BBBBBBBB.','..BBBBBB..'];
+var PAL_BACKPACK={'B':'#4a2a10','L':'#8a5030','D':'#2a1a08'};
+var SPR_FLOWER=['.P.P.','PPPPP','.PHP.','PPPPP','.P.P.','..S..','..S..'];
+var PAL_FLOWER={'P':'#e060a0','H':'#ffd060','S':'#3a6a30'};
+var SPR_GRAVESTONE=['...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSCCCSS','.SSSSSSCCCCS','.SSSSSSCCCSS','.SSSSSSSSSS.','.GGSSSSSSGG.','.GGGGGGGGGG.'];
+var PAL_GRAVESTONE={'S':'#7a7068','C':'#3a3028','G':'#3a5a2a'};
+var SPR_CART=['..WWWWWWWW..','.WWWWWWWWWW.','WWWWWWWWWWWW','WWDDDDDDDDWW','WWDDDDDDDDWW','WWWWWWWWWWWW','WWWWWWWWWWWW','WWD......DWW','.CC......CC.','.CC......CC.','.CC......CC.','.............'];
+var PAL_CART={'W':'#6a4828','D':'#4a2a10','C':'#3a2410'};
+var SPR_CRATE=['.WWWWWWWW.','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','.WWWWWWWW.'];
+var PAL_CRATE={'W':'#6a4828','D':'#4a2a10'};
+var SPR_BONES=['...BBBB..','..BBBBBB.','..BBBBBB.','.BB.BB.BB','.BB.BB.BB','.B..BB..B','.....BB..'];
+var PAL_BONES={'B':'#d0c8a8'};
+var SPR_BROKEN_SWORD=['..M..','.MMM.','.MMM.','.MMM.','..M..','..W..','..W..','..W..','.WWW.','.....'];
+var PAL_BROKEN_SWORD={'M':'#8a8a90','W':'#5a4020'};
+var SPR_BLOOD_STAIN=['..RRR...','.RRRRRR.','RRRRRRRR','RRRRRRRR','.RRRRRR.','..RRR...'];
+var PAL_BLOOD_STAIN={'R':'#5a1010'};
+var SPR_RITUAL_CIRCLE=['..CCCCCCCC..','.CC......CC.','C..SSSSSS..C','C.S......S.C','C.S..KK..S.C','C.S.KKKK.S.C','C.S..KK..S.C','C.S......S.C','C..SSSSSS..C','.CC......CC.','..CCCCCCCC..'];
+var PAL_RITUAL_CIRCLE={'C':'#8a2020','S':'#5a1010','K':'#c02020'};
+var SPR_RITUAL_CANDLE=['..F..','.FFF.','.FHF.','..F..','..W..','..W..','..W..','.WWW.'];
+var PAL_RITUAL_CANDLE={'F':'#ff6020','H':'#ffd060','W':'#e0d0c0'};
+var SPR_GRAVE_SMALL=['...SSSS...','..SSSSSS..','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','..GGGGGG..','..GGGGGG..'];
+var PAL_GRAVE_SMALL={'S':'#6a6058','G':'#3a5a2a'};
+var SPR_GRAVE_CROSS=['...SSS....','...SSS....','.SSSSSSS..','.SSSSSSS..','...SSS....','...SSS....','...SSS....','...SSS....','..GGGGGG..'];
+var PAL_GRAVE_CROSS={'S':'#7a7068','G':'#3a5a2a'};
+var SPR_RAVEN=['..BBB..','.BBBBB.','BBWBBWB','.BBBBB.','..BBB..','..B.B..','..B.B..','.Y...Y.'];
+var PAL_RAVEN={'B':'#1a1a1a','W':'#f0e0c0','Y':'#c8a040'};
+var SPR_SKELETON_SIT=['..HHHH..','.HHHHHH.','.HEEEHH.','.HHHHHH.','..HHHH..','.BBBBBB.','BBBBBBBB','B.BBBB.B','B.B..B.B','..B..B..'];
+var PAL_SKELETON_SIT={'H':'#e8dcc0','E':'#1a0f08','B':'#d0c8a8'};
+var SPR_OLD_BACKPACK=['.BBBBBB.','BBLLLLBB','BLDDDDLB','BLDDDDLB','BLLLLLLB','.BBBBBB.','..B..B..'];
+var PAL_OLD_BACKPACK={'B':'#3a2010','L':'#6a4020','D':'#2a1a08'};
+var SPR_CANTEEN=['.MMM.','M...M','M...M','M...M','.MMM.'];
+var PAL_CANTEEN={'M':'#8a7050'};
+var SPR_SHRINE_ALTAR=['..SSSSSSSS..','.SGGGGGGGGS.','.SGCCCCCCGS.','.SGCCCCCCGS.','.SGGGGGGGGS.','..SSSSSSSS..','...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','SSSSSSSSSSSS'];
+var PAL_SHRINE_ALTAR={'S':'#7a6a58','G':'#c8a040','C':'#a0d0ff'};
+var SPR_SHRINE_STATUE=['..HHHH..','.HHHHHH.','HHSEESHH','HHSSSSHH','.HSSSSH.','..CCCC..','.CCCCCC.','CCCCCCCC','CCCCCCCC','.CC..CC.','.CC..CC.'];
+var PAL_SHRINE_STATUE={'H':'#8a7a62','S':'#c8bb9a','E':'#a0d0ff','C':'#6a5a48'};
+var SPR_PRAYER_BOOK=['.PPPP.','PIIIIP','PIWIIP','PIIWIP','PIIIIP','.PPPP.'];
+var PAL_PRAYER_BOOK={'P':'#4a2a10','I':'#f0e0c0','W':'#8a6a30'};
+var SPR_CHALICE=['.GGG.','G...G','G...G','GGGGG','.GGG.','..G..','..G..','.GGG.'];
+var PAL_CHALICE={'G':'#c8a040'};
+var SPR_CANDLE_TALL=['..F..','.FHF.','.FHF.','..F..','..W..','..W..','..W..','..W..','..W..','..W..','.WWW.'];
+var PAL_CANDLE_TALL={'F':'#ff8020','H':'#ffe080','W':'#e0d0c0'};
+var SPR_SPIDER_WEB_TREE=['W..W..W..W','.W.W.W.W.W','..WWWWWW..','.W.W.W.W.W','W..W..W..W'];
+var PAL_SPIDER_WEB_TREE={'W':'rgba(230,230,240,0.45)'};
+var SPR_AURORA_SPOT=['..GG..PP..','.GGGG.PPP.','GGGGGGPPP.','.GGGG.PPP.','..GG..PP..'];
+var PAL_AURORA_SPOT={'G':'rgba(120,255,180,0.35)','P':'rgba(200,140,255,0.35)'};
+var SPR_FISH_BONES=['...B..B..','.BBB.BBB.','B.BB.B.B.','.B.BB.B..','..BBBBB..','...BBB...','....B....'];
+var PAL_FISH_BONES={'B':'#d0c8a8'};
+var SPR_SLIME_PUDDLE=['..GGGG..','.GGGGGG.','GGGGGGGG','GGGGGGGG','.GGGGGG.'];
+var PAL_SLIME_PUDDLE={'G':'rgba(140,220,80,0.35)'};
+var SPR_ROTTING_REMAINS=['..BBBB..','.BGGGGB.','BGKGGKGB','BGGGGGGB','.BGGGGB.','..BBBB..'];
+var PAL_ROTTING_REMAINS={'B':'#3a2a1a','G':'#5a6a3a','K':'#1a1a10'};
+
 var DECOR_SPRITES={
   memoryShrine:{spr:SPR_MEMORY_SHRINE,pal:PAL_MEMORY_SHRINE,yOff:0,scaleOff:1},
   druidStone:{spr:SPR_DRUID_STONE,pal:PAL_DRUID_STONE,yOff:0,scaleOff:1},
@@ -14003,65 +14226,9 @@ var DECOR_SPRITES={
   frozenFall:     {spr:SPR_FROZEN_FALL,     pal:PAL_FROZEN_FALL,     yOff:0, scaleOff:1},
   bloodFountain:  {spr:SPR_BLOOD_FOUNTAIN,  pal:PAL_BLOOD_FOUNTAIN,  yOff:0, scaleOff:1}
 };
-/* ============================================================
-v7.0 — НОВЫЕ СПРАЙТЫ ДЕКОРА (консолидация патчей 6.5.10/6.6.1/6.6.3/6.6.4)
-============================================================ */
-var SPR_CAMPFIRE=['..KKK...KKK..','.K.........K.','K...........K','K....FFF....K','K...FFFFF...K','K...FHHHF...K','K...FFFFF...K','K....FFF....K','K...........K','.K.........K.','..KKK...KKK..','.............'];
-var PAL_CAMPFIRE={'K':'#5a5048','F':'#ff6020','H':'#ffd060'};
-var SPR_CAMPFIRE_DEAD=['..KKK...KKK..','.K.........K.','K...........K','K...........K','K....CCC....K','K...CCCCC...K','K....CCC....K','K...........K','K...........K','.K.........K.','..KKK...KKK..','.............'];
-var PAL_CAMPFIRE_DEAD={'K':'#5a5048','C':'#2a1a10'};
-var SPR_BACKPACK=['.BBBBBBBB.','BBLLLLLLBB','BLLLLLLLLB','BLLDDDDLLB','BLLDDDDLLB','BLLLLLLLLB','BBLLLLLLBB','.BBBBBBBB.','..BBBBBB..'];
-var PAL_BACKPACK={'B':'#4a2a10','L':'#8a5030','D':'#2a1a08'};
-var SPR_FLOWER=['.P.P.','PPPPP','.PHP.','PPPPP','.P.P.','..S..','..S..'];
-var PAL_FLOWER={'P':'#e060a0','H':'#ffd060','S':'#3a6a30'};
-var SPR_GRAVESTONE=['...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSSSSS.','.SSSSSSCCCSS','.SSSSSSCCCCS','.SSSSSSCCCSS','.SSSSSSSSSS.','.GGSSSSSSGG.','.GGGGGGGGGG.'];
-var PAL_GRAVESTONE={'S':'#7a7068','C':'#3a3028','G':'#3a5a2a'};
-var SPR_CART=['..WWWWWWWW..','.WWWWWWWWWW.','WWWWWWWWWWWW','WWDDDDDDDDWW','WWDDDDDDDDWW','WWWWWWWWWWWW','WWWWWWWWWWWW','WWD......DWW','.CC......CC.','.CC......CC.','.CC......CC.','.............'];
-var PAL_CART={'W':'#6a4828','D':'#4a2a10','C':'#3a2410'};
-var SPR_CRATE=['.WWWWWWWW.','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','WWDDDDDDWW','WWDDDDDDWW','WWWWWWWWWW','.WWWWWWWW.'];
-var PAL_CRATE={'W':'#6a4828','D':'#4a2a10'};
-var SPR_BONES=['...BBBB..','..BBBBBB.','..BBBBBB.','.BB.BB.BB','.BB.BB.BB','.B..BB..B','.....BB..'];
-var PAL_BONES={'B':'#d0c8a8'};
-var SPR_BROKEN_SWORD=['..M..','.MMM.','.MMM.','.MMM.','..M..','..W..','..W..','..W..','.WWW.','.....'];
-var PAL_BROKEN_SWORD={'M':'#8a8a90','W':'#5a4020'};
-var SPR_BLOOD_STAIN=['..RRR...','.RRRRRR.','RRRRRRRR','RRRRRRRR','.RRRRRR.','..RRR...'];
-var PAL_BLOOD_STAIN={'R':'#5a1010'};
-var SPR_RITUAL_CIRCLE=['..CCCCCCCC..','.CC......CC.','C..SSSSSS..C','C.S......S.C','C.S..KK..S.C','C.S.KKKK.S.C','C.S..KK..S.C','C.S......S.C','C..SSSSSS..C','.CC......CC.','..CCCCCCCC..'];
-var PAL_RITUAL_CIRCLE={'C':'#8a2020','S':'#5a1010','K':'#c02020'};
-var SPR_RITUAL_CANDLE=['..F..','.FFF.','.FHF.','..F..','..W..','..W..','..W..','.WWW.'];
-var PAL_RITUAL_CANDLE={'F':'#ff6020','H':'#ffd060','W':'#e0d0c0'};
-var SPR_GRAVE_SMALL=['...SSSS...','..SSSSSS..','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','.SSSSSSSS.','..GGGGGG..','..GGGGGG..'];
-var PAL_GRAVE_SMALL={'S':'#6a6058','G':'#3a5a2a'};
-var SPR_GRAVE_CROSS=['...SSS....','...SSS....','.SSSSSSS..','.SSSSSSS..','...SSS....','...SSS....','...SSS....','...SSS....','..GGGGGG..'];
-var PAL_GRAVE_CROSS={'S':'#7a7068','G':'#3a5a2a'};
-var SPR_RAVEN=['..BBB..','.BBBBB.','BBWBBWB','.BBBBB.','..BBB..','..B.B..','..B.B..','.Y...Y.'];
-var PAL_RAVEN={'B':'#1a1a1a','W':'#f0e0c0','Y':'#c8a040'};
-var SPR_SKELETON_SIT=['..HHHH..','.HHHHHH.','.HEEEHH.','.HHHHHH.','..HHHH..','.BBBBBB.','BBBBBBBB','B.BBBB.B','B.B..B.B','..B..B..'];
-var PAL_SKELETON_SIT={'H':'#e8dcc0','E':'#1a0f08','B':'#d0c8a8'};
-var SPR_OLD_BACKPACK=['.BBBBBB.','BBLLLLBB','BLDDDDLB','BLDDDDLB','BLLLLLLB','.BBBBBB.','..B..B..'];
-var PAL_OLD_BACKPACK={'B':'#3a2010','L':'#6a4020','D':'#2a1a08'};
-var SPR_CANTEEN=['.MMM.','M...M','M...M','M...M','.MMM.'];
-var PAL_CANTEEN={'M':'#8a7050'};
-var SPR_SHRINE_ALTAR=['..SSSSSSSS..','.SGGGGGGGGS.','.SGCCCCCCGS.','.SGCCCCCCGS.','.SGGGGGGGGS.','..SSSSSSSS..','...SSSSSS...','..SSSSSSSS..','.SSSSSSSSSS.','SSSSSSSSSSSS'];
-var PAL_SHRINE_ALTAR={'S':'#7a6a58','G':'#c8a040','C':'#a0d0ff'};
-var SPR_SHRINE_STATUE=['..HHHH..','.HHHHHH.','HHSEESHH','HHSSSSHH','.HSSSSH.','..CCCC..','.CCCCCC.','CCCCCCCC','CCCCCCCC','.CC..CC.','.CC..CC.'];
-var PAL_SHRINE_STATUE={'H':'#8a7a62','S':'#c8bb9a','E':'#a0d0ff','C':'#6a5a48'};
-var SPR_PRAYER_BOOK=['.PPPP.','PIIIIP','PIWIIP','PIIWIP','PIIIIP','.PPPP.'];
-var PAL_PRAYER_BOOK={'P':'#4a2a10','I':'#f0e0c0','W':'#8a6a30'};
-var SPR_CHALICE=['.GGG.','G...G','G...G','GGGGG','.GGG.','..G..','..G..','.GGG.'];
-var PAL_CHALICE={'G':'#c8a040'};
-var SPR_CANDLE_TALL=['..F..','.FHF.','.FHF.','..F..','..W..','..W..','..W..','..W..','..W..','..W..','.WWW.'];
-var PAL_CANDLE_TALL={'F':'#ff8020','H':'#ffe080','W':'#e0d0c0'};
-var SPR_SPIDER_WEB_TREE=['W..W..W..W','.W.W.W.W.W','..WWWWWW..','.W.W.W.W.W','W..W..W..W'];
-var PAL_SPIDER_WEB_TREE={'W':'rgba(230,230,240,0.45)'};
-var SPR_AURORA_SPOT=['..GG..PP..','.GGGG.PPP.','GGGGGGPPP.','.GGGG.PPP.','..GG..PP..'];
-var PAL_AURORA_SPOT={'G':'rgba(120,255,180,0.35)','P':'rgba(200,140,255,0.35)'};
-var SPR_FISH_BONES=['...B..B..','.BBB.BBB.','B.BB.B.B.','.B.BB.B..','..BBBBB..','...BBB...','....B....'];
-var PAL_FISH_BONES={'B':'#d0c8a8'};
-var SPR_SLIME_PUDDLE=['..GGGG..','.GGGGGG.','GGGGGGGG','GGGGGGGG','.GGGGGG.'];
-var PAL_SLIME_PUDDLE={'G':'rgba(140,220,80,0.35)'};
-var SPR_ROTTING_REMAINS=['..BBBB..','.BGGGGB.','BGKGGKGB','BGGGGGGB','.BGGGGB.','..BBBB..'];
-var PAL_ROTTING_REMAINS={'B':'#3a2a1a','G':'#5a6a3a','K':'#1a1a10'};
+/* v8.5.8-FIX: повторный блок объявлений спрайтов удалён.
+   Канонические SPR_ и PAL_ уже объявлены выше, до DECOR_SPRITES. */
+
 
 /* ============================================================
 v7.0 — СЦЕНКИ И КЛАСТЕРЫ (консолидация патчей 6.5.10/6.6.1/6.6.3)
@@ -14161,6 +14328,10 @@ return arr[Math.floor(gameRNG()*arr.length)];
 function _isBlockedByEntity(tx,ty){
 for(var i=0;i<chests.length;i++){
 if(Math.floor(chests[i].x/TILE)===tx&&Math.floor(chests[i].y/TILE)===ty)return true;
+}
+/* v8.5.7 — NPC также занимает клетку и не должен перекрываться декором. */
+for(var ni=0;ni<npcs.length;ni++){
+if(npcs[ni]&&Math.floor(npcs[ni].x/TILE)===tx&&Math.floor(npcs[ni].y/TILE)===ty)return true;
 }
 if(stairs&&Math.floor(stairs.x/TILE)===tx&&Math.floor(stairs.y/TILE)===ty)return true;
 if(trader&&Math.floor(trader.x/TILE)===tx&&Math.floor(trader.y/TILE)===ty)return true;
@@ -15036,7 +15207,7 @@ function _syncAttackIcon(){
   var tint=kind==='bow'?'#d7dfb1':kind==='dagger'?'#d2b7e7':kind==='staff'?'#d8bd8c':'#e7d9b8';
   el.innerHTML='<img class="game-icon-original" alt="" aria-hidden="true" width="23" height="23" src="'+iconUrls[kind]+'">';
   el.style.color=tint;
-  var iconImg=el.querySelector('.game-icon-original');if(iconImg){iconImg.style.width='23px';iconImg.style.height='23px';iconImg.style.objectFit='contain';iconImg.style.mixBlendMode='screen';iconImg.style.filter='none';iconImg.style.background='transparent';iconImg.onerror=function(){this.style.display='none';el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 3.2l3 3-10.7 11-3.2-3.2z"/><path d="M7.2 13.8l3.1 3.1-4.1 4.1-3.1-3.1z"/></svg>';};}
+  var iconImg=el.querySelector('.game-icon-original');if(iconImg){iconImg.style.width='23px';iconImg.style.height='23px';iconImg.style.objectFit='contain';iconImg.style.mixBlendMode='screen';iconImg.style.filter='none';iconImg.style.background='transparent';iconImg.onerror=function(){iconImg.style.display='none';el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 3.2l3 3-10.7 11-3.2-3.2z"/><path d="M7.2 13.8l3.1 3.1-4.1 4.1-3.1-3.1z"/></svg>';};}
 }
 function drawElf(){
   if(!player)return;
@@ -15604,11 +15775,12 @@ function _drawMagicPixelAccent(sx,sy,type){
   var colors={fire:['#ffd36a','#ff7a32','#c93b22'],ice:['#f0fbff','#9de7ff','#5c9fe8'],shadow:['#e1b8ff','#a56cff','#59349c'],holy:['#fff4ad','#ffe15a','#c9a43a'],magic:['#d9c6ff','#a58aff','#7456c7']};
   var pal=colors[type]||colors.magic;
   var ix=Math.floor(sx),iy=Math.floor(sy);
-  /* Fixed offsets keep the accents crisp and avoid random flicker. */
+  /* v8.5.7 — save/restore вместо ручного сброса globalAlpha. */
+  ctx.save();
   ctx.globalAlpha=0.9;ctx.fillStyle=pal[0];ctx.fillRect(ix-5,iy-2,2,2);
   ctx.fillStyle=pal[1];ctx.fillRect(ix+4,iy+3,2,2);
   if(((ix+iy)&1)===0){ctx.fillStyle=pal[2];ctx.fillRect(ix-2,iy+6,2,2);}
-  ctx.globalAlpha=1;
+  ctx.restore();
 }
 function drawProjectiles(){
   if(projectiles.length===0)return;
@@ -16042,6 +16214,7 @@ function _renderGroundLayer(){
     }
 
     drawDecor(dg);
+    /* _drawEnvironmentPixelAccents вызывается отдельно: drawDecor сам его не вызывает. */
     _drawEnvironmentPixelAccents(dg, dg.x*TILE-cam.x+TILE/2, dg.y*TILE-cam.y+TILE/2);
     // v8.0.0 — пульсация синего телепорта друидов.
     if(dg.type === 'druidTeleport'){
@@ -16205,6 +16378,8 @@ function _renderEntityLayer(){
   for(var ni=0;ni<npcs.length;ni++){
     var _np=npcs[ni];
     if(!_np)continue;
+    /* v8.5.10-FIX: битые координаты NPC пропускаем. */
+    if(typeof _np.x!=='number'||!isFinite(_np.x)||typeof _np.y!=='number'||!isFinite(_np.y))continue;
     var _npx=_np.x-cam.x, _npy=_np.y-cam.y;
     if(_npx>-160&&_npy>-160&&_npx<VW+160&&_npy<VH+160)
       _pushDrawItem(drawList,_wl++,_np.y,5,_np);
@@ -16299,7 +16474,8 @@ function _renderWalls(x0,y0,x1,y1){
     for(var _edi=0;_edi<_elderDoors.length;_edi++){
       var _ed=_elderDoors[_edi];
       var _edx=_ed.x*TILE-cam.x+TILE/2,_edy=_ed.y*TILE-cam.y+TILE/2;
-      if(_edx<-80||_edy<-80||_edx>VW+80||_edy>VH+80)continue;
+      /* v8.5.10-FIX: увеличен culling для щелей (стрелки + свечение занимают больше места). */
+      if(_edx<-200||_edy<-200||_edx>VW+200||_edy>VH+200)continue;
 
       var _edp = 0.5 + Math.sin(Date.now()*0.004 + _ed.seed*8) * 0.5;
       var _t = Date.now() * 0.003;
@@ -16621,8 +16797,32 @@ hp:'',hpW:-1,lvl:-1,dmg:'',gold:-1,gems:-1,
 kills:-1,keys:-1,xp:'',xpW:-1,weaponCd:-1,
 acc:'',subclass:'',lore:'',altar:''
 };
+/* v8.6.0 — компактный индикатор приоритетного статуса игрока. */
+function _updateStatusIcons(){
+  var _el=document.getElementById('statusIcons');
+  if(!_el){
+    /* v8.5.10-FIX: проверяем hud ДО создания элемента — иначе утечка памяти. */
+    var _hud=document.getElementById('hud');
+    if(!_hud||!_hud.parentNode)return;
+    _el=document.createElement('div');
+    _el.id='statusIcons';
+    _el.style.cssText='position:fixed;top:44px;left:8px;font-size:14px;z-index:10;pointer-events:none;text-shadow:1px 1px 0 #000;';
+    _hud.parentNode.insertBefore(_el,_hud.nextSibling);
+  }
+  if(!player){_el.textContent='';return;}
+  var _status='',_tip='';
+  if(player.burning&&player.burning>0){_status='🔥';_tip='Горение';}
+  else if(player.poisoned&&player.poisoned>0&&!player.poisonImmune){_status='☠️';_tip='Отравление';}
+  else if(player.bleeding&&player.bleeding>0){_status='🩸';_tip='Кровотечение';}
+  else if(player.slowed&&player.slowed>0){_status='❄️';_tip='Замедление';}
+  else if(player.curseDmgTick&&player.curseDmgTick>0){_status='🩸';_tip='Кровоточащие стены';}
+  _el.textContent=_status;
+  _el.title=_tip;
+}
+
 function updateHUD(){
 if(!player)return;
+_updateStatusIcons();
 /* v8.5.3 — единый пиксельный спрайт золота в HUD. */
 var _hudCoin=document.getElementById('hudCoinIcon');
 if(_hudCoin&&typeof SPR_COIN!=='undefined'&&typeof PAL_COIN!=='undefined'){
@@ -16828,7 +17028,8 @@ function showToast(text){
 function drawToasts(){
   var len=toasts.length;
   var _hasCombo=(comboCount>1&&!inHub&&player);
-  if(len===0&&!_hasCombo)return;
+  var _hasKillstreak=!!(player&&player._killstreak>=3&&player._killstreakTimer>0&&!inHub);
+  if(len===0&&!_hasCombo&&!_hasKillstreak)return;
 
   /* v6.5.9 — ФИКС: ограничиваем ширину тоста и обрезаем длинный текст.
      Было: тост с длинным текстом вылезал за экран по горизонтали
@@ -16887,6 +17088,15 @@ function drawToasts(){
     ctx.fillStyle=comboCount>=4?'#f0d040':'#c8a040';
     ctx.fillText('⚡ COMBO x'+comboCount,VW/2,130);
     ctx.textAlign='left';
+  }
+  /* v8.6.0 — серия убийств: только визуал, никаких боевых бонусов. */
+  if(_hasKillstreak){
+    var _ksAlpha=Math.min(1,player._killstreakTimer/60);
+    ctx.save();ctx.globalAlpha=_ksAlpha;
+    ctx.font='bold 13px Georgia';ctx.textAlign='center';
+    ctx.fillStyle=player._killstreak>=7?'#ff8040':(player._killstreak>=5?'#f0d040':'#c8a040');
+    ctx.fillText('🔥 Серия: '+player._killstreak,VW/2,_hasCombo?152:130);
+    ctx.restore();ctx.textAlign='left';
   }
 }
 function updateToasts(dt){
@@ -17135,6 +17345,17 @@ function continueRun(){
   for(var key in p){
     if(p.hasOwnProperty(key)) player[key] = p[key];
   }
+  /* v8.5.10-FIX: валидация класса/подкласса после загрузки.
+     Если класс не существует в текущей версии — сбрасываем на warrior. */
+  if(!player.class || !SUBCLASSES[player.class]){
+    player.class = 'warrior';
+    player.subclass = 'berserk';
+  }
+  /* Если подкласс не существует в текущем классе — берём первый. */
+  if(player.subclass && !getSubclassData(player.class, player.subclass)){
+    var _firstSub = getSubclassList(player.class);
+    player.subclass = _firstSub.length > 0 ? _firstSub[0].id : null;
+  }
   player._grovePriestessTalked=_grovePriestessTalked;
   player._groveOfferings=_groveOfferings;
   player._groveLoreShown=_groveLoreShown;
@@ -17155,11 +17376,15 @@ function continueRun(){
   player.curseDmgTick = 0; player.curseDmgAmount = 0;
   player.curseFog = false; player.curseGreed = false;
   player.curseHaste = false; player.curseFragility = false;
-  player._diaryShown = {};
+  /* v8.5.7 — сохраняем отметки дневника при continueRun, не сбрасываем их. */
+  player._diaryShown = (p._diaryShown && typeof p._diaryShown === 'object' && !Array.isArray(p._diaryShown)) ? p._diaryShown : {};
   player._sellCount = p._sellCount || null;
   /* v8.4.1 — сохраняем расширение сумки между продолжениями забега. */
   player.bagPurchased = (typeof p.bagPurchased === 'number' && isFinite(p.bagPurchased)) ? p.bagPurchased : 0;
   _repairPlayerVitals();
+
+  /* v8.5.10-FIX: сброс блокировки дневника, чтобы он не показывался повторно. */
+  _diaryLock = {};
 
   /* v7.9.13 PATCH — запоминаем координаты сохранённого игрока до генерации.
      Генератор этажа выставляет игрока в центр; после генерации попробуем вернуть
@@ -17175,10 +17400,34 @@ function continueRun(){
 
   buildFloor();
   /* Восстанавливаем позицию только если координаты валидны и клетка проходима.
-     В противном случае оставляем безопасную стартовую позицию, заданную генератором. */
+     v8.5.9-FIX: проверяем не только пол, но и твёрдый декор (деревья, камни),
+     иначе игрок мог застрять внутри препятствия после продолжения забега. */
   if(typeof _resumeX==='number'&&isFinite(_resumeX)&&typeof _resumeY==='number'&&isFinite(_resumeY)){
     var _resumeTX=Math.floor(_resumeX/TILE), _resumeTY=Math.floor(_resumeY/TILE);
-    if(map[_resumeTY]&&map[_resumeTY][_resumeTX]===0){player.x=_resumeX;player.y=_resumeY;}
+    var _cellIsFloor = map[_resumeTY] && map[_resumeTY][_resumeTX] === 0;
+    var _cellHasDecor = (typeof _decorCollides === 'function') && _decorCollides(_resumeX, _resumeY, player.r);
+    if(_cellIsFloor && !_cellHasDecor){
+      player.x = _resumeX;
+      player.y = _resumeY;
+    } else {
+      /* Безопасный fallback: сдвигаем игрока на ближайшую свободную клетку. */
+      var _foundSafe = false;
+      for(var _tryR = 1; _tryR <= 6 && !_foundSafe; _tryR++){
+        for(var _dxo = -_tryR; _dxo <= _tryR && !_foundSafe; _dxo++){
+          for(var _dyo = -_tryR; _dyo <= _tryR && !_foundSafe; _dyo++){
+            if(Math.abs(_dxo) !== _tryR && Math.abs(_dyo) !== _tryR) continue;
+            var _sx2 = _resumeX + _dxo * TILE;
+            var _sy2 = _resumeY + _dyo * TILE;
+            var _stx = Math.floor(_sx2/TILE), _sty = Math.floor(_sy2/TILE);
+            if(!map[_sty] || map[_sty][_stx] !== 0) continue;
+            if(typeof _decorCollides === 'function' && _decorCollides(_sx2, _sy2, player.r)) continue;
+            player.x = _sx2;
+            player.y = _sy2;
+            _foundSafe = true;
+          }
+        }
+      }
+    }
   }
 
   if(typeof p.hp === 'number') player.hp = p.hp;
@@ -17779,7 +18028,9 @@ function talkToYoungPriest(){var line=_YOUNG_PRIEST_LINES[Math.floor(gameRNG()*_
 function talkToGhostChild(){var lines=['«Мы ждём, когда Древо вспомнит весну».','«Ты тоже слышишь, как корни шепчут?»','«Не уходи надолго. Здесь темно, когда никто не приходит».','«Под листьями всё ещё тепло».'];var line=lines[Math.floor(gameRNG()*lines.length)];showModal('<h2>👻 Дитя рощи</h2><p style="font-style:italic;color:#c9e7ee;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
 
 function _openSacredTree(){
+  /* v8.5.10-FIX: защита от вызова без player. */
   if(!player) return;
+  if(inHub || gameOver) return;
 
   var _prayed = !!player._grovePrayed;
   var _offered = !!player._groveOfferings;
@@ -19007,6 +19258,28 @@ function _generateBalanceCompendium(){
       }
     }
   }
+
+  /* v8.6.0 — раздел «Критические удары»: эффекты по типам оружия. */
+  var _critEntries = [
+    {name:'⚔️ Режущее (меч, топор)',desc:'Крит отталкивает врага примерно на 40px. Боссы и элитные враги устойчивы к отталкиванию.',lore:'«Хороший удар — не тот, что разрубает. Хороший удар — тот, что отбрасывает. Враг должен понять, что ему дали шанс.» — из записей Аэлиса, этаж 16'},
+    {name:'🔨 Дробящее (молот, булава)',desc:'Крит оглушает обычного врага на 0,3 секунды. Боссы не получают дополнительного эффекта.',lore:'«Молот — это не убийство. Это выигранное время. Бей, пока он падает. Бей, пока он помнит, что стоит.» — из записей Таэлира, этаж 5'},
+    {name:'🗡️ Колющее (кинжал, копьё)',desc:'Крит накладывает кровотечение: до 3 урона за тик.',lore:'«Кинжал не убивает сразу. Он оставляет длинную линию. Гоблин бежит — и за ним тянется красное.» — из записей Таэлира, этаж 11'},
+    {name:'🔮 Магическое (посох)',desc:'Крит магического оружия с АоЕ создаёт взрыв радиусом 40px и наносит окружающим врагам 40% базового урона оружия.',lore:'«Посох — это не оружие. Посох — это вопрос. Огонь отвечает за тебя. Иногда ответ — взрыв.» — из записей Седьмого Архимага'},
+    {name:'🎯 Дальний бой (лук)',desc:'Крит наносит ×1,5 урона. Дополнительного эффекта нет; пассивные бонусы класса сохраняются.',lore:'«Стрела не спорит. Она просто идёт туда, куда смотрит сердце.» — из записей Аэлиса, этаж 7'}
+  ];
+  var _critSectionIdx = -1;
+  for(var _sci=0; _sci<COMPENDIUM.length; _sci++){
+    if(COMPENDIUM[_sci].section && COMPENDIUM[_sci].section.indexOf('Критические удары')>=0){_critSectionIdx=_sci;break;}
+  }
+  if(_critSectionIdx>=0) COMPENDIUM[_critSectionIdx].entries=_critEntries;
+  else {
+    var _insertCritIdx=-1;
+    for(var _sci2=0;_sci2<COMPENDIUM.length;_sci2++){
+      if(COMPENDIUM[_sci2].section && COMPENDIUM[_sci2].section.indexOf('Сюжет')>=0){_insertCritIdx=_sci2;break;}
+    }
+    if(_insertCritIdx<0)_insertCritIdx=COMPENDIUM.length;
+    COMPENDIUM.splice(_insertCritIdx,0,{section:'💥 Критические удары',entries:_critEntries});
+  }
 }
 
 /* Запускаем сразу после определения WEAPONS/ARMORS/CLASS_STATS/BALANCE,
@@ -19156,17 +19429,17 @@ setTimeout(resize,100);setTimeout(resize,400);setTimeout(resize,1000);
   }
 })();
 
-/* v7.3.12 / v7.9.7 — синхронизация цен SKILLS с BALANCE.skills.
-   ВАЖНО: только если в BALANCE есть price. Иначе оставляем цену из SKILLS. */
+/* v7.3.12 / v8.6.1 — синхронизация цен SKILLS с BALANCE.skills.
+   Приоритет: цена из SKILLS (если задана и > 0), иначе — из BALANCE. */
 (function _syncSkillPrices(){
   if(typeof SKILLS === 'undefined' || typeof BALANCE === 'undefined') return;
   if(!BALANCE.skills) return;
   for(var _i=0; _i<SKILLS.length; _i++){
     var _s = SKILLS[_i];
     var _bal = BALANCE.skills[_s.id];
-    if(_bal && typeof _bal.price === 'number'){
-      /* v7.9.7 — уважаем новую цену из SKILLS, если она выше балансной */
-      if(!_s.price || _s.price < _bal.price){
+    if(_bal && typeof _bal.price === 'number' && _bal.price >= 0){
+      /* v8.6.1 — уважаем цену из SKILLS, если она задана явно. */
+      if(!_s.price || _s.price <= 0){
         _s.price = _bal.price;
       }
     }
@@ -19221,6 +19494,34 @@ setTimeout(resize,100);setTimeout(resize,400);setTimeout(resize,1000);
     LEGENDARY_ITEMS.thorns_armor.effect.chance = _bl.thorns_armor.reflectChance;
     LEGENDARY_ITEMS.thorns_armor.effect.reflectPercent = _bl.thorns_armor.reflectPercent;
   }
+})();
+
+/* v8.5.8-FIX: секретный раздел справочника о финалах с Аэлисом.
+   SUBCLASSES к этому месту уже объявлен. */
+(function _addSecretCompendiumSection(){
+  var _secretEntries=[];
+  for(var _subId in AELIS_ENDING_BY_SUBCLASS){
+    if(!AELIS_ENDING_BY_SUBCLASS.hasOwnProperty(_subId))continue;
+    var _subData=null;
+    for(var _cls in SUBCLASSES){
+      if(!SUBCLASSES.hasOwnProperty(_cls))continue;
+      for(var _i=0;_i<SUBCLASSES[_cls].length;_i++){
+        if(SUBCLASSES[_cls][_i].id===_subId){_subData=SUBCLASSES[_cls][_i];break;}
+      }
+      if(_subData)break;
+    }
+    if(!_subData)continue;
+    var _won=stats.aelisWins && stats.aelisWins.indexOf(_subId)>=0;
+    _secretEntries.push({
+      name: _subData.icon+' '+_subData.name+(_won?' ✅':' ❓'),
+      desc: _won ? AELIS_ENDING_BY_SUBCLASS[_subId] : 'Финал с ??? для этого пути. Ещё не открыт.',
+      lore: _won ? '' : '«Я знал, что ты придёшь. Ты всегда приходил.» — из дневника Аэлиса, запись 24'
+    });
+  }
+  COMPENDIUM.push({
+    section:'??? — Брат',
+    entries:_secretEntries
+  });
 })();
 
 requestAnimationFrame(loop);
