@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v8.5.1. -->
+<!-- Dungeon Elf v8.5.4. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v8.5.0 — Круг друидов</title>
+<title>Dungeon Elf v8.5.1 — Священная Роща</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -461,7 +461,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v8.5.0 · КРУГ ДРУИДОВ</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v8.5.1 · СВЯЩЕННАЯ РОЩА</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -481,7 +481,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='8.5.0';
+var GAME_VERSION='8.5.4';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -1885,6 +1885,15 @@ var GRAVE_NAMES_V2=[
 ];
 // [FIXED] RITUAL_LORE — удалён сломанный блок, используется v7.0 версия (стр. ~11231)
 // [FIXED] SHRINE_LORE — удалён сломанный блок, используется v7.0 версия (стр. ~11238)
+/* v8.5.4 — Записки Священной Рощи */
+var GROVE_NOTES = [
+  {id:'grove_tree',floor:0,location:'grove',title:'📜 О Древе',text:'«Древо было до нас. Оно будет после. Мы — только листья на его ветвях. Один эльф — один лист. Падает — значит жил. Гниёт — значит вернулся.\n\nНо сейчас листья не гниют. Они лежат. И Древо молчит.»\n\n— из книги Старейшины, запись 1'},
+  {id:'grove_tirion',floor:0,location:'grove',title:'📜 О Тирионе',text:'«Он сидел под Древом каждую ночь. С самого детства. Говорил с ним тихо. Думал — никто не слышит. Я слышала.\n\nОн спрашивал — почему листья должны падать? Почему всё должно кончаться? Древо молчало. Он злился.\n\nТеперь я понимаю: Древо молчало не потому что не знало ответа. А потому что ответ — не в словах.»\n\n— из дневника жрицы, страница без номера'},
+  {id:'grove_children',floor:0,location:'grove',title:'📜 О детях',text:'«Они играли здесь всегда. Прятались в корнях, плели венки из листьев, пели песни Древу. Оно слушало.\n\nТеперь они играют по-прежнему. Но я не слышу их смеха. Только эхо песен. Только тень венков. Только шаги по кругу, которые никогда не заканчиваются.»\n\n— записка у детской площадки'},
+  {id:'grove_priestess',floor:0,location:'grove',title:'📜 О жрице',text:'«Я — последняя. Другие ушли в корень. Ушли в землю. Ушли в песню. Я осталась.\n\nПочему? Не знаю. Наверное — потому что кто-то должен помнить. Кто-то должен сказать новому эльфу — вот здесь было Древо. Оно дышало. Оно пело. Оно помнило всех.\n\nЯ скажу тебе. И ты запомнишь. Так Древо не умрёт окончательно.»\n\n— из дневника жрицы, последняя страница'},
+  {id:'grove_end',floor:0,location:'grove',title:'📜 О конце',text:'«Когда Древо умрёт — осень не кончится. Никогда.\n\nНо если кто-то придёт и освободит Тириона — Древо вздохнёт. Медленно. Как после долгого сна. И листья — снова начнут гнить. И земля — снова примет их. И весной — снова зелёные листья.\n\nТы — этот кто-то? Тогда — иди. Не бойся. Древо ждёт.»\n\n— записка на коре Древа'}
+];
+
 var LORE_SOURCES=[
   {id:'note',    arr:LORE_NOTES,       prefix:'',         title:'📜 Записка',
    color:'#d0b890', mode:'modal', context:'floor'},
@@ -1905,7 +1914,9 @@ var LORE_SOURCES=[
   {id:'afrag',   arr:AELIS_FRAGMENTS,  prefix:'afrag',    title:'📜',
    color:'#c0b0d0', mode:'toast', context:'floor'},
   {id:'hero',    arr:HERO_DIARY,       prefix:'hero',     title:'📔 Дневник героя',
-   color:'#b0c0d0', mode:'modal', context:'floor'}
+   color:'#b0c0d0', mode:'modal', context:'floor'},
+  {id:'grove',   arr:GROVE_NOTES,      prefix:'grove_',   title:'📜 Записка рощи',
+   color:'#c0e0b0', mode:'modal', context:'grove'}
 ];
 
 /* Найти все записи для текущего этажа. Возвращает массив
@@ -3542,6 +3553,123 @@ var SPR_TRADER=['....HHHHHH....','...HHHHHHHH...','..HHHHHHHHHH..','..HHHSSSSHHH
 var PAL_TRADER={'H':PAL.trHood,'S':PAL.eSkin,'E':PAL.trEye,'B':PAL.trBody,'D':'#3a2a4a'};
 var SPR_TREE=['......LLLLLLLLL.........','....LLLLLLLLLLLLL.......','...LLL11LLLLL11LLL......','..LLL1111111111LLL......','..LL111222211111LLL.....','.LLL1122222211111LLL....','.LLL1222222222111LLL....','.LLL1222222222111LLL....','.LLLL122222221111LLL....','.LLLL111222111111LLL....','..LLLL111111111LLL......','..LLLLL11111111LLL......','...LLLLLLLLLLLLL........','....LLLLLLLLLLL.........','......TTTT..............','......TTTT..............','......TTTT..............','......TTTTT.............','.....TTTTTT.............','.....TTTTTT.............','.....TTTTTT.............','....TTTTTTT.............','....TTTTTTT.............','....TTTTTTT.............','...TTTTTTTT.............','...DDDDDDDD.............','...DDDDDDDD.............','........................'];
 var PAL_TREE={'L':PAL.tLeaf4,'1':PAL.tLeaf1,'2':PAL.tLeaf2,'T':PAL.tTrunk,'D':PAL.tTrunkD};
+/* ============================================================
+   v8.5.1 — СВЯЩЕННОЕ ДРЕВО
+   Огромное дерево, сердце рощи. Умирающее, но живое.
+   ============================================================ */
+/* v8.5.4 — Священное Древо: исправлено исчезновение при прокрутке камеры и усилено магическое свечение. */
+/* v8.5.4 — Священное Древо: широкая крона, видимые ветви, дупло и расходящиеся корни. */
+/* v8.5.3 — улучшенный пиксель-арт Священного Древа, созданный из детализированного референса. */
+var SPR_SACRED_TREE = [
+'...................................................J....................',
+'................................I.IG....................................',
+'..............................IIEIECEE..................................',
+'..............................IIIEECBCCC................................',
+'........................I.......IIECEABE..JJ.GEG........................',
+'.................JD...IIEEI..I.II.IICBBCII.ICCBBCICDCG..................',
+'......................IEEEEIECCECEIIEBCCCEJICBBABBAABC..................',
+'...........J.J...J......IIECCCCECCEEEECECBCEEECECBAACJ..................',
+'............JJ.......J.JJIEBC.IJIIJEEIBBCBCEIIEEBABABGJG................',
+'.................J....J.IJ.EI...JCEEEEECBCCIICECCBCCBBBCD...............',
+'.........G...JEJ..J..J.JI.J..EIIEEBBCIECCACEEECIICCCBBBEI.JJ............',
+'........IEEIEIIIJ......IJ....EEEECBACECCBABBBEEEEDCCCBBEJ.II.EED........',
+'........EEIEEIJ.......J.JI..EEEEEICCEEEEECCBBIGIICCIIEICIJIIEECBJ.......',
+'....JJJ..IEEEEEIJ........FJIEEEEI.IEECIIECBAABE.IECCCDGIJJECBBBCED......',
+'....IIIEIIEEEJECCI.ICI.......IIEJIEIEEIECCBCBBC.JIECCA.ECEBBBCBBCCG.....',
+'..JIIJIECIJI.IECCG.ECC.EEI....JE..I.IIICCDB.CBCF...EJECCBBABCECCEDE.....',
+'.....IECEJ...EEEEECECBBCBG..II......IIEEDIJH.HHH.IIICECBBABCCD.JCG......',
+'....J.IEIJ...JIJEECCECBBBBCIEEE.....IG.E.IGHFJ...ECECBCCABBBAB.J...GG...',
+'..JJ..I.IE.....JIEEEEEBBAABCII.IEGG......J.FD.JEJIECEECAAACEC.JI.CECB...',
+'.....JE..J....J.JIIEEBBCBBBC.IJEBBC..JJ....FH.IEEIEIECBBAACCI.JIECBBBDDJ',
+'......J..H...JIJIECCEIECBCIEECCEBBCEEEEJJFHH..EIEEEICBBEECDEG.JEECBBCBBC',
+'.............J.IECDEI.ECIIJIEECCEBBBBEII.HH..IEEIEEEE.BEECBG..IEEECCBCG.',
+'...............EEEEJ..DCE.JEEECBCEBAACIJ.FH..GEI.IEIGHICCD.G.JJ.JEECCBC.',
+'..JJ...JE..II...IIEE...I..EECCCBBEECBCEJ.DFIH.IJF.HGG.HDD.I.J.H.IEGCECBG',
+'.....EEIEEIEEIF..II.J.....JDEEJGEGIEEII.JFH...I.FDHD...JECECDGDHDH.EIJEE',
+'....IEEIEEEEIJ......GJ..JIJIJ....IEBBCCIJFH.....FH....JECBBBBDH.....JJEE',
+'IJI.IEECEEEBBI......FD.JJGIJJ.H.IECBABCIHFH..FFFF...GIIECBBCEECE......GE',
+'IIEEIIEEECBBBE....H.BB...JH..FHIIECBBABCCCHFDFFHH..GGJIEEIEECAABI..FH.GJ',
+'.IEEJ..JICBCCDI.HFFFDF....HDFF.II.EBCBAECB.DFJ....JEEEEJECCCBBABEE...GH.',
+'.III...EEEECBBDFDH..HDH..H..HFH....CCECIJDFHH.....IEECBCCCBBECBBCE......',
+'.I..H.JIEGGCCBC......FD..F...HDH...GECD.JIECG.....IICCBCH.BCGGBEEBI.....',
+'J.......J..IIGG..IGJ.JHDFD....HF.BF.IJI.ICBBC.H..IIED..BH.GGHJDIICCECE..',
+'..J...GG....I...IIEI...HHDF....HDBD.I..GCCBBJ.FFHH.JGHHGG..H.JJEIEBBCE..',
+'.JJIJ.GJJHHH....JJIJJJ...HFHJ..FD...JH..F..A..HJHH.GF...J.HHHHDCEECABEDG',
+'.IGI.JEJJ..HHJ....IEECEIJ.HG.CFFDH..JGJHFD...G.....FDFFH.HFJ..IEJICBCBDJ',
+'..JI...GJJJH..EEEJIEECCBCIECBADHDD..HHHFH...IEECI.JDFHHFFF.....D.ECCECEG',
+'..GGJJCG.FH...EECEEEECABCEECBBB.DDG.HHHH..GEECCCIGHDH...FDFHFF....EGGEDE',
+'..G.JGGIG.....JJJIIIEECBCGDCBBAAFFF.HHFH.HDCGEEIDBBD..J...HFF.GEJJGGGDG.',
+'..G.JG.JG..IIJJ.....IIECBC.H.JB.JHHHFFDFHFFD..G..BAGII..GJ..I.GEIJGDJ...',
+'..G....GG..JJIEEE...ICC.DE..HH.HF.FFDDDD....HHHHDGGGGEIEE...GIGGIG.G....',
+'.......II...IIECCG.JJGCJGFH..DHGD.HFDDDDH..GFHHFGGGEDBCEJ.....GEI.......',
+'.......JG.IIIJEGCG.J.H.HFDDFHHHFFFFDAADBHJHDFDBDGGCBBCBCEE....GGJ..DH...',
+'.......G..JJGGCG..JIFFFDFG.GHFH.HBDDAADCHHDBBDFJGCDCBCDCCC.....G...J....',
+'.....JF.H..JG.G..GGCD.HGIEIJJ.HHJBFDAABFDDDDHJGGDD.BBDHBC.....HDF.......',
+'.....JFBC....IG..JGGF..JGG.GG..HHFFABDADCDFH.JGGD.H...........HAB.......',
+'.......BB...JGG...G.J......GGJ.JHHBBHHFBBBF....D.F.GH...HJ.....CD.......',
+'.......HH....GG...IJJ......GGJ..HFBHFFHDBBCG...D.H......FJ......H.......',
+'.............F....I.......HF.J..HDBHBBHHBD.C...D.JHDD..........HH.......',
+'.........H...GG...G.......FAD..GHBFFAAFHDD.E...D..HABJ..................',
+'.........FH..........J.J..HBF..HFBFDAAD.DDDG......JDD...................',
+'...........JGG.....I.J...JJH.IG.HBFFAAFHBBDI...............GJ.H.........',
+'...........G......IEIIAC..JH.IIJHDDHBBHHBBDI........I....GC.G.H.........',
+'...........ICB....JEEEAAIII..IJ.JDDHDD.FABDJJ......JJDI..FBDJ...........',
+'............BAC...JJJCAAIIIJ.J....BDHHHBABDGHHG.J...JIJJ.DAB............',
+'......H.....BACJ.GGEIAAAIJ.....G.HDBBFBAADC.HHFFGAC.IEGJ.CAB.G...HJ.....',
+'.......G...GCBCCE.JJEAAAEI..J.GGHFHFBBBAAFBBBBD.CAAIEIJJ.DBDGG..F.......',
+'...........G.FCEEEJJECAAEJ.GG.I.JHFFDBBAADD.AAF.EAAEI.H.GDD.GI..........',
+'...........GDEEIIIEGEEEEG.DIH.GDJHFDDBBBABFGDA..CAAC.F..HFDDGI.J..HJ....',
+'....G...J..EGGEECAEIGG.J.DI...FF.HFBDBBDBBBG..CDBAAAIJ..G..EIE.JJ.......',
+'....GCIJJJ.EIGIEAAAEGIEGGIJ..HFHI.FDBDDBDBBBD.CBBBACEJJJEEICCE.IJ.......',
+'..J.......IJECEEAACIEDG...JHFHHEI.FBBFFBDDDAB.CBBDGGED.IAACEEJJ......H..',
+'..H........DDEECAAAIE......FDJJEJJFDBDFBBFDDBDDCCC.....EAACJ.........H..',
+'..........GDDGIAAAC..I.H..GH..IE..DBDDHDBB.FBDBDC.BBBDFEAAAII.HG.CE.....',
+'......JG..JEIEIIAAEIJI....G.JCEIIFDDDFJF.ABDFFFFDFCCGG.CAAAIDDHHGJJ.....',
+'.......H.J.JJIIECEEIEG.FDFHIEEEJDBBFFH.HFBABBBD.FHHD.CBBAAAE.FFH........',
+'....GDB.....JECBEEEC.HJFBH.IEG.DB.DHFF..GF.BBAABD.HFDBBBCBCDGHH.F.....J.',
+'...JJBA..H.H.EIEDE.GI.DH.GIDBBDD.DH.FDH.JGFHHFDDDG..HHHD....FFFH.BF..GJJ',
+'...IJBA.GGHFG..GH.JJ.FH.IIFDFFH.....HDD....HHHHFB.JJJ..HFHFHGHJ.CADI....',
+'J...JDCEEGJH..GGJIJGG....GAAE.IBFG..HFBB.GFFFD.JDDFDDDD.HGG.HHJGCBDI....',
+'...G.G.G.GDDJ.JGGHH..GGIJ.AAA.CD.J..HHFBADJ..FF..FFDDDFG.HH...D..D.I....',
+'..IJ..I.JDGGGHG..JJJHDDGGCAACID.JJGJFF.HFBF...DF.JG...HFF.HFF.....GJ....',
+'...I..JGDG.JHH.GG.DD...FDCAAAIDHG..JDD...DD..HHHDGGGG.HHHHCDFGG.G.GGG...',
+'JIJ..G.JDDCGG.FHHFFBDGHFEEAAAEG.BDGGBF...HBGD.H.HFGDFFH..H.DF.HJECJJEJI.',
+'.....J...G.JHHHDFHJ..H.EEEAAEEEDDG.DD.JH.HD.EEEJHHHFFD.G..FHHH..GJGG....',
+'..JGJ..JGGFFFJHG.C..JJIECAEEDDG..FCFHDG...HD.IEFH......FG..GH.HFDHHGJ...',
+'.JJGJ...J.HHH..JEC...HGCECCD..GHHDH.I..HJ..HDH.HGFD..CF.G.HHFFHFFB......',
+'.......J.......GIG..JHGGJJDDG...FFJJFB.G.J..FHHHG..HGBBG..HDJH..........',
+'..........HF.D..FBB.GG.HFC.C.G.FFFJ.FB.EFG..F.FH...G.BAH.......J........',
+'.........J...F..FBD.DDDFDBBFG.FH.F.J.GCGFDJJH.FHGF.GGDC.....F...........',
+'.........J......JGGFIE.CDFGG.H.JJHG.JJGJ..J.HFFDDHG.G.HG..HJ.DDGG.......',
+'............J....JG.JDD.F....HJ.FFH.EEGGH.J..HDDFGGJJJGIJ..JJG.GJJ......',
+'......H.......JJ....IJGHDB....HH.D.JJ.GJ..F.H.HHG..J..JI.IIGGG..........'
+];
+var PAL_SACRED_TREE = {
+  'A': '#8ea759',
+  'B': '#6e7d28',
+  'C': '#576620',
+  'D': '#574d17',
+  'E': '#2d4b1a',
+  'F': '#4d3812',
+  'G': '#333810',
+  'H': '#37290d',
+  'I': '#1f3414',
+  'J': '#1d270f'
+};
+/* v8.5.1 — здоровая палитра: используется в редкие моменты,
+   когда Древо «вздыхает» — листва на мгновение зеленеет. */
+var PAL_SACRED_TREE_ALIVE = {
+  'G': '#236b31', 'g': '#65a94b',
+  'T': '#654329', 'K': '#38251b',
+  'D': '#1a1408'
+};
+/* Умирающая палитра — наоборот, ещё серее. */
+var PAL_SACRED_TREE_DYING = {
+  'G': '#343c28', 'g': '#555b3d',
+  'T': '#514035', 'K': '#2a211c',
+  'D': '#1a1408'
+};
+
 // v8.0.0 — зелёное дерево друидов: вокруг осень, а здесь весна.
 var SPR_TREE_GREEN = [
 '......LLLLLLLLL.........',
@@ -4569,7 +4697,7 @@ ARMORS.mourningRobe.sprite=SPR_ARMOR;ARMORS.mourningRobe.pal={M:'#4a4a5a',L:'#2a
    [SECTION 6] СОСТОЯНИЕ
    ===================================================================== */
 var TILE=40;var PX=4;
-var MAP_W=0,MAP_H=0,map=null,rooms=[],decor=[],enemies=[],projectiles=[],bloodParticles=[],dmgTexts=[],groundItems=[],chests=[],doors=[],fallingLeaves=[],bookPagesOnFloor=[],stairs=null,caveEntrance=null,forestEntrance=null,forestExit=null,castleEntrance=null,druidEntrance=null,druidExit=null,trader=null,boss=null,npcs=[],player=null; /* v5.9.0 — forestEntrance */
+var MAP_W=0,MAP_H=0,map=null,rooms=[],decor=[],enemies=[],projectiles=[],bloodParticles=[],dmgTexts=[],groundItems=[],chests=[],doors=[],fallingLeaves=[],bookPagesOnFloor=[],stairs=null,caveEntrance=null,forestEntrance=null,forestExit=null,castleEntrance=null,druidEntrance=null,druidExit=null,groveEntrance=null,trader=null,boss=null,npcs=[],player=null; /* v5.9.0 — forestEntrance */
 var cam={x:0,y:0},biome=BIOMES[0],floorNum=1,tickTime=0,floorCanvas=null,floorCacheCanvas=null,wallCanvas=null,waterCanvas=null,lavaCanvas=null,weaponLevel=1,armorLevel=1,combatFog=0,runStartTime=0,gameOver=false,lastStepSound=0;
 /* v4.9.58 — защита от повторного вызова endRun (смерть → кнопка «В Хаб») */
 /* v5.2.3 — флаг блокировки автосохранения во время сброса прогресса.
@@ -4704,7 +4832,7 @@ function _clearRunState(){
   curseGoldMult=1.0;
   _loreQueue.length=0;
   _dmgTextPool.length=0;
-  stairs=null;caveEntrance=null;forestEntrance=null;forestExit=null;trader=null;boss=null;
+  stairs=null;caveEntrance=null;forestEntrance=null;forestExit=null;groveEntrance=null;trader=null;boss=null;
   /* v6.5.5 — ФИКС #1: castleEntrance не сбрасывался в _clearRunState.
      Оставался с прошлого забега, игрок мог телепортироваться в замок. */
   castleEntrance=null;
@@ -5320,7 +5448,8 @@ function resetFloorTransient(){
 function _repairPlayerVitals(){if(!player)return;if(typeof player.maxHp!=='number'||!isFinite(player.maxHp)||player.maxHp<=0){var m=100;try{m=calcMaxHp(0,player.subclass?getSubclassData(player.class,player.subclass):null,getClassStats());}catch(e){}player.maxHp=(typeof m==='number'&&isFinite(m)&&m>0)?m:100;}if(typeof player.hp!=='number'||!isFinite(player.hp))player.hp=player.maxHp;player.hp=clamp(player.hp,0,player.maxHp);if(typeof player.invuln!=='number'||!isFinite(player.invuln)||player.invuln<0)player.invuln=0;}
 
 function _ensureHostilePopulation(){
-  if(currentLocation === 'village' || !player || !map || !MAP_W || !MAP_H) return;
+  /* v8.5.1 — роща — мирная локация, как деревня. */
+  if(currentLocation === 'village' || currentLocation === 'grove' || !player || !map || !MAP_W || !MAP_H) return;
   if(!Array.isArray(enemies)) enemies = [];
 
   /* Удаляем битые записи, которые могли остаться после старого сохранения
@@ -5428,7 +5557,7 @@ function _buildFloorInternal(showLore){
   /* v5.9.0 — Лес — НЕ подземелье. Не показываем записки,
      не кидаем проклятия, не считаем как этаж. */
   /* v6.0.1 — Замок — тоже не подземелье. Та же логика. */
-  if(currentLocation === 'forest' || currentLocation === 'castle' || currentLocation === 'druid'){
+  if(currentLocation === 'forest' || currentLocation === 'castle' || currentLocation === 'druid' || currentLocation === 'grove'){
     if(showLore){
       _showAllHeroDiaryForLocation(currentLocation);
     }
@@ -5662,6 +5791,7 @@ function _generateLevelLayout(){
   if(currentLocation === 'castle') buildCastle();
   else if(currentLocation === 'forest') buildForest();
   else if(currentLocation === 'druid') buildDruidCircle();
+  else if(currentLocation === 'grove') buildGrove();
   else if(isVillage) buildVillage();
   else buildDungeon();
   if(player){cam.x=player.x-VW/2;cam.y=player.y-VH/2;}
@@ -5678,7 +5808,7 @@ function _generateLevelLayout(){
     }
   }
   var fl=document.getElementById('floorLabel');
-  if(fl)fl.textContent=(currentLocation==='forest'?'🍂 Лес':currentLocation==='castle'?'🏰 Замок Тириона':currentLocation==='druid'?'🌿 Круг друидов':isVillage?'Деревня':'Этаж '+floorNum);
+  if(fl)fl.textContent=(currentLocation==='forest'?'🍂 Лес':currentLocation==='castle'?'🏰 Замок Тириона':currentLocation==='druid'?'🌿 Круг друидов':currentLocation==='grove'?'🌳 Священная Роща':isVillage?'Деревня':'Этаж '+floorNum);
   var ft=document.getElementById('floorTxt');
   if(ft)ft.textContent=(currentLocation==='forest'?'🍂':currentLocation==='castle'?'🏰':currentLocation==='druid'?'🌿':floorNum);
 
@@ -6343,6 +6473,13 @@ function _spawnElderDoor(stRoom,finalFloor){
       if(map[_fy] && map[_fy][_fx-1] === 0) _floorCount++;
       if(map[_fy] && map[_fy][_fx+1] === 0) _floorCount++;
       if(_floorCount < 2) continue;
+      /* v8.5.6 — хотя бы один соседний проход должен быть свободен и от сущностей. */
+      var _neighborsFree = 0;
+      if(map[_fy-1] && map[_fy-1][_fx]===0 && !_isBlockedByEntity(_fx,_fy-1)) _neighborsFree++;
+      if(map[_fy+1] && map[_fy+1][_fx]===0 && !_isBlockedByEntity(_fx,_fy+1)) _neighborsFree++;
+      if(map[_fy] && map[_fy][_fx-1]===0 && !_isBlockedByEntity(_fx-1,_fy)) _neighborsFree++;
+      if(map[_fy] && map[_fy][_fx+1]===0 && !_isBlockedByEntity(_fx+1,_fy)) _neighborsFree++;
+      if(_neighborsFree < 1) continue;
       _elderDoors.push({x:_fx, y:_fy, seed:gameRNG()});
       return;
     }
@@ -6630,6 +6767,36 @@ function _spawnElderLetterOnFloor(){
   decor.push({x:_letterX,y:_letterY,type:'elderLetter',letterKey:_letterKey,s:1.0,seed:gameRNG(),isElderLetter:true});
 }
 
+/* v8.5.4 — Открытие записки Священной Рощи. */
+function _openGroveNote(noteObj){
+  if(!noteObj||!noteObj.groveNoteId)return;
+  var note=null;
+  for(var i=0;i<GROVE_NOTES.length;i++)if(GROVE_NOTES[i].id===noteObj.groveNoteId){note=GROVE_NOTES[i];break;}
+  if(!note)return;
+  if(!player._runLore)player._runLore={};
+  var runKey='grove_'+note.id, isNewRun=!player._runLore[runKey];
+  player._runLore[runKey]=true;
+  if(!Array.isArray(stats.loreRead))stats.loreRead=[];
+  var codexKey='grove_'+note.id, isNewCodex=stats.loreRead.indexOf(codexKey)<0;
+  if(isNewCodex){
+    stats.loreRead.push(codexKey);
+    _loreReadSetCacheLen=-1;_loreCountCacheLen=-1;
+    saveStats();checkAchievements();
+  }
+  showModal('<h2 class="lore-title">'+note.title+'</h2><div class="lore-text">'+note.text.replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+  SfxPlay('scroll');
+  if(isNewCodex)showToast('📜 Записка рощи найдена');
+  if(isNewRun){for(var d=decor.length-1;d>=0;d--)if(decor[d]===noteObj){decor.splice(d,1);break;}}
+}
+
+function openGroveNoteFromCodex(noteId){
+  var note=null;
+  for(var i=0;i<GROVE_NOTES.length;i++)if(GROVE_NOTES[i].id===noteId){note=GROVE_NOTES[i];break;}
+  if(!note)return;
+  showModal('<h2 class="lore-title">'+note.title+'</h2><div class="lore-text">'+note.text.replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="openCodex()">⬅️ К Кодексу</button><button class="btn" onclick="closeModal()">Закрыть</button>');
+  SfxPlay('scroll');
+}
+
 /* 8.6 — Открытие письма Старейшины */
 function _openElderLetter(letterObj){
   if(!letterObj||!letterObj.letterKey)return;
@@ -6756,6 +6923,213 @@ function finishElderFinal(){
 var currentLocation = 'village';
 
 /* v5.9.0 — Осенний лес. Первая версия: пустая локация без мобов. */
+/* ============================================================
+   v8.5.4 · СВЯЩЕННАЯ РОЩА (пока пустая локация)
+   ============================================================ */
+function buildGrove(){
+  var W=30,H=30;
+  MAP_W=W+4; MAP_H=H+4;
+  map=[];
+  for(var y=0;y<MAP_H;y++){
+    map[y]=[];
+    for(var x=0;x<MAP_W;x++) map[y][x]=(x<2||y<2||x>=MAP_W-2||y>=MAP_H-2)?1:0;
+  }
+  for(var k=0;k<60;k++){
+    var side=randi(0,3),ex,ey;
+    if(side===0){ex=randi(0,MAP_W-1);ey=2;}
+    else if(side===1){ex=randi(0,MAP_W-1);ey=MAP_H-3;}
+    else if(side===2){ex=2;ey=randi(0,MAP_H-1);}
+    else{ex=MAP_W-3;ey=randi(0,MAP_H-1);}
+    if(map[ey]&&map[ey][ex]===0)map[ey][ex]=1;
+  }
+  var _cX=Math.floor(MAP_W/2),_cY=Math.floor(MAP_H/2);
+  decor=[];
+  var _entryX=_cX,_entryY=_cY+8;
+  if(!player){
+    var startHp=BALANCE.player.baseHp;
+    player={x:_entryX*TILE,y:_entryY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,
+      lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,
+      weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],
+      equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,
+      regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',
+      subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
+  }else{player.x=_entryX*TILE;player.y=_entryY*TILE;}
+  forestEntrance=null; caveEntrance=null; castleEntrance=null; druidEntrance=null; druidExit=null;
+  stairs=null;trader=null;boss=null;npcs=[];enemies=[];chests=[];doors=[];groundItems=[];fallingLeaves=[];
+  var _exitX=Math.floor(MAP_W/2),_exitY=MAP_H-5;
+  forestExit={x:_exitX*TILE,y:_exitY*TILE,w:4*TILE,h:3*TILE};
+  for(var _ey2=_exitY-3;_ey2<=_exitY+3;_ey2++){
+    for(var _ex2=_exitX-3;_ex2<=_exitX+3;_ex2++){
+      if(_ex2>2&&_ey2>2&&_ex2<MAP_W-2&&_ey2<MAP_H-2)map[_ey2][_ex2]=0;
+    }
+  }
+  decor.push({x:_exitX-1,y:_exitY,type:'forestGate',s:1,seed:gameRNG()});
+  decor.push({x:_exitX+1,y:_exitY,type:'forestGate',s:1,seed:gameRNG()});
+  for(var _pi=1;_pi<=3;_pi++)decor.push({x:_exitX,y:_exitY-_pi,type:'forestPath',s:1,seed:gameRNG()});
+
+  /* v8.5.1 — Священное Древо в центре рощи. */
+  var _treeX = _cX;
+  var _treeY = _cY - 1;
+
+  /* Расчистить площадку под Древо (7×7 тайлов). */
+  for(var _ty = _treeY - 3; _ty <= _treeY + 3; _ty++){
+    for(var _tx = _treeX - 3; _tx <= _treeX + 3; _tx++){
+      if(_tx > 2 && _ty > 2 && _tx < MAP_W-2 && _ty < MAP_H-2){
+        map[_ty][_tx] = 0;
+      }
+    }
+  }
+
+  /* Убрать декор вокруг Древа. */
+  decor = decor.filter(function(d){
+    return !(Math.abs(d.x - _treeX) < 4 && Math.abs(d.y - _treeY) < 4);
+  });
+
+  /* Поставить Древо. */
+  decor.push({
+    x: _treeX,
+    y: _treeY,
+    type: 'sacredTree',
+    s: 1.0,
+    seed: gameRNG(),
+    isSacredTree: true
+  });
+
+  /* v8.5.1 — опавшие листья вокруг Древа (не гниют). */
+  for(var _lf = 0; _lf < 24; _lf++){
+    var _lfa = gameRNG() * Math.PI * 2;
+    var _lfd = 3 + gameRNG() * 4;
+    var _lfx = Math.round(_treeX + Math.cos(_lfa) * _lfd);
+    var _lfy = Math.round(_treeY + Math.sin(_lfa) * _lfd);
+    if(_lfx > 2 && _lfy > 2 && _lfx < MAP_W-2 && _lfy < MAP_H-2 && map[_lfy][_lfx] === 0){
+      decor.push({
+        x: _lfx, y: _lfy,
+        type: 'leafpile',
+        s: 1.0,
+        seed: gameRNG()
+      });
+    }
+  }
+
+  /* v8.5.1 — потухшие свечи по кругу вокруг Древа. */
+  for(var _cd = 0; _cd < 8; _cd++){
+    var _cda = (_cd / 8) * Math.PI * 2;
+    var _cdr = 5;
+    var _cdx = Math.round(_treeX + Math.cos(_cda) * _cdr);
+    var _cdy = Math.round(_treeY + Math.sin(_cda) * _cdr);
+    if(_cdx > 2 && _cdy > 2 && _cdx < MAP_W-2 && _cdy < MAP_H-2 && map[_cdy][_cdx] === 0){
+      decor.push({
+        x: _cdx, y: _cdy,
+        type: 'deadCandle',
+        s: 1.0,
+        seed: gameRNG()
+      });
+    }
+  }
+
+  /* v8.5.1 — дополнительный декор рощи без перекрытия площадки Древа. */
+  for(var _fi = 0; _fi < 120; _fi++){
+    var _fx2 = randi(4, MAP_W-5), _fy2 = randi(4, MAP_H-5);
+    if(map[_fy2][_fx2] !== 0) continue;
+    if(Math.abs(_fx2-_treeX)<5 && Math.abs(_fy2-_treeY)<5) continue;
+    if(Math.abs(_fx2-_exitX)<4 && Math.abs(_fy2-_exitY)<4) continue;
+    var _occupied3 = false;
+    for(var _oi3=0; _oi3<decor.length; _oi3++){
+      if(decor[_oi3].x===_fx2 && decor[_oi3].y===_fy2){_occupied3=true;break;}
+    }
+    if(_occupied3) continue;
+    var _roll2=gameRNG(), _type2;
+    if(_roll2<0.35) _type2='tree';
+    else if(_roll2<0.55) _type2='tree2';
+    else if(_roll2<0.70) _type2='bush';
+    else if(_roll2<0.80) _type2='rock';
+    else if(_roll2<0.90) _type2='log';
+    else _type2='grass';
+    decor.push({x:_fx2,y:_fy2,type:_type2,s:0.9+gameRNG()*0.2,seed:gameRNG()});
+  }
+  /* v8.5.3 — призрачные дети вокруг Древа: клетки и декор очищаются заранее. */
+  var _childPositions=[{dx:-3,dy:3},{dx:3,dy:3},{dx:-2,dy:5},{dx:2,dy:5}];
+  for(var _ci=0;_ci<_childPositions.length;_ci++){
+    var _chx=_treeX+_childPositions[_ci].dx, _chy=_treeY+_childPositions[_ci].dy;
+    if(_chx<3||_chy<3||_chx>=MAP_W-3||_chy>=MAP_H-3)continue;
+    map[_chy][_chx]=0;
+    decor=decor.filter(function(d){return !(d.x===_chx&&d.y===_chy);});
+    npcs.push({x:_chx*TILE,y:_chy*TILE,sprite:0,phrase:'',isGhostChild:true,childSeed:gameRNG()});
+  }
+  /* v8.5.3 — главная жрица, старый жрец и молодая жрица. */
+  var _grovePeople=[
+    {dx:4,dy:1,flag:'isPriestess'},
+    {dx:-4,dy:2,flag:'isElderPriest'},
+    {dx:-5,dy:4,flag:'isYoungPriest'}
+  ];
+  for(var _gpi=0;_gpi<_grovePeople.length;_gpi++){
+    var _gp=_grovePeople[_gpi],_gx=Math.max(3,Math.min(MAP_W-4,_treeX+_gp.dx)),_gy=Math.max(3,Math.min(MAP_H-4,_treeY+_gp.dy));
+    map[_gy][_gx]=0;
+    decor=decor.filter(function(d){return !(d.x===_gx&&d.y===_gy);});
+    var _gn={x:_gx*TILE,y:_gy*TILE,sprite:0,phrase:''};_gn[_gp.flag]=true;npcs.push(_gn);
+  }
+  /* v8.5.3 — насыщаем рощу цветами, травой и памятными камнями, не занимая клетки NPC. */
+  for(var _fl=0;_fl<40;_fl++){
+    var _fa=gameRNG()*Math.PI*2,_fd=5+gameRNG()*8,_fx=Math.round(_treeX+Math.cos(_fa)*_fd),_fy=Math.round(_treeY+Math.sin(_fa)*_fd);
+    if(_fx<3||_fy<3||_fx>=MAP_W-3||_fy>=MAP_H-3||map[_fy][_fx]!==0)continue;
+    var _focc=false;for(var _fo=0;_fo<decor.length;_fo++)if(decor[_fo].x===_fx&&decor[_fo].y===_fy){_focc=true;break;}
+    for(var _fn=0;_fn<npcs.length;_fn++)if(Math.floor(npcs[_fn].x/TILE)===_fx&&Math.floor(npcs[_fn].y/TILE)===_fy){_focc=true;break;}
+    if(!_focc)decor.push({x:_fx,y:_fy,type:gameRNG()<0.5?'flower':'grass',s:0.9+gameRNG()*0.2,seed:gameRNG()});
+  }
+  for(var _mi=0;_mi<12;_mi++){
+    var _ma=_mi/12*Math.PI*2,_mx=Math.round(_treeX+Math.cos(_ma)*9),_my=Math.round(_treeY+Math.sin(_ma)*9);
+    if(_mx<3||_my<3||_mx>=MAP_W-3||_my>=MAP_H-3||map[_my][_mx]!==0)continue;
+    var _mocc=false;for(var _mo=0;_mo<decor.length;_mo++)if(decor[_mo].x===_mx&&decor[_mo].y===_my){_mocc=true;break;}
+    if(!_mocc)decor.push({x:_mx,y:_my,type:'rock',s:1.1+gameRNG()*0.2,seed:gameRNG()});
+  }
+
+  /* Тропинка от входа к Древу. */
+  for(var _py3=_entryY; _py3>_treeY+3; _py3--){
+    if(map[_py3] && map[_py3][_entryX]===0){
+      decor=decor.filter(function(d){return !(d.x===_entryX && d.y===_py3);});
+      decor.push({x:_entryX,y:_py3,type:'forestPath',s:1,seed:gameRNG()});
+    }
+  }
+
+  /* Пустая локация на первом этапе: без сцен, NPC и врагов. */
+  if(!REDUCED_MOTION){
+    var _bl=BALANCE.weather.leaves;
+    for(var fl=0;fl<30;fl++)fallingLeaves.push({x:gameRNG()*VW,y:gameRNG()*VH,
+      vy:rand(_bl.vyMin,_bl.vyMax),vx:rand(_bl.vxMin,_bl.vxMax),phase:gameRNG()*Math.PI*2,
+      size:rand(_bl.sizeMin,_bl.sizeMax),color:pick([PAL.tLeaf1,PAL.tLeaf2,PAL.tLeaf3,PAL.tLeaf4])});
+  }
+
+  /* v8.5.4 — Пять исследуемых записок Священной Рощи. */
+  var _groveNotePositions=[
+    {noteId:'grove_tree',dx:5,dy:6},
+    {noteId:'grove_tirion',dx:-5,dy:4},
+    {noteId:'grove_children',dx:0,dy:7},
+    {noteId:'grove_priestess',dx:-6,dy:6},
+    {noteId:'grove_end',dx:2,dy:10}
+  ];
+  for(var _gi=0;_gi<_groveNotePositions.length;_gi++){
+    var _gp=_groveNotePositions[_gi],_gx=_treeX+_gp.dx,_gy=_treeY+_gp.dy;
+    if(_gx<3||_gy<3||_gx>=MAP_W-3||_gy>=MAP_H-3)continue;
+    map[_gy][_gx]=0;
+    decor=decor.filter(function(d){return !(d.x===_gx&&d.y===_gy);});
+    decor.push({x:_gx,y:_gy,type:'elderLetter',s:1.0,seed:gameRNG(),isElderLetter:true,isGroveNote:true,groveNoteId:_gp.noteId});
+  }
+
+  /* v8.5.5 — Эхо-камень: корни Древа связаны с Тирионом. */
+  var _echoX=_treeX-7;
+  var _echoY=_treeY+8;
+  if(_echoX<3)_echoX=3;
+  if(_echoY<3)_echoY=3;
+  if(_echoX>=MAP_W-3)_echoX=MAP_W-4;
+  if(_echoY>=MAP_H-3)_echoY=MAP_H-4;
+  map[_echoY][_echoX]=0;
+  decor=decor.filter(function(d){return !(d.x===_echoX&&d.y===_echoY);});
+  decor.push({
+    x:_echoX,y:_echoY,type:'rock',isEchoStone:true,s:1.1,seed:gameRNG(),
+    text:'«Ты слышишь? Это корни. Они идут вниз. Далеко вниз. Туда, где сидит он. Он держит их. Он думает — он спасает Древо. Он не понимает: он — причина, по которой оно умирает.»\n\n«Не убивай его. Освободи. Древо вздохнёт. И осень — кончится.»'
+  });
+}
+
 function buildForest(){
   var W = 50, H = 35;
   MAP_W = W + 4; MAP_H = H + 4;
@@ -6976,6 +7350,18 @@ decor.push({x: _castleX, y: _castleY + 3, type: 'forestPath', s: 1.0, seed: game
   doors = [];
   groundItems = [];
   fallingLeaves = [];
+
+  /* v8.5.1 — вход в Священную Рощу. */
+  var _groveX=Math.floor(MAP_W*0.7), _groveY=Math.floor(MAP_H*0.7);
+  groveEntrance={x:_groveX*TILE,y:_groveY*TILE,w:2*TILE,h:2*TILE};
+  for(var _gy2=_groveY-2;_gy2<=_groveY+2;_gy2++){
+    for(var _gx2=_groveX-2;_gx2<=_groveX+2;_gx2++){
+      if(_gx2>2&&_gy2>2&&_gx2<MAP_W-2&&_gy2<MAP_H-2)map[_gy2][_gx2]=0;
+    }
+  }
+  decor=decor.filter(function(d){return !(Math.abs(d.x-_groveX)<3&&Math.abs(d.y-_groveY)<3);});
+  decor.push({x:_groveX,y:_groveY,type:'forestGate',s:1.2,seed:gameRNG(),isGrovePortal:true});
+  npcs.push({x:(_groveX-1)*TILE,y:(_groveY+1)*TILE,sprite:0,phrase:'',isGroveKeeper:true});
 
   /* Осенние листья — атмосфера */
     /* v7.3.8 — числа из BALANCE.weather.leaves. */
@@ -9176,6 +9562,16 @@ function showHub(){
     },1000);
   }
 
+  /* v8.5.5 — Одноразовое эхо Рощи после победы и посещения локации. */
+  if(stats.groveSeenInVictory && !stats.groveEchoShown){
+    stats.groveEchoShown=true;
+    saveStats();
+    setTimeout(function(){
+      showToast('🌿 Голос с ветра: «Спасибо. Древо вздохнуло.»');
+      setTimeout(function(){showToast('...и тишина.');},2800);
+    },2200);
+  }
+
   /* v7.0.8 — Показ модалки «Продолжить» изнутри showHub.
      v7.0.8 — убран флаг _continueOffered: он блокировал повторный показ.
      Защита от дубликата — через проверку, что модалка уже открыта. */
@@ -9272,7 +9668,7 @@ function goToHub(){
 function _collectRunData(){
   if(!player) return null;
   return {
-    version: '7.0.3',
+    version: '8.5.1',
     savedAt: Date.now(),
     player: {
       x: player.x, y: player.y,
@@ -9298,7 +9694,10 @@ function _collectRunData(){
       _sellCount: player._sellCount || null,
       _runLore: player._runLore || {},
       _runBook: player._runBook || {},
-      bagPurchased: player.bagPurchased || 0
+      bagPurchased: player.bagPurchased || 0,
+      altarHpBonus: player.altarHpBonus || 0,
+      altarDmgBonus: player.altarDmgBonus || 0,
+      _grovePrayed: !!player._grovePrayed
     },
     world: {
       floorNum: floorNum,
@@ -9310,7 +9709,12 @@ function _collectRunData(){
       weaponLevel: weaponLevel,
       armorLevel: armorLevel,
       runStartTime: runStartTime,
-      lastBossWasAelis: lastBossWasAelis
+      lastBossWasAelis: lastBossWasAelis,
+      /* v8.5.1 — сохраняем флаги рощи. */
+      grovePriestessTalked: !!(player && player._grovePriestessTalked),
+      groveOfferings: !!(player && player._groveOfferings),
+      groveLoreShown: !!(player && player._groveLoreShown),
+      grovePrayed: !!(player && player._grovePrayed)
     },
     bag: bag.slice()
   };
@@ -9379,6 +9783,14 @@ function loadRun(){
         if(typeof data.player.invisUsed!=='boolean')data.player.invisUsed=false;
         data.version='8.4.1';
       }
+      /* v8.5.1 — безопасная миграция флагов Священной Рощи. */
+      if(typeof data.world.grovePriestessTalked==='undefined')data.world.grovePriestessTalked=false;
+      if(typeof data.world.groveOfferings==='undefined')data.world.groveOfferings=false;
+      if(typeof data.world.groveLoreShown==='undefined')data.world.groveLoreShown=false;
+      if(typeof data.world.grovePrayed==='undefined')data.world.grovePrayed=false;
+      var _verParts=String(data.version||'0').split('.');
+      var _minor2=parseInt(_verParts[1],10)||0, _patch2=parseInt(_verParts[2],10)||0;
+      if(_major===8&&(_minor2<5||(_minor2===5&&_patch2<1)))data.version='8.5.1';
       if(i===1){try{localStorage.setItem('dungeonElfRun',JSON.stringify(data));}catch(e){}}
       return data;
     }catch(e){_log('[DungeonElf] loadRun: ошибка парсинга',e);}
@@ -10027,6 +10439,7 @@ function openCodex(){
     +'<div class="tab" onclick="showCodexTab(\'fortress\',this)">🏰 Крепость</div>'
     +'<div class="tab" onclick="showCodexTab(\'book\',this)">📖 Промокшая книга</div>'
     +'<div class="tab" onclick="showCodexTab(\'druid\',this)">🌿 Записки друидов</div>'
+    +'<div class="tab" onclick="showCodexTab(\'grove\',this)">🌳 Записки рощи</div>'
     +'<div class="tab" onclick="showCodexTab(\'paths\',this)">⚔️ Пути</div>'
     +'</div>';
 
@@ -10281,6 +10694,22 @@ function openCodex(){
   }
   html+='</div>';
 
+  /* v8.5.4 — Записки Священной Рощи */
+  html+='<div id="codex_grove" style="display:none">';
+  html+='<p style="font-size:11px;color:#a08060;font-style:italic">Записки из Священной Рощи: Древо, Тирион, дети и последняя жрица.</p>';
+  if(!Array.isArray(stats.loreRead))stats.loreRead=[];
+  for(var _gni=0;_gni<GROVE_NOTES.length;_gni++){
+    var _gn=GROVE_NOTES[_gni],_gnKey='grove_'+_gn.id,_gnRead=stats.loreRead.indexOf(_gnKey)>=0;
+    if(_gnRead)opened++;
+    html+='<div class="itemRow '+(_gnRead?'done':'')+'" style="align-items:flex-start">'
+      +'<div class="itemIcon">'+(_gnRead?'📜':'🔒')+'</div>'
+      +'<div class="itemInfo"><b>'+(_gnRead?_gn.title:'???')+'</b><br>'
+      +'<i style="font-style:italic;color:'+(_gnRead?'#c0e0b0':'#5a4020')+'">'+(_gnRead?_gn.text.substring(0,140).replace(/\n/g,' ')+'...':'Записка ещё не найдена')+'</i>'
+      +(_gnRead?'<button class="btn gold small" style="margin-top:6px" onclick="openGroveNoteFromCodex(\''+_gn.id+'\')">Читать полностью</button>':'')
+      +'</div></div>';
+  }
+  html+='</div>';
+
   html+='<div id="codex_paths" style="display:none">';
   var _pathClassNames={warrior:'Воина',archer:'Лучника',mage:'Мага'};
   for(var _pc in SUBCLASSES){
@@ -10322,7 +10751,7 @@ function openCodex(){
 
 function showCodexTab(tab,el){
   /* v4.9.43 — ФИКС: убрана зависимость от window.event (Safari/Firefox) */
-  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_paths'];
+  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_grove','codex_paths'];
   for(var i=0;i<ids.length;i++){
     var s=document.getElementById(ids[i]);
     if(s)s.style.display='none';
@@ -11480,6 +11909,7 @@ function _dropLoot(e){
 function _sweepInvalidGroundItems(){
   for(var _i=groundItems.length-1;_i>=0;_i--){
     var _gi=groundItems[_i];
+    if(!_gi || typeof _gi.x!=='number' || !isFinite(_gi.x) || typeof _gi.y!=='number' || !isFinite(_gi.y)){groundItems.splice(_i,1);continue;}
     if(_gi.kind==='weapon'&&!WEAPONS[_gi.id]){groundItems.splice(_i,1);continue;}
     if(_gi.kind==='armor'&&!ARMORS[_gi.id]){groundItems.splice(_i,1);continue;}
     if(_gi.kind==='scroll'&&!SCROLLS[_gi.id]){groundItems.splice(_i,1);continue;}
@@ -11704,9 +12134,19 @@ function showEnding(){
   );
   return;
 }
+/* v8.5.5 — финал помнит, посещал ли игрок Священную Рощу. */
+var _sawGrove=!!(player&&(player._grovePriestessTalked||player._grovePrayed||player._groveOfferings));
+var _groveEndingText='';
+if(_sawGrove){
+  _groveEndingText='\n\n«Ты помнишь жрицу? Она стояла у Древа. И ждала. И ты вспоминаешь — она просила: не убей, освободи. Ты освободил. И теперь — где-то наверху — Древо вздохнуло. Впервые за сорок лет. Жрица это почувствовала. Она заплакала. Но впервые — не от горя».';
+  stats.groveSeenInVictory=true;
+  saveStats();
+}else{
+  _groveEndingText='\n\n«Осень кончилась. Не сразу — через неделю. Листья пожелтели, упали и сгнили, как и должно быть. Но где-то далеко, в глубине леса, есть место, куда ты не заходил. Там стоит Древо. Оно вздохнуло вместе с лесом. И ждёт того, кто придёт его поблагодарить».';
+}
 showModal(
   '<h2>🌳 Тирион свободен</h2>'+
-  '<p style="font-style:italic;color:#d0b890;font-size:13px;line-height:1.6;white-space:pre-line">'+ENDING_TEXT+epilogueText+'</p>'+
+  '<p style="font-style:italic;color:#d0b890;font-size:13px;line-height:1.6;white-space:pre-line">'+ENDING_TEXT+epilogueText+_groveEndingText+'</p>'+
   '<p style="color:#c8a040;font-weight:bold;margin-top:14px">🏆 ИГРА ПРОЙДЕНА!</p>'+
   '<p style="font-size:12px;color:#a08060">+1500✦ в банк · 25% золота забега тоже в банк</p>'+
   '<button class="btn gold" onclick="finishGameToHub()">🍂 Вернуться в Приют</button>'+
@@ -13485,6 +13925,9 @@ var DECOR_SPRITES={
   dead_tree:  {spr:SPR_DEAD_TREE,  pal:PAL_DEAD_TREE},
   /* v5.9.0 — Ворота в лес */
   forestGate:       {spr:SPR_FOREST_GATE, pal:PAL_FOREST_GATE, yOff:-16},
+  /* v8.5.1 — Священное Древо. */
+  /* v8.5.1 — Древо увеличено, крона и корни читаются лучше. */
+  sacredTree:       {spr:SPR_SACRED_TREE, pal:PAL_SACRED_TREE, yOff:-98, scaleOff:1.25},
   forestPath:       {spr:SPR_FOREST_PATH, pal:PAL_FOREST_PATH, yOff:8},
   /* v5.9.0 — Пень */
   stump:            {spr:SPR_STUMP, pal:PAL_STUMP, yOff:6},
@@ -14151,8 +14594,54 @@ var DECOR_DRAWERS={
 function drawDecor(d){
   if(!d||!d.type)return;
   var sx=d.x*TILE-cam.x,sy=d.y*TILE-cam.y;
-  if(sx<-160||sy<-160||sx>VW+160||sy>VH+160)return;
+  // Sacred Tree extends far above its anchor tile: use generous bounds so camera scrolling never culls it mid-screen.
+  var _cullTop = d.isSacredTree ? 620 : 160;
+  var _cullSide = d.isSacredTree ? 300 : 160;
+  if(sx < -_cullSide || sy < -_cullTop || sx > VW+_cullSide || sy > VH+160)return;
   var cx=sx+TILE/2,cy=sy+TILE/2;
+
+  /* v8.5.1 — Священное Древо: пульсация + свечение. */
+  var _sacredTreePal = null;
+  if(d.isSacredTree){
+    var _treePulse = 0.5 + Math.sin(Date.now() * 0.0008) * 0.5;  /* мягкое дыхание свечения */
+    // Не переключаем палитру целиком: альтернативные палитры используют другие ключи
+    // и делали почти весь спрайт невидимым на короткие моменты.
+    _sacredTreePal = PAL_SACRED_TREE;
+    var _treeGlowR = 205 + _treePulse * 24;
+    var _treeGlow = ctx.createRadialGradient(cx, cy - 20, 20, cx, cy - 20, _treeGlowR);
+    _treeGlow.addColorStop(0, 'rgba(120, 220, 95, ' + (0.15 + _treePulse * 0.10) + ')');
+    _treeGlow.addColorStop(0.5, 'rgba(80, 190, 100, ' + (0.07 + _treePulse * 0.05) + ')');
+    _treeGlow.addColorStop(1, 'rgba(60, 100, 40, 0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = _treeGlow;
+    ctx.fillRect(cx - _treeGlowR, cy - 20 - _treeGlowR, _treeGlowR*2, _treeGlowR*2);
+    ctx.restore();
+
+    /* Внутренний свет в стволе — «сердце» Древа. */
+    var _heartPulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.15 + _heartPulse * 0.15;
+    ctx.fillStyle = '#baff72';
+    ctx.beginPath();
+    ctx.arc(cx, cy + 15, 10 + _heartPulse * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    /* Золотые искры, всплывающие от корней. */
+    if(!REDUCED_MOTION && Math.random() < 0.08 && bloodParticles.length < 140){
+      bloodParticles.push({
+        x: d.x*TILE + TILE/2 + (Math.random()-0.5)*30,
+        y: d.y*TILE + TILE + Math.random()*10,
+        vx: (Math.random()-0.5)*0.2,
+        vy: -0.3 - Math.random()*0.4,
+        life: 70,
+        color: 'rgba(180, 230, 120, 0.9)'
+      });
+    }
+  }
+
   var t=d.type;
 
   var _def=DECOR_SPRITES[t];
@@ -14258,7 +14747,8 @@ function drawDecor(d){
   var _fn=DECOR_DRAWERS[t];
   if(_fn){_fn(ctx,cx,cy,d);}
   else if(_def){
-    drawSprite(_def.spr,_def.pal,cx,cy+_yOff,_sc);
+    var _renderPal = d.isSacredTree ? _sacredTreePal : _def.pal;
+    drawSprite(_def.spr,_renderPal,cx,cy+_yOff,_sc);
   }
 
   // v8.2.1 — оставляем у рунических камней только мягкое пульсирующее свечение,
@@ -14884,7 +15374,7 @@ function drawTrader(){
   if(floorEvent&&floorEvent.id==='ghostTrader')ctx.globalAlpha=0.5;
   drawSprite(SPR_TRADER,PAL_TRADER,sx,sy,SPRITE_SCALE);
   ctx.globalAlpha=1;
-  /* v8.5.2 — вместо emoji над торговцем рисуем игровой спрайт монеты. */
+  /* v8.5.3 — вместо emoji над торговцем рисуем игровой спрайт монеты. */
   drawSprite(SPR_COIN,PAL_COIN,sx,sy-32,2);
 }
 function drawMerc(onlyMerc){
@@ -15753,7 +16243,16 @@ function _renderEntityLayer(){
     else if(kd===5){
       var np=item.ref;
       /* v6.0.1 — Спец-спрайты для NPC замка */
-      if(np.isCastleServant){
+      if(np.isGhostChild){
+        var _ghPulse=0.62+Math.sin(Date.now()*0.003+(np.x||0)*0.01)*0.12;
+        ctx.globalAlpha=_ghPulse;drawSprite(SPR_GHOST_SERVANT,PAL_GHOST_SERVANT,np.x-cam.x,np.y-cam.y,SPRITE_SCALE*0.85);ctx.globalAlpha=1;
+      } else if(np.isPriestess||np.isElderPriest||np.isYoungPriest){
+        var _prPulse=0.5+Math.sin(Date.now()*0.002+(np.x||0)*0.001)*0.5;
+        ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=0.10+_prPulse*0.06;ctx.fillStyle=np.isYoungPriest?'#d0e0a0':'#a0d080';ctx.beginPath();ctx.arc(np.x-cam.x,np.y-cam.y,18+_prPulse*4,0,Math.PI*2);ctx.fill();ctx.restore();
+        var _prScale=np.isElderPriest?SPRITE_SCALE*1.12:(np.isYoungPriest?SPRITE_SCALE*0.9:SPRITE_SCALE);
+        drawSprite(SPR_NPC,PAL_NPC,np.x-cam.x,np.y-cam.y+Math.sin(Date.now()*0.0015+(np.x||0)*0.002),_prScale);
+        if(player&&dist2(np.x,np.y,player.x,player.y)<100*100){ctx.save();ctx.font='bold 10px Georgia';ctx.textAlign='center';ctx.fillStyle='rgba(180,220,150,0.95)';ctx.fillText(np.isElderPriest?'Старый жрец':(np.isYoungPriest?'Молодая жрица':'Жрица'),np.x-cam.x,np.y-cam.y-20);ctx.restore();}
+      } else if(np.isCastleServant){
         ctx.globalAlpha = 0.65 + Math.sin(Date.now()*0.003)*0.15;  /* призрак пульсирует */
         drawSprite(SPR_GHOST_SERVANT, PAL_GHOST_SERVANT, np.x-cam.x, np.y-cam.y, SPRITE_SCALE);
         ctx.globalAlpha = 1;
@@ -15998,22 +16497,7 @@ function _renderHUDFrame(){
   ctx.fillRect(0,VH-36,VW,36);
   ctx.fillRect(0,0,36,VH);
   ctx.fillRect(VW-36,0,36,VH);
-  /* v7.5.2 — мягкая виньетка. */
-  if(!REDUCED_MOTION){
-    if(_vignetteCache.w !== VW || _vignetteCache.h !== VH || !_vignetteCache.grd){
-      var _vg = ctx.createRadialGradient(
-        VW/2, VH/2, Math.min(VW,VH)*0.35,
-        VW/2, VH/2, Math.max(VW,VH)*0.75
-      );
-      _vg.addColorStop(0, 'rgba(0,0,0,0)');
-      _vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-      _vignetteCache.w = VW;
-      _vignetteCache.h = VH;
-      _vignetteCache.grd = _vg;
-    }
-    ctx.fillStyle = _vignetteCache.grd;
-    ctx.fillRect(0, 0, VW, VH);
-  }
+  /* v8.5.6 — отдельная виньетка убрана: _renderDarkFantasyAtmosphere уже затемняет края. */
 }
 /* v8.5.1 — отрисовка исходного пиксельного спрайта монеты в любой canvas-контекст. */
 function drawPixelCoin(targetCtx,cx,cy,pixelSize){
@@ -16139,7 +16623,7 @@ acc:'',subclass:'',lore:'',altar:''
 };
 function updateHUD(){
 if(!player)return;
-/* v8.5.2 — единый пиксельный спрайт золота в HUD. */
+/* v8.5.3 — единый пиксельный спрайт золота в HUD. */
 var _hudCoin=document.getElementById('hudCoinIcon');
 if(_hudCoin&&typeof SPR_COIN!=='undefined'&&typeof PAL_COIN!=='undefined'){
   var _hctx=_hudCoin.getContext('2d');
@@ -16274,6 +16758,16 @@ function updateRunModeBadge(){
     if(player && player.subclass){
       var sc = getSubclassData(player.class || 'warrior', player.subclass);
       if(sc) el.textContent += ' · ' + sc.icon;
+    }
+    return;
+  }
+
+  /* v8.5.1 — Священная Роща. */
+  if(currentLocation==='grove'){
+    el.textContent='🌳 Священная Роща';
+    if(player&&player.subclass){
+      var sc=getSubclassData(player.class||'warrior',player.subclass);
+      if(sc)el.textContent+=' · '+sc.icon;
     }
     return;
   }
@@ -16612,6 +17106,11 @@ function continueRun(){
   armorLevel = w.armorLevel || 1;
   runStartTime = w.runStartTime || Date.now();
   lastBossWasAelis = !!w.lastBossWasAelis;
+  /* v8.5.1 — флаги рощи; совместимо со старыми сохранениями. */
+  var _grovePriestessTalked=!!w.grovePriestessTalked;
+  var _groveOfferings=!!w.groveOfferings;
+  var _groveLoreShown=!!w.groveLoreShown;
+  var _grovePrayed=!!w.grovePrayed;
 
   bag = Array.isArray(data.bag) ? data.bag.slice() : [];
 
@@ -16636,6 +17135,10 @@ function continueRun(){
   for(var key in p){
     if(p.hasOwnProperty(key)) player[key] = p[key];
   }
+  player._grovePriestessTalked=_grovePriestessTalked;
+  player._groveOfferings=_groveOfferings;
+  player._groveLoreShown=_groveLoreShown;
+  player._grovePrayed=_grovePrayed;
 
   /* v7.5.1 — защита от NaN в ключевых числовых полях после загрузки. */
   if(typeof player.gold !== 'number' || !isFinite(player.gold)) player.gold = 0;
@@ -16862,7 +17365,12 @@ function handleCanvasTap(clientX,clientY){
     var np=npcs[n];
     if(dist2(wx,wy,np.x,np.y)<55*55){
       if(dist2(np.x,np.y,player.x,player.y)>=80*80){showToast('Подойди ближе');return;}
+      if(np.isPriestess){talkToPriestess();return;}
+      if(np.isElderPriest){talkToElderPriest();return;}
+      if(np.isYoungPriest){talkToYoungPriest();return;}
+      if(np.isGhostChild){talkToGhostChild();return;}
       if(np.isGateKeeper){talkToGateKeeper();return;}
+      if(np.isGroveKeeper){showToast('🌳 За этими вратами — Священная Роща.');return;}
       if(np.isCastleServant){talkToServant();return;}
       if(np.isCat){showToast('🐈 Мяу! Кошка смотрит на тебя. У неё жёлтые глаза.');SfxPlay('pickup');return;}
       showToast(np.phrase);return;
@@ -16875,6 +17383,22 @@ function handleCanvasTap(clientX,clientY){
     var fex=forestExit.x+forestExit.w/2,fey=forestExit.y+forestExit.h/2;
     if(dist2(wx,wy,fex,fey)<120*120){if(dist2(fex,fey,player.x,player.y)<110*110)exitForest();else showToast('Подойди ближе');return;}}
   if(trader){if(dist2(wx,wy,trader.x,trader.y)<75*75){if(dist2(trader.x,trader.y,player.x,player.y)<110*110)openTrader();else showToast('Подойди ближе');return;}}
+  /* v8.5.1 — тап по Священному Древу. */
+  for(var _tdi = 0; _tdi < decor.length; _tdi++){
+    var _td = decor[_tdi];
+    if(_td.isSacredTree){
+      var _tsx = _td.x * TILE + TILE/2;
+      var _tsy = _td.y * TILE + TILE/2 + 40;  /* центр ствола ниже спрайта */
+      if(dist2(wx, wy, _tsx, _tsy) < 90*90){
+        if(dist2(_tsx, _tsy, player.x, player.y) < 130*130){
+          _openSacredTree();
+        } else {
+          showToast('Подойди ближе');
+        }
+        return;
+      }
+    }
+  }
   /* === Письма Старейшины + лорные объекты со случайными текстами === */
   for(var di=0;di<decor.length;di++){
     var dd=decor[di];
@@ -16882,6 +17406,7 @@ function handleCanvasTap(clientX,clientY){
       var _elx=dd.x*TILE+TILE/2,_ely=dd.y*TILE+TILE/2;
       if(dist2(wx,wy,_elx,_ely)<55*55){
         if(dist2(_elx,_ely,player.x,player.y)>=90*90){showToast('Подойди ближе');return;}
+        if(dd.isGroveNote){_openGroveNote(dd);return;}
         _openElderLetter(dd);return;
       }
     }
@@ -16897,6 +17422,15 @@ function handleCanvasTap(clientX,clientY){
   /* === Базовый декор (алтарь, эхо-камни, клад, скелет крепости) === */
   for(var di2=0;di2<decor.length;di2++){
     var dd2=decor[di2];
+    /* v8.5.5 — интерактивный Эхо-камень в Священной Роще. */
+    if(dd2.isEchoStone){
+      var _esx=dd2.x*TILE+TILE/2,_esy=dd2.y*TILE+TILE/2;
+      if(dist2(wx,wy,_esx,_esy)<55*55){
+        if(dist2(_esx,_esy,player.x,player.y)>=90*90){showToast('Подойди ближе');return;}
+        showModal('<h2>🪨 Эхо-камень</h2><div class="lore-text">'+dd2.text+'</div><button class="btn gold" onclick="closeModal()">Слушать корни</button>');
+        SfxPlay('altar');return;
+      }
+    }
     // v8.2.1 — лор на камнях друидов
     if(dd2.type === 'druidStone' && !dd2.isPortal){
       var _dsx = dd2.x*TILE + TILE/2;
@@ -16978,6 +17512,23 @@ function handleCanvasTap(clientX,clientY){
   if(druidEntrance&&currentLocation==='forest'){
     var _dex=druidEntrance.x+druidEntrance.w/2,_dey=druidEntrance.y+druidEntrance.h/2;
     if(dist2(wx,wy,_dex,_dey)<120*120){if(dist2(_dex,_dey,player.x,player.y)<110*110)enterDruidCircle();else showToast('Подойди ближе');return;}
+  }
+  /* v8.5.1 — вход в Священную Рощу. */
+  if(groveEntrance&&currentLocation==='forest'){
+    var _gx=groveEntrance.x+groveEntrance.w/2,_gy=groveEntrance.y+groveEntrance.h/2;
+    if(dist2(wx,wy,_gx,_gy)<120*120){
+      if(dist2(_gx,_gy,player.x,player.y)<110*110)enterGrove();
+      else showToast('Подойди ближе');
+      return;
+    }
+  }
+  if(currentLocation==='grove'&&forestExit){
+    var _fex2=forestExit.x+forestExit.w/2,_fey2=forestExit.y+forestExit.h/2;
+    if(dist2(wx,wy,_fex2,_fey2)<120*120){
+      if(dist2(_fex2,_fey2,player.x,player.y)<110*110)exitGrove();
+      else showToast('Подойди ближе');
+      return;
+    }
   }
   if(forestExit&&currentLocation==='druid'){
     var _fex=druidExit?druidExit.x+druidExit.w/2:forestExit.x+forestExit.w/2;
@@ -17178,6 +17729,145 @@ function enterForestFromDialog(){
 }
 
 var MEMORY_SHRINE_REWARDS={potion:{type:'dmgBonus',value:0.05,label:'+5% урона'},scroll:{type:'regenBuff',value:1,label:'+1 HP/сек (2 мин)'},weapon:{type:'wpnLevel',value:1,label:'Оружие +1 уровень (3 этажа)'},armor:{type:'hpBuff',value:20,label:'+20 макс. HP'},jewel:{type:'goldBonus',value:20,label:'+20 золота'}};
+/* ============================================================
+   v8.5.1 — Взаимодействие со Священным Древом.
+   Три действия:
+   1. Помолиться — бафф +5 HP на забег (один раз).
+   2. Оставить дар — если есть золото, даёт +5% урона на забег.
+   3. Просто послушать — лор.
+   ============================================================ */
+function talkToPriestess(){
+  /* v8.5.5 — отмечаем посещение рощи для финальной развилки. */
+  if(player)player._grovePriestessTalked=true;
+  var _readElder25=!!(player&&player._runLore&&player._runLore['elder25']);
+  if(_readElder25&&player&&!player._priestessElderShown){
+    player._priestessElderShown=true;
+    showModal(
+      '<h2>🌿 Жрица Древа</h2>'+
+      '<p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+
+      '«Ты читал его письмо. То, что он написал тебе... вернее, тому, кто пойдёт. Он просил: не убей его. Освободи.'+
+      '<br><br>'+
+      'Он прав. Тирион — не чудовище. Он — тот, кто слишком долго держал. Древо — тоже держит. Только не его, а себя. И я не знаю, чей груз тяжелее».'+
+      '<br><br>'+
+      '«Когда ты найдёшь его внизу — вспомни эти слова. Не убей. Освободи.»'+
+      '</p><button class="btn gold" onclick="closeModal()">Я помню</button>'
+    );
+    SfxPlay('altar');
+    return;
+  }
+  var lines=['«Древо ещё дышит. Прислушайся к его корням».','«Мы храним здесь память о мире до Осени».','«Не всякая тишина означает смерть».'];
+  var line=lines[Math.floor(gameRNG()*lines.length)];
+  showModal('<h2>🌿 Жрица Древа</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');
+  SfxPlay('altar');
+}
+var _ELDER_PRIEST_LINES=[
+'«Я помню Древо, когда оно пело. Оно пело на рассвете. Тихо. Мы просыпались от этого».',
+'«Я был мальчиком, когда Тирион впервые пришёл сюда. Он спросил: „А что, если остановить осень?“ Я ответил: „Нельзя“. Он не послушал».',
+'«Каждый день я прихожу. Сажусь. Слушаю. Оно молчит. Но иногда — я слышу, как оно вздыхает. Оно помнит меня. Это уже что-то».',
+'«Не бойся того, кто внизу. Он был добрым. Он до сих пор добрый. Просто осень длиннее, чем он».',
+'«Спасибо, что пришёл. Мы ждали. Я ждал. Уже не помню, сколько лет».'
+];
+function talkToElderPriest(){var line=_ELDER_PRIEST_LINES[Math.floor(gameRNG()*_ELDER_PRIEST_LINES.length)];showModal('<h2>🧙 Старый жрец</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
+var _YOUNG_PRIEST_LINES=[
+'«Я не застала Древо живым. Мне рассказывали. Я слушала и плакала. Как можно плакать по тому, чего не видел?»',
+'«Когда-нибудь оно снова запоёт. Я верю. Я буду здесь. Я услышу».',
+'«Старейшина приходил сюда вчера. Сидел рядом со мной. Молчал. Потом ушёл. И заплакал».',
+'«Ты — тот, кто идёт вниз? Тогда не забывай нас. Мы здесь. Мы ждём».',
+'«Я вырастила эти цветы сама, из семян, которые нашла в корнях. Они не умирают. Как и мы».'
+];
+function talkToYoungPriest(){var line=_YOUNG_PRIEST_LINES[Math.floor(gameRNG()*_YOUNG_PRIEST_LINES.length)];showModal('<h2>🌿 Молодая жрица</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
+function talkToGhostChild(){var lines=['«Мы ждём, когда Древо вспомнит весну».','«Ты тоже слышишь, как корни шепчут?»','«Не уходи надолго. Здесь темно, когда никто не приходит».','«Под листьями всё ещё тепло».'];var line=lines[Math.floor(gameRNG()*lines.length)];showModal('<h2>👻 Дитя рощи</h2><p style="font-style:italic;color:#c9e7ee;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
+
+function _openSacredTree(){
+  if(!player) return;
+
+  var _prayed = !!player._grovePrayed;
+  var _offered = !!player._groveOfferings;
+
+  var html = '<h2 class="lore-title">🌳 Священное Древо</h2>';
+
+  /* Лорное вступление */
+  html += '<div class="lore-text" style="margin-bottom:14px">'
+    + '«Древо огромно. Кора — серая, вся в глубоких трещинах. '
+    + 'Листья не падают — они застыли в воздухе, как будто время здесь остановилось. '
+    + 'Где-то в глубине ствола — тихий, ровный пульс. Оно ещё живо. Ещё дышит. Но уже очень устало.»'
+    + '</div>';
+
+  /* Кнопка: Помолиться */
+  if(!_prayed){
+    html += '<button class="btn gold" onclick="sacredTreePray()">🙏 Помолиться (+5 HP на забег)</button>';
+  } else {
+    html += '<div class="itemRow done"><div class="itemInfo"><i>🙏 Ты уже молился здесь</i></div></div>';
+  }
+
+  /* Кнопка: Оставить дар */
+  if(!_offered){
+    var _canOffer = (player.gold >= 25);
+    if(_canOffer){
+      html += '<button class="btn gold" onclick="sacredTreeOffer()">🎁 Оставить дар (25✦, +5% урона на забег)</button>';
+    } else {
+      html += '<div class="itemRow"><div class="itemInfo"><i>🎁 Дар: нужно 25✦</i></div></div>';
+    }
+  } else {
+    html += '<div class="itemRow done"><div class="itemInfo"><i>🎁 Дар уже принесён</i></div></div>';
+  }
+
+  /* Кнопка: Послушать */
+  html += '<button class="btn" onclick="sacredTreeListen()">👂 Послушать Древо</button>';
+
+  /* Закрыть */
+  html += '<button class="btn" onclick="closeModal()">Уйти</button>';
+
+  showModal(html);
+  SfxPlay('altar');
+}
+
+/* Помолиться у Древа — один раз за забег. */
+function sacredTreePray(){
+  if(!player || player._grovePrayed) return;
+  player._grovePrayed = true;
+  /* Бафф +5 HP на забег. */
+  player.altarHpBonus = (player.altarHpBonus || 0) + 5;
+  applySubclassBonuses();
+  player.hp = Math.min(player.maxHp, player.hp + 5);
+  updateHUD();
+  SfxPlay('heal');
+  showToast('🙏 Древо слышит тебя. +5 HP');
+  _openSacredTree();
+}
+
+/* Оставить дар — один раз за забег. */
+function sacredTreeOffer(){
+  if(!player || player._groveOfferings) return;
+  if(player.gold < 25){
+    showToast('Мало золота');
+    return;
+  }
+  player.gold -= 25;
+  player._groveOfferings = true;
+  player.altarDmgBonus = (player.altarDmgBonus || 0) + 0.05;
+  updateHUD();
+  SfxPlay('forge');
+  showToast('🎁 Древо принимает дар. +5% урона');
+  _openSacredTree();
+}
+
+/* Послушать Древо — лор, можно много раз. */
+function sacredTreeListen(){
+  var _lines = [
+    '«Тише... слышишь? Это не ветер. Это дыхание.»',
+    '«Оно помнит. Каждого эльфа. Каждое имя. Каждое "прости".»',
+    '«Оно не злится. Оно просто устало.»',
+    '«"Освободи его" — шепчет Древо. "И я вздохну".»',
+    '«Оно говорит голосом Старейшины. Или Старейшина говорит его голосом. Уже не разобрать.»',
+    '«Ты слышишь детский смех. Где-то очень далеко. И очень давно.»'
+  ];
+  var _line = _lines[Math.floor(gameRNG() * _lines.length)];
+  showToast('🌳 ' + _line);
+  SfxPlay('altar');
+  /* Не закрываем модалку — можно слушать дальше. */
+}
+
 var _lastMemoryShrine=null;
 function openMemoryShrine(shrine){
  var _items=[];for(var i=0;i<bag.length;i++){var it=bag[i];if(it.kind==='potion')_items.push({idx:i,kind:'potion',icon:'🧪',name:'Зелье',reward:'potion'});else if(it.kind==='scroll')_items.push({idx:i,kind:'scroll',icon:'📜',name:SCROLLS[it.id]?SCROLLS[it.id].name:'Свиток',reward:'scroll'});else if(it.kind==='weapon')_items.push({idx:i,kind:'weapon',icon:'⚔️',name:WEAPONS[it.id]?WEAPONS[it.id].name:'Оружие',reward:'weapon'});else if(it.kind==='armor')_items.push({idx:i,kind:'armor',icon:'🛡️',name:ARMORS[it.id]?ARMORS[it.id].name:'Броня',reward:'armor'});else if(it.kind==='jewel')_items.push({idx:i,kind:'jewel',icon:'💎',name:JEWELS[it.id]?JEWELS[it.id].name:'Камень',reward:'jewel'});}
@@ -17352,6 +18042,16 @@ function enterDruidCircle(){
 }
 function exitDruidCircle(){
   if(currentLocation!=='druid')return;
+  currentLocation='forest';buildFloor();updateHUD();showToast('🍂 Осенний лес');SfxPlay('door');
+}
+
+/* v8.5.1 — вход/выход Священной Рощи. */
+function enterGrove(){
+  if(currentLocation==='grove'||currentLocation!=='forest'||inHub||gameOver)return;
+  currentLocation='grove';buildFloor();updateHUD();showToast('🌳 Священная Роща');SfxPlay('descend');
+}
+function exitGrove(){
+  if(currentLocation!=='grove')return;
   currentLocation='forest';buildFloor();updateHUD();showToast('🍂 Осенний лес');SfxPlay('door');
 }
 
