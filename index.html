@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v9.0.63 — reduced scroll drop frequency. -->
+<!-- Dungeon Elf v9.0.65 — choosing New Run returns to hub for class selection; preserves multitouch joystick movement. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v9.0.63</title>
+<title>Dungeon Elf v9.0.65</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -481,7 +481,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.0.63';
+var GAME_VERSION='9.0.65';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -10606,7 +10606,7 @@ function goToHub(){
 function _collectRunData(){
   if(!player) return null;
   return {
-    version: '9.0.63',
+    version: '9.0.65',
     savedAt: Date.now(),
     player: {
       x: player.x, y: player.y,
@@ -19592,16 +19592,13 @@ document.addEventListener('keyup',function(e){keys[e.code]=false;});
 /* v4.9.44 — защита от залипания клавиш при потере фокуса */
 function _releasePointerInput(){
   input.atk=false;input.mx=0;input.my=0;
-  joyActive=false;
+  joyActive=false;joyPointerId=null;
   if(nub){nub.style.left='50%';nub.style.top='50%';}
 }
 function _releaseTransientInput(){keys={};_releasePointerInput();}
 window.addEventListener('blur',_releaseTransientInput);
-/* v9.0.58 — release joystick/attack state even if pointer-up lands outside its control. */
-window.addEventListener('pointerup',function(){
-  if(joyActive||input.mx!==0||input.my!==0||input.atk)_releasePointerInput();
-},{passive:true});
-window.addEventListener('pointercancel',_releaseTransientInput,{passive:true});
+/* v9.0.64 — do not let a second finger's pointerup/cancel interrupt joystick movement.
+   Joystick uses pointer capture and releases only its own pointer; blur still clears all input. */
 var _lastTapTime=0;
 canvas.addEventListener('pointerdown',function(e){
   if(inHub){e.preventDefault();return;}
@@ -19633,12 +19630,25 @@ var dashBtnEl=document.getElementById('dashBtn');if(isTouch&&dashBtnEl)dashBtnEl
 if(dashBtnEl){dashBtnEl.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();tryDash();});}
 var joy=document.getElementById('joy');
 var nub=joy?joy.querySelector('.nub'):null;
-var joyActive=false,joyCX=0,joyCY=0;
+var joyActive=false,joyCX=0,joyCY=0,joyPointerId=null;
 if(joy){
-  joy.addEventListener('pointerdown',function(e){e.preventDefault();joyActive=true;var r=joy.getBoundingClientRect();joyCX=r.left+r.width/2;joyCY=r.top+r.height/2;moveJoyXY(e.clientX,e.clientY);});
-  joy.addEventListener('pointermove',function(e){if(!joyActive)return;moveJoyXY(e.clientX,e.clientY);});
-  joy.addEventListener('pointerup',function(){joyActive=false;if(nub){nub.style.left='50%';nub.style.top='50%';}input.mx=0;input.my=0;});
-  joy.addEventListener('pointercancel',function(){joyActive=false;if(nub){nub.style.left='50%';nub.style.top='50%';}input.mx=0;input.my=0;});
+  joy.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    if(joyActive)return;
+    joyActive=true;joyPointerId=e.pointerId;
+    try{joy.setPointerCapture(e.pointerId);}catch(_captureErr){}
+    var r=joy.getBoundingClientRect();joyCX=r.left+r.width/2;joyCY=r.top+r.height/2;
+    moveJoyXY(e.clientX,e.clientY);
+  });
+  joy.addEventListener('pointermove',function(e){if(!joyActive||e.pointerId!==joyPointerId)return;moveJoyXY(e.clientX,e.clientY);});
+  function _endJoyPointer(e){
+    if(e&&joyPointerId!==null&&e.pointerId!==joyPointerId)return;
+    joyActive=false;joyPointerId=null;
+    if(nub){nub.style.left='50%';nub.style.top='50%';}
+    input.mx=0;input.my=0;
+  }
+  joy.addEventListener('pointerup',_endJoyPointer);
+  joy.addEventListener('pointercancel',_endJoyPointer);
 }
 function moveJoyXY(clientX,clientY){
   var dx=clientX-joyCX,dy=clientY-joyCY;var len=Math.sqrt(dx*dx+dy*dy)||1;var max=45;
@@ -21239,12 +21249,14 @@ function _continueFromModal(){
 }
 
 function _newRunFromModal(){
+  /* v9.0.65 — «Новый забег» из окна продолжения удаляет старый забег,
+     но возвращает игрока к выбору класса/подкласса вместо немедленного старта. */
   clearRunSave();
   closeModalAll();
-  showToast('🗑️ Старое сохранение удалено');
-  setTimeout(function(){
-    startRun(meta.mode || 'classic');
-  }, 250);
+  /* Окно находится поверх хаба: оставляем хаб открытым, чтобы игрок
+     мог изменить класс, подкласс и режим перед началом нового забега. */
+  if(typeof showHub==='function') showHub();
+  showToast('🗑️ Старый забег удалён · Выбери класс и начни новый');
 }
 
 try{
