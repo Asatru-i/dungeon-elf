@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v9.1.6 — lore rendering fix and stability checks. -->
+<!-- Dungeon Elf v9.2.0 — bug fixes and compendium refresh. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v9.1.5</title>
+<title>Dungeon Elf v9.2.0</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -465,7 +465,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v9.1.1 · BALANCE REWORK</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v9.2.0 · PATCHED</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -486,7 +486,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.1.6';
+var GAME_VERSION='9.2.0';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -625,7 +625,7 @@ var canvas=document.getElementById('game');
 var ctx=canvas.getContext('2d');
 var minimap=document.getElementById('minimap');
 var mmx=minimap.getContext('2d');
-var VW=0,VH=0,DPR=Math.min(window.devicePixelRatio||1,2);
+var VW=0,VH=0,DPR=Math.min(window.devicePixelRatio||1,1.5);
 var REDUCED_MOTION=false;
 try{REDUCED_MOTION=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
 
@@ -635,10 +635,7 @@ function resize(){
   VW=w;VH=h;
   canvas.width=Math.floor(w*DPR);canvas.height=Math.floor(h*DPR);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
-  _spriteCache={};_spriteCacheCount=0;
-  _spriteCacheReady=false;
-  _shadowCache = {};
-  /* v8.5.8-FIX: сброс кэша атмосферной виньетки при resize/orientationchange. */
+  /* v9.1.8 PERF: НЕ сбрасываем кеши спрайтов/теней — они переживут resize. */
   if(typeof _darkAtmoCache !== 'undefined')_darkAtmoCache={w:0,h:0,grd:null};
   try{ctx.setTransform(DPR,0,0,DPR,0,0);}catch(e){ctx.scale(DPR,DPR);}
   ctx.imageSmoothingEnabled=false;
@@ -4710,9 +4707,9 @@ var COMPENDIUM=[
     {name:'🧙 Торговец',desc:'Появляется на чётных этажах и в деревне. Цены зелий растут с этажом. Ассортимент обновляется каждый этаж.'}
   ]},
   {section:'🔥 Адепты Стихий (маги)',entries:[
-    {name:'🔥 Адепт Огня',desc:'Поджог: 12 + этаж×1,6 урона за тик; огонь не распространяется. Инферно (E): 75% прежнего прямого урона, радиус 337,5px (−25%), поджог 6/сек на 6 сек.'},
-    {name:'❄️ Адепт Льда',desc:'Замедло 70% на 3 сек · 20% шанс заморозки 1.5 сек · +35% урона по замедлённым · 10% шанс мгновенной казни при HP<30% (не боссы). Способность: Абсолютный ноль (E) — заморозка 1.5 сек + 20 + этаж урона в радиусе 350px'},
-    {name:'💀 Адепт Тьмы',desc:'До 5 скелетов. HP скелета = 25% max HP игрока, урон = 5 + половина бонуса урона за уровень. Способность: Костяная армия (E) — поднимает 2 скелета'}
+    {name:'🔥 Адепт Огня',desc:'Поджог: 12 + этаж×1,6 урона за тик. Инферно (E): 75% прямого урона + поджог 6/сек на 6 сек, радиус 337,5px.',lore:'Огонь — это не ярость. Огонь — это милосердие. Старейшина учил так. Он не соврал.'},
+    {name:'❄️ Адепт Льда',desc:'Замедло 70% на 3 сек · 20% шанс заморозки 1.5 сек · +35% урона по замедлённым · 10% шанс казни при HP<30% (кроме боссов). Абсолютный ноль (E): заморозка 1.5 сек + 20+этаж урона, радиус 350px.',lore:'Лёд не убивает. Лёд даёт время. Время — чтобы успеть сказать «прости». '},
+    {name:'💀 Адепт Тьмы',desc:'До 5 скелетов. HP скелета = 25% max HP игрока, урон = 5 + половина бонуса урона за уровень. Костяная армия (E): поднимает 2 скелета.',lore:'Скелеты слушают его. Не потому что он сильный. Потому что он не боится их слушать.'}
   ]},
   {section:'🌳 Сюжет',entries:[
     {name:'🧝 Эльф',desc:'Ты. Спускаешься в подземелье, чтобы остановить вечную осень',lore:'Ты — тот, кто идёт после Аэлиса. Ты — тот, кого ждал Старейшина. Ты — последний, кто помнит лес до осени. Ты не герой. Ты — тот, кто просто не смог сидеть дома.'},
@@ -5028,9 +5025,18 @@ for(var _dk in _diaryLock){if(_diaryLock.hasOwnProperty(_dk))delete _diaryLock[_
 
   _ghostSilhouette = null;
   _ghostShown = false;
+  /* v9.2.0 FIX: reset cursed blade whisper cooldown. */
+  _curseWhisperCd = 0;
   /* v7.0.1-fix: сброс таймеров амбиента и шёпота между забегами */
   _lastAmbientTick=Date.now();
   _whisperTimer=1800;
+  /* v9.2.0 FIX: одноразовые сундуки сбрасываются между забегами. */
+  stats.banditCacheOpened = false;
+  stats.banditCaptainRewardClaimed = false;
+  stats.ancientElvesCache1Opened = false;
+  stats.ancientElvesCache2Opened = false;
+  stats.ancientElvesCache3Opened = false;
+  stats.ancientElvesCache4Opened = false;
   /* v9.0.50 — clear cross-run visual/audio transients and derived caches. */
   if(typeof _invalidateWeaponStatsCache==='function')_invalidateWeaponStatsCache();
   if(typeof stopMusic==='function')stopMusic();
@@ -5987,6 +5993,7 @@ function _buildFloorInternal(showLore){
 /* --- Шаг 1: сброс всех транзитных состояний этажа --- */
 function _resetFloorState(){
   floorCacheCanvas = null;
+  _invalidateStaticDecor();
   if(player){
     player.curseDmgTick=0;player.curseDmgAmount=0;
     player.curseFog=false;player.curseGreed=false;
@@ -6049,6 +6056,7 @@ function _pickBiomeAndPalette(){
   for(var fi=0;fi<8;fi++)floorCanvas.push(makeFloorTile(pal,fi*17+floorNum*3,_floorStyle));
   /* Пол визуально меняется при смене биома, но карта и её генерация не затрагиваются. */
   floorCacheCanvas=null;
+  _invalidateStaticDecor();
   wallCanvas=makeWallTile();waterCanvas=makeWaterCanvas();lavaCanvas=makeLavaCanvas();
 }
 
@@ -6521,7 +6529,7 @@ for(var li=0;li<90;li++){var lx2=randi(4,MAP_W-5),ly2=randi(4,MAP_H-5);if(map[ly
       if(_cx<3||_cy<3||_cx>=MAP_W-3||_cy>=MAP_H-3)continue;
       for(var _d=decor.length-1;_d>=0;_d--){
         if(decor[_d].x===_cx && decor[_d].y===_cy){
-          decor.splice(_d,1);
+          decor.splice(_d,1);_invalidateStaticDecor();
         }
       }
     }
@@ -6574,7 +6582,7 @@ for(var li=0;li<90;li++){var lx2=randi(4,MAP_W-5),ly2=randi(4,MAP_H-5);if(map[ly
     if(!_cd)continue;
     var _isNearSkel=Math.abs(_cd.x-_clearSkelX)<=1&&Math.abs(_cd.y-_clearSkelY)<=1;
     var _isNearChest=Math.abs(_cd.x-_clearChestX)<=1&&Math.abs(_cd.y-_clearChestY)<=1;
-    if((_isNearSkel||_isNearChest)&&(_cd.type==='rock'||_cd.type==='boulder'||_cd.type==='log'||_cd.type==='tree'||_cd.type==='tree2'||_cd.type==='treeGreen'||_cd.type==='pine'||_cd.type==='stump'))decor.splice(_cl,1);
+    if((_isNearSkel||_isNearChest)&&(_cd.type==='rock'||_cd.type==='boulder'||_cd.type==='log'||_cd.type==='tree'||_cd.type==='tree2'||_cd.type==='treeGreen'||_cd.type==='pine'||_cd.type==='stump'))decor.splice(_cl,1);_invalidateStaticDecor();
   }
 
   /* Шаг 3 — скелет внутри двора.
@@ -6737,7 +6745,7 @@ function _spawnTowerRuin(){
     if(x<2||y<2||x>=MAP_W-2||y>=MAP_H-2)continue;
     if(map[y]&&map[y][x]!==3)map[y][x]=0;
   }
-  for(var i=decor.length-1;i>=0;i--){var d=decor[i];if(Math.abs(d.x-tx)<4&&Math.abs(d.y-ty)<4)decor.splice(i,1);}
+  for(var i=decor.length-1;i>=0;i--){var d=decor[i];if(Math.abs(d.x-tx)<4&&Math.abs(d.y-ty)<4)decor.splice(i,1);_invalidateStaticDecor();}
   decor.push({x:tx,y:ty,type:'towerRuin',s:1,seed:gameRNG(),isTowerRuin:true});
   for(var j=0;j<8;j++){var a=gameRNG()*Math.PI*2,dist=3+gameRNG()*1.5,lx=Math.round(tx+Math.cos(a)*dist),ly=Math.round(ty+Math.sin(a)*dist);if(lx>2&&ly>2&&lx<MAP_W-2&&ly<MAP_H-2&&map[ly]&&map[ly][lx]===0)decor.push({x:lx,y:ly,type:'leafpile',s:1,seed:gameRNG()});}
 }
@@ -7415,7 +7423,7 @@ function _openGroveNote(noteObj){
   showGameModal('<h2 class="lore-title">'+_esc(String(note.title||''))+'</h2><div class="lore-text">'+_esc(String(note.text||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
   SfxPlay('scroll');
   if(isNewCodex)showToast('📜 Записка рощи найдена');
-  if(isNewRun){for(var d=decor.length-1;d>=0;d--)if(decor[d]===noteObj){decor.splice(d,1);break;}}
+  if(isNewRun){for(var d=decor.length-1;d>=0;d--)if(decor[d]===noteObj){decor.splice(d,1);break;}if(typeof _invalidateStaticDecor==='function')_invalidateStaticDecor();}
 }
 
 function openGroveNoteFromCodex(noteId){
@@ -7467,7 +7475,7 @@ function _openElderLetter(letterObj){
   showGameModal('<h2 class="lore-title">📜 Письмо Старейшины</h2><div class="lore-text">'+_esc(String(_letterText||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
   SfxPlay('altar');
   if(_isNew){
-    for(var j=decor.length-1;j>=0;j--){if(decor[j]===letterObj){decor.splice(j,1);break;}}
+    for(var j=decor.length-1;j>=0;j--){if(decor[j]===letterObj){decor.splice(j,1);_invalidateStaticDecor();break;}}
   }
 }
 
@@ -7887,7 +7895,7 @@ function buildForest(){
   var _stumpX = _cX + 3;
   var _stumpY = _cY;
   for(var _sd = decor.length-1; _sd >= 0; _sd--){
-    if(decor[_sd].x === _stumpX && decor[_sd].y === _stumpY) decor.splice(_sd, 1);
+    if(decor[_sd].x === _stumpX && decor[_sd].y === _stumpY) decor.splice(_sd, 1);_invalidateStaticDecor();
   }
   if(map[_stumpY] && map[_stumpY][_stumpX] === 0){
     decor.push({x: _stumpX, y: _stumpY, type: 'stump', s: 1.0, seed: gameRNG()});
@@ -10270,6 +10278,8 @@ function showGameModal(html){
     if(_t) _t.style.display = 'none';
     var _pb = document.getElementById('pickBtn');
     if(_pb) _pb.classList.remove('show');
+    /* v9.2.0 FIX: explicitly hide touch controls during modal. */
+    ['atk','dashBtn','useBtn','abilityBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.visibility='hidden';});
     stopMusic();
   }
   showModal(html);
@@ -10295,6 +10305,8 @@ function closeGameModal(){
     gamePaused = false;
     var _t = document.getElementById('touch');
     if(_t) _t.style.display = isTouch ? 'block' : 'none';
+    /* v9.2.0 FIX: restore touch controls after modal. */
+    ['atk','dashBtn','useBtn','abilityBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.visibility='visible';});
     if(!meta.mute) startMusic(floorNum === 1 ? 'village' : (boss ? 'boss' : 'dungeon'));
   }
 }
@@ -10890,6 +10902,7 @@ function goToHub(){
      повторно после смерти и meta.runs++ инкрементируется дважды */
   _lastActionName='';
   _lastActionTime=0;
+  _runGeneration++; /* v9.2.0 FIX: invalidate delayed callbacks on hub exit. */
   endRun('hub');
   showHub();
 }
@@ -11285,6 +11298,8 @@ function startRun(mode){
   _clearRunState();
   /* v6.5.5fix — баг #5: явный сброс lastBossWasAelis в startRun */
   lastBossWasAelis=false;
+  /* v9.2.0 FIX: reset diary lock before player creation. */
+  _diaryLock = {};
   player=null;floorNum=1;tickTime=0;
   weaponLevel=1;if(typeof _invalidateWeaponStatsCache==='function')_invalidateWeaponStatsCache();armorLevel=1;
   /* v6.5.14-step2 — хаб-апгрейд +3 (постоянно), торговец player.bagPurchased (на забег). */
@@ -11339,6 +11354,9 @@ function startRun(mode){
   if(player){
     player.class = _pendingClass;
     player.subclass = _pendingSubclass;
+    /* v9.2.0 FIX: reset per-run counters and diary. */
+    player._sellCount = null;
+    player._diaryShown = {};
     /* v5.7.9 — миграция старых сейвов свитков к {id, count}. */
     _migrateScrolls();
     /* Один раз пересчитываем статы с подклассом */
@@ -12219,34 +12237,7 @@ function showCodexTab(tab,el){
 }
 
 /* v9.1.1 — справочник баланса синхронизирован с действующими механиками; числовые классы и оружие также генерируются из BALANCE/WEAPONS. */
-(function _syncBalanceCompendium(){
-  if(typeof COMPENDIUM==='undefined'||COMPENDIUM._balance911)return;
-  COMPENDIUM._balance911=true;
-  COMPENDIUM.unshift({section:'⚖️ Баланс v9.1.5',entries:[
-    {name:'Изменения v9.1.5',desc:'Маг: бонус маны за этаж удалён; +1 максимальная и текущая мана за уровень. Адепт Огня: Инферно ослаблено на 25%, радиус уменьшен с 450px до 337,5px, поджог снижен до 6 урона/сек на 6 сек.'},
-    {name:'Мана мага',desc:'100 базовой маны; +1 к максимуму и +1 текущей маны за каждый полученный уровень. За этаж бонуса нет. Броня роли мага: +20 к максимуму. Регенерация: 3 маны/сек в бою, 8 вне боя; задержка после заклинания 1,5 сек. Выстрел 3 маны, заряженное оружие 15, AoE 25.'},
-    {name:'Классы',desc:'Воин: ×1,25 HP, ×1,03 скорость, ×1 урон. Лучник: ×0,78 HP, ×1,15 скорость, ×1,15 урон. Маг: ×0,75 HP, ×1,05 скорость, ×1 урон; дальний урон мага дополнительно ×1,10, AoE ×1,20.'},
-    {name:'Берсерк',desc:'×0,82 HP, ×1,04 скорость, ×1,05 урон, ×1,10 скорость атаки. Пассивка добавляет до +50% урона пропорционально недостающему HP.'},
-    {name:'Снайпер',desc:'При неподвижности 60 кадров: ×1,9 урон; 30–59 кадров: ×1,4; менее 6 кадров: ×0,6.'},
-    {name:'Охотник',desc:'Тройной залп; каждая стрела наносит 62% урона. После залпа перезарядка залпа 240 кадров; в перезарядке выпускается одна стрела.'},
-    {name:'Разбойник',desc:'Удар в спину: ×1,3 урона; критический удар в спину: ×2. Рывок лучника блокирует стрельбу на 60 кадров.'},
-    {name:'Проклятия',desc:'Кровоточащие стены: урон HP/сек и +50% золота. Туман: обзор −80px, враги замечают с 150px. Жадность: ×2 золото, ×2 входящий урон, +20% крит. Спешка: враги +40%, игрок +20% скорости. Хрупкость: −30% max HP, +30% урон. Засуха: нет зелий, +3 HP/сек вне боя.'},
-    {name:'Свиток молнии',desc:'40 + 3 урона за этаж; боссам наносит 50% урона.'},
-    {name:'Свиток мороза',desc:'Замедляет обычных врагов на 120 кадров (2 сек); боссы не замедляются.'},
-    {name:'Свиток огня',desc:'Поджигает врагов только в радиусе 200px.'},
-    {name:'Свиток щита',desc:'1 сек неуязвимости и 5 сек защиты, снижающей входящий урон на 50%.'},
-    {name:'Свиток лечения',desc:'Восстанавливает 50% максимального HP.'},
-    {name:'Награды элиток',desc:'Гигант: зелье и 5–10 золота. Быстрый: 15–25 золота. Огненный: свиток огня. Ядовитый: изумруд. Кристальный: 2–3 случайных самоцвета.'},
-    {name:'Обвал',desc:'Перед обвалом исключаются лестница, игрок, двери, входы и узкие проходы. После обвала и при загрузке сейва проверяется путь к лестнице. Если обвал перекрыл маршрут, отменяются только стены, упавшие в этом событии; автоматические скрытые проходы не создаются.'},
-    {name:'Засада',desc:'3 волны по 3 врага с интервалом 5 секунд.'},
-    {name:'Затопление',desc:'Уровень воды повышается каждые 10 секунд; на 6-м уровне игрок погибает. Вода не блокирует путь, только замедляет.'},
-    {name:'Автонаведение лучника',desc:'В движении: дальность 120px и конус 30° по направлению взгляда. Стоя: дальность 340px и полный круг.'},
-    {name:'Мимик',desc:'Раскрывается при приближении игрока на 80px, издаёт звук и становится враждебным.'},
-    {name:'Роли врагов',desc:'Гоблин и волк фланкируют игрока. Орк — танк. Гоблин-лучник отступает, если игрок ближе 100px. Шаман при HP ниже 50% получает щит на 100 HP.'},
-    {name:'Фазы боссов',desc:'Вождь орков при HP ниже 40% зовёт 3 орков. Маг при HP ниже 40% телепортируется и создаёт иллюзии с 1 HP. Дракон при HP ниже 40% летает 4 сек без урона и вызывает 3 элементалей. Костяной лорд при HP ниже 30% создаёт 5 скелетов по 20% его максимального HP. Королева пауков при HP ниже 50% скрывается в паутине на 200 HP и неуязвима, пока паутина жива.'},
-    {name:'Экономика',desc:'Множитель золота с врагов: 0,16. В сундуках и тупиках золото: 3–8.'}
-  ]});
-})();
+/* v9.2.0 — patch changelog removed from player compendium; current mechanics are generated from BALANCE. */;
 function openCompendium(){
   var html='<h2>📖 Справочник</h2>';
   html+='<p style="font-size:11px;color:#a08060">Все эффекты, проклятия и предметы игры</p>';
@@ -12309,6 +12300,8 @@ function resetProgressConfirm(){
 function resetProgressDo(){
   /* v5.2.3 + v7.0 (из v6.5.5): блокируем автосохранение ДО очистки */
   _resetInProgress=true;
+  /* v9.2.0 FIX: invalidate codex caches after full reset. */
+  _loreCountCache=-1;_loreCountCacheLen=-1;_loreReadSetCacheLen=-1;_loreReadSetCache=null;
   if(typeof musicTimer!=='undefined' && musicTimer){clearTimeout(musicTimer);musicTimer=null;}
   stopMusic();
   try{
@@ -14583,14 +14576,14 @@ lastHitBy=_projNames[p.type]||'снаряд';
   }
 }
 /* v9.0.45 — bounded particle creation: cap before allocating new objects. */
-var _MAX_BLOOD_PARTICLES=250;
+var _MAX_BLOOD_PARTICLES=120;
 function _pushBloodParticle(p){
   if(!Array.isArray(bloodParticles)||bloodParticles.length>=_MAX_BLOOD_PARTICLES)return false;
   bloodParticles.push(p);
   return true;
 }
 function updateParticles(dt){
-  if(bloodParticles.length>250)bloodParticles.splice(0,bloodParticles.length-250);
+  if(bloodParticles.length>120)bloodParticles.splice(0,bloodParticles.length-120);
   for(var i=bloodParticles.length-1;i>=0;i--){
     var b=bloodParticles[i];
     if(!b){bloodParticles.splice(i,1);continue;}
@@ -14733,31 +14726,8 @@ function updatePlayer(dt){
   if(now-lastStepSound>520){
     lastStepSound=now;
     SfxPlay('step');
-    // v4.5.0 — пыль под ногами
-    if(!REDUCED_MOTION){
-      var ptx2=Math.floor(player.x/TILE),pty2=Math.floor(player.y/TILE);
-      var dustColor='rgba(180,160,130,0.55)';
-      if(map[pty2]&&map[pty2][ptx2]===3)dustColor='rgba(150,200,230,0.55)';
-      else if(map[pty2]&&map[pty2][ptx2]===4)dustColor='rgba(255,140,60,0.55)';
-      /* v7.0 — цвета пыли по биомам */
-      else if(biome){
-        if(biome.name==='Ледяные Залы'||biome.name==='Ледяные Пещеры')dustColor='rgba(200,230,255,0.55)';
-        else if(biome.name==='Лавовые Пещеры')dustColor='rgba(255,100,60,0.55)';
-        else if(biome.name==='Затопленные Залы')dustColor='rgba(100,180,200,0.55)';
-        else if(biome.name==='Грибные Пещеры'||biome.name==='Гигантские Грибы')dustColor='rgba(180,120,200,0.55)';
-        else if(biome.name==='Осенний Эльфийский Лес')dustColor='rgba(200,140,80,0.55)';
-      }
-      for(var _di=0;_di<3;_di++){
-        _pushBloodParticle({
-          x:player.x+rand(-5,5),
-          y:player.y+14+rand(-2,2),
-          vx:rand(-0.6,0.6),
-          vy:rand(-1.0,-0.3),
-          life:18,
-          color:dustColor
-        });
-      }
-    }
+    /* v9.1.8 PERF: пыль под ногами отключена — она создавала 3 частицы
+       каждые 520мс при движении и засоряла пул. Визуально почти незаметна. */
   }
 }
   var ptx=Math.floor(player.x/TILE),pty=Math.floor(player.y/TILE);
@@ -16706,12 +16676,18 @@ DECOR_DRAWERS.shrineAltar=function(ctx,cx,cy,d){
 };
 /* Stage 2: richer architecture props, preserving the existing footprint. */
 DECOR_DRAWERS.pillar=function(ctx,cx,cy,d){
-  var s=(d.s||1)*1.04;ctx.save();shadow(ctx,cx,cy,12,4,s);
-  box(ctx,cx,cy,s,[[-10,-18,20,4,'#77786d'],[-8,-15,16,18,'#454b47'],[-5,-14,3,16,'#8b8b79'],[2,-14,3,16,'#666c61'],[-10,3,20,4,'#858475'],[-8,-19,16,2,'#b2ad94'],[-6,-8,2,2,'#c4c2a6'],[4,-2,2,3,'#c4c2a6'],[-2,-11,4,2,'#344e46']]);ctx.restore();
+  /* v9.2.1 FIX: drawers must be self-contained; box/shadow from an older IIFE are not in scope. */
+  var s=(d.s||1)*1.04;
+  function _px(rects){for(var i=0;i<rects.length;i++){var r=rects[i];ctx.fillStyle=r[4];ctx.fillRect(Math.round(cx+r[0]*s),Math.round(cy+r[1]*s),Math.max(1,Math.round(r[2]*s)),Math.max(1,Math.round(r[3]*s)));}}
+  ctx.save();ctx.fillStyle='rgba(9,12,9,.34)';ctx.beginPath();ctx.ellipse(cx,cy+3.2*s,12*s,1.8*s,0,0,Math.PI*2);ctx.fill();
+  _px([[-10,-18,20,4,'#77786d'],[-8,-15,16,18,'#454b47'],[-5,-14,3,16,'#8b8b79'],[2,-14,3,16,'#666c61'],[-10,3,20,4,'#858475'],[-8,-19,16,2,'#b2ad94'],[-6,-8,2,2,'#c4c2a6'],[4,-2,2,3,'#c4c2a6'],[-2,-11,4,2,'#344e46']]);ctx.restore();
 };
 DECOR_DRAWERS.throne=function(ctx,cx,cy,d){
-  var s=(d.s||1)*1.04;ctx.save();shadow(ctx,cx,cy,16,5,s);
-  box(ctx,cx,cy,s,[[-13,-8,26,16,'#3c2926'],[-11,-20,5,16,'#694333'],[6,-20,5,16,'#694333'],[-8,-23,16,4,'#b08a4b'],[-7,-15,14,10,'#743d3b'],[-4,-14,8,7,'#a65a4c'],[-2,-13,4,4,'#e8d38a'],[-12,6,24,3,'#b08a4b'],[-15,-17,3,10,'#7f5b3e'],[12,-17,3,10,'#7f5b3e']]);ctx.restore();
+  /* v9.2.1 FIX: local pixel painter prevents ReferenceError and stone fallback. */
+  var s=(d.s||1)*1.04;
+  function _px(rects){for(var i=0;i<rects.length;i++){var r=rects[i];ctx.fillStyle=r[4];ctx.fillRect(Math.round(cx+r[0]*s),Math.round(cy+r[1]*s),Math.max(1,Math.round(r[2]*s)),Math.max(1,Math.round(r[3]*s)));}}
+  ctx.save();ctx.fillStyle='rgba(9,12,9,.36)';ctx.beginPath();ctx.ellipse(cx,cy+4*s,16*s,2*s,0,0,Math.PI*2);ctx.fill();
+  _px([[-13,-8,26,16,'#3c2926'],[-11,-20,5,16,'#694333'],[6,-20,5,16,'#694333'],[-8,-23,16,4,'#b08a4b'],[-7,-15,14,10,'#743d3b'],[-4,-14,8,7,'#a65a4c'],[-2,-13,4,4,'#e8d38a'],[-12,6,24,3,'#b08a4b'],[-15,-17,3,10,'#7f5b3e'],[12,-17,3,10,'#7f5b3e']]);ctx.restore();
 };
 /* Stage 3: layered fungi and stone/moss micro-detail. */
 DECOR_DRAWERS.glow_mushroom=function(ctx,cx,cy,d){
@@ -16731,10 +16707,27 @@ DECOR_DRAWERS.giantMush=function(ctx,cx,cy,d){
   box(ctx,cx,cy,s,[[-6,-7,12,15,'#d9d2b7'],[-9,1,18,4,'#9e9277'],[-15,-16,30,10,'#8e3f8e'],[-12,-21,24,7,'#bd61b1'],[-6,-24,12,4,'#e5a0db'],[-10,-14,4,3,'#f6d9ee'],[5,-17,4,3,'#f6d9ee'],[-2,-11,4,3,'#baffdf']]);
   ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.10+p*.12;ctx.fillStyle='#a0ffd9';ctx.beginPath();ctx.arc(cx,cy-12*s,28*s,0,Math.PI*2);ctx.fill();ctx.restore();
 };
+/* v9.2.2 FIX: self-contained rock drawer; no out-of-scope box()/shadow() calls. */
 DECOR_DRAWERS.rock=function(ctx,cx,cy,d){
-  var s=(d.s||1),seed=d.seed||0;ctx.save();shadow(ctx,cx,cy,13,4,s);
-  box(ctx,cx,cy,s,[[-10,-2,20,8,'#454b48'],[-8,-8,16,8,'#6c746e'],[-4,-12,9,5,'#8e9589'],[-6,-7,4,3,'#b6b6a0'],[1,-5,5,3,'#555f58'],[-9,3,6,2,'#343b38'],[5,1,4,2,'#343b38']]);
-  if(seed>.38){ctx.fillStyle='#668a58';ctx.fillRect(cx-5*s,cy-5*s,4*s,2*s);ctx.fillRect(cx+2*s,cy-2*s,3*s,2*s);}
+  var s=(d&&d.s)||1, seed=(d&&d.seed)||0;
+  ctx.save();
+  ctx.fillStyle='rgba(10,12,10,.34)';
+  ctx.beginPath();ctx.ellipse(cx,cy+8*s,13*s,4*s,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#383d39';ctx.beginPath();
+  ctx.moveTo(cx-13*s,cy+5*s);ctx.lineTo(cx-10*s,cy-5*s);
+  ctx.lineTo(cx-3*s,cy-11*s);ctx.lineTo(cx+6*s,cy-9*s);
+  ctx.lineTo(cx+13*s,cy-1*s);ctx.lineTo(cx+10*s,cy+7*s);
+  ctx.lineTo(cx-7*s,cy+9*s);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#687168';ctx.beginPath();
+  ctx.moveTo(cx-10*s,cy-5*s);ctx.lineTo(cx-3*s,cy-11*s);
+  ctx.lineTo(cx+6*s,cy-9*s);ctx.lineTo(cx+1*s,cy-2*s);
+  ctx.lineTo(cx-7*s,cy+1*s);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#969783';ctx.fillRect(Math.round(cx-4*s),Math.round(cy-8*s),Math.max(1,5*s),Math.max(1,2*s));
+  ctx.fillRect(Math.round(cx-9*s),Math.round(cy-3*s),Math.max(1,3*s),Math.max(1,2*s));
+  ctx.fillStyle='#4f6b3b';ctx.fillRect(Math.round(cx+3*s),Math.round(cy-1*s),Math.max(1,4*s),Math.max(1,2*s));
+  ctx.fillRect(Math.round(cx+5*s),Math.round(cy-3*s),Math.max(1,2*s),Math.max(1,2*s));
+  ctx.fillStyle='#292f2c';ctx.fillRect(Math.round(cx-2*s),Math.round(cy+2*s),Math.max(1,3*s),Math.max(1,2*s));
+  if(seed>.38){ctx.fillStyle='#78965b';ctx.fillRect(Math.round(cx-5*s),Math.round(cy-5*s),Math.max(1,4*s),Math.max(1,2*s));}
   ctx.restore();
 };
 DECOR_DRAWERS.moss=function(ctx,cx,cy,d){
@@ -17729,7 +17722,7 @@ function _spawnCombatImpact(e,dmg){
         life:7+Math.floor(gameRNG()*5),color:accent});
     }
   }
-  if(bloodParticles.length>250)bloodParticles.splice(0,bloodParticles.length-250);
+  if(bloodParticles.length>120)bloodParticles.splice(0,bloodParticles.length-120);
 }
 function drawEnemy(e){
   /* v7.0 (из v6.5.5): защита от битого объекта врага */
@@ -18255,7 +18248,7 @@ function updateAmbientMotes(dt){
   var _moteKey=_isAncientElves?'ancient-elven-city':name;
   if(_ambientMoteBiome!==_moteKey||_ambientMotes.length===0){
     _ambientMotes.length=0;_ambientMoteBiome=_moteKey;
-    var _moteCount=_isAncientElves?24:18;
+    var _moteCount=_isAncientElves?10:8;
     for(var i=0;i<_moteCount;i++)_ambientMotes.push({x:gameRNG()*VW,y:gameRNG()*VH,phase:gameRNG()*Math.PI*2,drift:(gameRNG()-0.5)*(_isAncientElves?.08:.12),size:i%(_isAncientElves?7:5)===0?2:1});
   }
   for(var j=0;j<_ambientMotes.length;j++){
@@ -18332,6 +18325,10 @@ function drawParticles(){
   ctx.textAlign='left';
 }
 var _lightMaskCanvas=null,_lightMaskCtx=null,_lightMaskW=0,_lightMaskH=0;
+/* v9.1.8 PERF: offscreen-кеш статичного декора. */
+var _staticDecorCanvas=null;
+var _staticDecorDirty=true;
+function _invalidateStaticDecor(){ _staticDecorDirty=true; _staticDecorCanvas=null; }
 /* v9.0.46 — cache the static vignette; rebuild only when viewport dimensions change. */
 var _vignetteCanvas=null,_vignetteW=0,_vignetteH=0;
 function _getVignetteCanvas(){
@@ -18393,7 +18390,7 @@ function drawLighting(){
   }
   var pulse=0.94+Math.sin(now*0.006)*0.035+Math.sin(now*0.017)*0.018;
   var lights=[];
-  for(var i=0;i<decor.length&&lights.length<14;i++){
+  for(var i=0;i<decor.length&&lights.length<6;i++){
     var d=decor[i],type=d.type;
     var isFire=type==='torch'||type==='candle'||type==='fire_geyser'||type==='lavaCrack'||type==='magma_crystal';
     if(!isFire)continue;
@@ -18406,12 +18403,8 @@ function drawLighting(){
     var l=lights[j],flicker=0.88+Math.sin(now*0.012+l.seed*13)*0.08+Math.sin(now*0.027+l.seed*5)*0.04;
     reveal(l.x,l.y,l.r*flicker,0.94);
   }
-  for(var q=0;q<projectiles.length&&q<30;q++){
-    var pr=projectiles[q];if(!pr)continue;
-    var qx=pr.x-cam.x,qy=pr.y-cam.y;
-    if(qx<-100||qy<-100||qx>VW+100||qy>VH+100)continue;
-    reveal(qx,qy,pr.aoe?42:24,0.18);
-  }
+  /* v9.1.8 PERF: reveal для снарядов отключён — каждый вызов создавал
+     createRadialGradient, что давало до 30 градиентов в кадр при залпах. */
   lctx.globalCompositeOperation='source-over';
   /* Мягкая виньетка также принадлежит маске и частично снимается рядом с огнём.
      Градиент заранее растеризован и переиспользуется до изменения размеров viewport. */
@@ -18583,6 +18576,85 @@ function _renderFloor(x0,y0,x1,y1){
   }
   ctx.drawImage(floorCacheCanvas, -cam.x, -cam.y);
 }
+/* v9.1.8 PERF: рисуем весь статичный декор один раз в offscreen canvas. */
+function _buildStaticDecorCanvas(){
+  if(!MAP_W||!MAP_H)return;
+  _staticDecorCanvas=document.createElement('canvas');
+  _staticDecorCanvas.width=MAP_W*TILE;
+  _staticDecorCanvas.height=MAP_H*TILE;
+  var _dctx=_staticDecorCanvas.getContext('2d');
+  _dctx.imageSmoothingEnabled=false;
+  /* v9.2.0 FIX: рисуем статичный декор в отдельный canvas-контекст. */
+  for(var i=0;i<decor.length;i++){
+    var d=decor[i];
+    if(!d)continue;
+    /* Анимированные типы рисуются каждый кадр в реальном времени. */
+    if(d.isSacredTree||d.isEpic||d.isTowerRuin||d.isEchoStone)continue;
+    var t=d.type;
+    if(t==='spikeTrap'||t==='druidTeleport'||t==='campfire'||t==='torch'||
+       t==='candle'||t==='glow_mushroom'||t==='lavaCrack'||t==='magma_crystal'||
+       t==='fire_geyser'||t==='candleTall'||t==='deadCandle'||t==='ritualCandle')continue;
+    _drawDecorToContext(_dctx, d);
+  }
+  _staticDecorDirty=false;
+}
+
+/* v9.2.0 FIX: безопасная отрисовка декора в произвольный контекст. */
+function _drawDecorToContext(targetCtx, d){
+  if(!d||!d.type||!targetCtx)return;
+  var _def=DECOR_SPRITES[d.type];
+  if(DECOR_DRAWERS[d.type]){
+    var _oldCtx=ctx, _oldCamX=cam.x, _oldCamY=cam.y, _oldVW=VW, _oldVH=VH;
+    ctx=targetCtx; cam.x=0; cam.y=0; VW=MAP_W*TILE; VH=MAP_H*TILE;
+    try{ DECOR_DRAWERS[d.type](targetCtx, d.x*TILE+TILE/2, d.y*TILE+TILE/2, d); }
+    catch(_de){
+      /* v9.2.2 FIX: recover inside the target cache; live-canvas drawing here is lost when static props are skipped later. */
+      try{
+        ctx=targetCtx; cam.x=0; cam.y=0; VW=MAP_W*TILE; VH=MAP_H*TILE;
+        if(_def){
+          var _fallbackScale=SPRITE_SCALE*(d.s||1)*((_def.scaleOff)||1);
+          _drawSpriteToCtx(targetCtx,_def.spr,_def.pal,d.x*TILE+TILE/2,d.y*TILE+TILE/2+((_def.yOff)||0),_fallbackScale,false);
+        }else if(typeof _SOLID_DECOR!=='undefined'&&_SOLID_DECOR[d.type]){
+          _drawFallbackStone(targetCtx,d.x*TILE+TILE/2,d.y*TILE+TILE/2,d,
+            d.type==='druidStone'||/rune|druid.?stone/i.test(String(d.type||'')));
+        }
+      }catch(_de2){}
+    }
+    finally{ ctx=_oldCtx; cam.x=_oldCamX; cam.y=_oldCamY; VW=_oldVW; VH=_oldVH; }
+    return;
+  }
+  if(_def){
+    var _sc=SPRITE_SCALE*(d.s||1)*((_def.scaleOff)||1);
+    var _yOff=(_def.yOff)||0;
+    _drawSpriteToCtx(targetCtx,_def.spr,_def.pal,d.x*TILE+TILE/2,d.y*TILE+TILE/2+_yOff,_sc,false);
+  }else if(typeof _SOLID_DECOR!=='undefined'&&_SOLID_DECOR[d.type]){
+    var _oldCtx2=ctx;
+    ctx=targetCtx;
+    try{_drawFallbackStone(targetCtx,d.x*TILE+TILE/2,d.y*TILE+TILE/2,d,false);}
+    catch(_de2){}
+    finally{ctx=_oldCtx2;}
+  }
+}
+
+/* v9.2.0 FIX: пиксельная отрисовка спрайта в произвольный canvas-контекст. */
+function _drawSpriteToCtx(targetCtx,sp,pal,x,y,ps,fx){
+  if(!sp||!pal||!targetCtx)return;
+  var rows=sp.length;if(!rows)return;
+  var cols=sp[0].length;
+  var w=cols*ps,h=rows*ps;
+  var _left=Math.round(x-w/2),_top=Math.round(y-h/2);
+  for(var r=0;r<rows;r++){
+    var row=sp[r];
+    for(var c=0;c<cols;c++){
+      var ch=row.charAt(c);
+      if(ch==='.'||ch===' ')continue;
+      var col=pal[ch];if(!col)continue;
+      var cx=fx?(cols-1-c):c;
+      targetCtx.fillStyle=col;
+      targetCtx.fillRect(_left+cx*ps,_top+r*ps,ps,ps);
+    }
+  }
+}
 function _renderGroundLayer(){
   if(decalCanvas) ctx.drawImage(decalCanvas, -cam.x, -cam.y);
   drawBloodTiles();
@@ -18707,7 +18779,11 @@ function _renderEntityLayer(){
   var drawList=_drawListBuffer;
   var _wl=0;  /* write index */
 
-  /* Декор (кроме «плоского», который уже нарисован в ground layer). */
+  /* v9.1.8 PERF: статичный декор рисуем один раз из offscreen-кеша. */
+  if(_staticDecorDirty||!_staticDecorCanvas)_buildStaticDecorCanvas();
+  if(_staticDecorCanvas)ctx.drawImage(_staticDecorCanvas,-cam.x,-cam.y);
+
+  /* Динамический декор (огонь, деревья священные, эпик) — рисуем каждый кадр. */
   for(var di=0;di<_decorLen;di++){
     var dd=decor[di];
     var ddT=dd.type;
@@ -18716,6 +18792,14 @@ function _renderEntityLayer(){
     if(ddT==='mushroom'||ddT==='glow_mushroom'||ddT==='giantMush'||ddT==='mushBlue'||ddT==='mushRed'||ddT==='glowMold')continue;
     var _ddx=dd.x*TILE-cam.x,_ddy=dd.y*TILE-cam.y;
     if(_ddx<-160||_ddy<-160||_ddx>VW+160||_ddy>VH+160)continue;
+    /* v9.1.8 PERF: статика уже в кеше — пропускаем. */
+    if(!dd.isSacredTree&&!dd.isEpic&&!dd.isTowerRuin&&!dd.isEchoStone){
+      var _tSkip=dd.type;
+      if(_tSkip!=='spikeTrap'&&_tSkip!=='druidTeleport'&&_tSkip!=='campfire'&&
+         _tSkip!=='torch'&&_tSkip!=='candle'&&_tSkip!=='glow_mushroom'&&
+         _tSkip!=='lavaCrack'&&_tSkip!=='magma_crystal'&&_tSkip!=='fire_geyser'&&
+         _tSkip!=='candleTall'&&_tSkip!=='deadCandle'&&_tSkip!=='ritualCandle')continue;
+    }
     /* v9.0.11 — грибы уже пропущены выше и рисуются отдельным передним проходом. */
     var _decorSortY = dd.y*TILE+TILE;
     _pushDrawItem(drawList,_wl++,_decorSortY,0,dd);
@@ -19008,7 +19092,8 @@ function _renderOverlays(){
   if(fallingLeaves.length)drawFallingLeaves();
   drawWeather();
   drawAmbientMotes();
-  _drawDungeonDust();
+  /* v9.1.8 PERF: _drawDungeonDust убрана — рисовала 8 точек каждый кадр поверх всего,
+     визуально бесполезна, но ела CPU на слабых устройствах. */
   drawParticles();
   /* v7.5.4 — холодная цветокоррекция поверх окружения; HUD остаётся вне canvas. */
   ctx.save();
@@ -19602,6 +19687,8 @@ function endRun(reason){
   _elderFinalActive = false;
   _elderFinalStep = 0;
   if(player)player._elderFinalLock = false;
+  /* v9.2.0 FIX: clear Elder rift doors on every run exit. */
+  _elderDoors = [];
   /* v7.0 (из v6.5.5): вызов без активного игрока */
   if(!player&&reason!=='hub'){_runEnded=true;return;}
   _runEnded=true;
@@ -20371,7 +20458,7 @@ function handleCanvasTap(clientX,clientY){
     }
     if(dd2.type==='gbclad'){
       var gx3=dd2.x*TILE+TILE/2,gy3=dd2.y*TILE+TILE/2;
-      if(dist2(wx,wy,gx3,gy3)<50*50){if(dist2(gx3,gy3,player.x,player.y)<80*80){player.gold+=(dd2.gold||20);SfxPlay('coin');showToast('✦ Клад!');decor.splice(di2,1);updateHUD();}else showToast('Подойди ближе');return;}
+      if(dist2(wx,wy,gx3,gy3)<50*50){if(dist2(gx3,gy3,player.x,player.y)<80*80){player.gold+=(dd2.gold||20);SfxPlay('coin');showToast('✦ Клад!');decor.splice(di2,1);_invalidateStaticDecor();updateHUD();}else showToast('Подойди ближе');return;}
     }
     if(dd2.type==='ruinSkeleton'){
       var _skx=dd2.x*TILE+TILE/2,_sky=dd2.y*TILE+TILE/2;
@@ -20802,7 +20889,7 @@ function memoryShrineOffer(idx,key){var r=MEMORY_SHRINE_REWARDS[key];if(!r||!pla
    if(typeof player.gold !== 'number' || !isFinite(player.gold)) player.gold = 0;
    player.gold += _v;
  }
- SfxPlay('altar');showToast('🕯️ '+r.label);updateHUD();updateInventoryUI();closeGameModal();if(_lastMemoryShrine){decor=decor.filter(function(d){return d!==_lastMemoryShrine;});_lastMemoryShrine=null;}
+ SfxPlay('altar');showToast('🕯️ '+r.label);updateHUD();updateInventoryUI();closeGameModal();if(_lastMemoryShrine){decor=decor.filter(function(d){return d!==_lastMemoryShrine;});_lastMemoryShrine=null;if(typeof _invalidateStaticDecor==='function')_invalidateStaticDecor();}
 }
 
 function openAltar(altar){
@@ -20891,7 +20978,7 @@ function altarChoose(kind){
     }
   }
   
-  if(altar){decor=decor.filter(function(d){return d!==altar;});}
+  if(altar){decor=decor.filter(function(d){return d!==altar;});_invalidateStaticDecor();}
   updateHUD();closeModal();
 }
 function enterDungeon(){
@@ -21095,7 +21182,7 @@ function askTakeItem(it){
     var eff=leg.effect||{};var statStr=leg.stats&&leg.stats.dmg?'+'+leg.stats.dmg+' урона':'';
     if(eff.type==='on_hit')subtitle=statStr+' · '+(eff.chance*100|0)+'% шанс: лечит '+(eff.healPercent*100|0)+'% урона';
     else if(eff.type==='on_death')subtitle='Воскрешение (1 раз, сгорает)';
-    else if(eff.type==='passive')subtitle=statStr+' · -'+eff.tickDamage+' HP/сек';
+    else if(eff.type==='passive')subtitle=statStr+' · -'+(eff.tickDamage||1)+' HP/сек';
     else if(eff.type==='on_hit_taken')subtitle=(leg.stats&&leg.stats.def?'+'+leg.stats.def+' защиты · ':'')+(eff.chance*100|0)+'% отразить '+(eff.reflectPercent*100|0)+'% урона';
     else subtitle='Легендарный предмет';}
   else return;
@@ -21720,8 +21807,9 @@ function loop(){
       /* v7.3.16 — атмосферу проверяем раз в 180 симуляционных кадров. */
       if(_frameCounter % 180 === 0) _biomeAmbientTick();
       mmTimer+=dt;
-      /* v7.3.16 — миникарта реже обновляется. */
-      if(mmTimer>30){mmTimer=0;drawMinimap();updateHUD();}
+      /* v9.1.8 PERF: миникарта раз в 3 секунды вместо 0.5 сек, HUD — раз в секунду. */
+      if(mmTimer>180){mmTimer=0;drawMinimap();}
+      if(_frameCounter%60===0)updateHUD();
     }
     /* Не допускаем спираль отложенных обновлений после длительной паузы. */
     if(_steps===_fixedMaxSteps&&_fixedAccumulator>=_fixedStepMs)_fixedAccumulator=0;
@@ -22278,9 +22366,11 @@ setTimeout(resize,100);setTimeout(resize,400);setTimeout(resize,1000);
     LEGENDARY_ITEMS.vampire_ring.effect.healPercent = _bl.vampire_ring.healPercent;
   }
 
-  /* cursed_blade: stats.dmg */
+  /* cursed_blade: stats.dmg + effect.tickDamage + effect.tickInterval */
   if(LEGENDARY_ITEMS.cursed_blade){
     LEGENDARY_ITEMS.cursed_blade.stats.dmg = _bl.cursed_blade.dmg;
+    LEGENDARY_ITEMS.cursed_blade.effect.tickDamage = _bl.cursed_blade.tickDamage;
+    LEGENDARY_ITEMS.cursed_blade.effect.tickInterval = _bl.cursed_blade.tickInterval;
   }
 
   /* phoenix_feather: без stats; effect.revive уже true — числа в BALANCE */
