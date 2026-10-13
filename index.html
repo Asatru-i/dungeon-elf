@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v9.0.65 — choosing New Run returns to hub for class selection; preserves multitouch joystick movement. -->
+<!-- Dungeon Elf v9.0.70 — restored floor numbering and hardened joystick pointer recovery. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v9.0.65</title>
+<title>Dungeon Elf v9.0.70</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -461,7 +461,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v8.6.19 · CHARACTER & CREATURE PASS</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v9.0.67 · VISUAL FLOOR NUMBERING</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -481,7 +481,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.0.65';
+var GAME_VERSION='9.0.70';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -1918,6 +1918,20 @@ var GROVE_NOTES = [
   {id:'grove_priestess',floor:0,location:'grove',title:'📜 О жрице',text:'«Я — последняя. Другие ушли в корень. Ушли в землю. Ушли в песню. Я осталась.\n\nПочему? Не знаю. Наверное — потому что кто-то должен помнить. Кто-то должен сказать новому эльфу — вот здесь было Древо. Оно дышало. Оно пело. Оно помнило всех.\n\nЯ скажу тебе. И ты запомнишь. Так Древо не умрёт окончательно.»\n\n— из дневника жрицы, последняя страница'},
   {id:'grove_end',floor:0,location:'grove',title:'📜 О конце',text:'«Когда Древо умрёт — осень не кончится. Никогда.\n\nНо если кто-то придёт и освободит Тириона — Древо вздохнёт. Медленно. Как после долгого сна. И листья — снова начнут гнить. И земля — снова примет их. И весной — снова зелёные листья.\n\nТы — этот кто-то? Тогда — иди. Не бойся. Древо ждёт.»\n\n— записка на коре Древа'}
 ];
+
+/* v9.0.67 — Записки Затерянного города древних эльфов (Лаэр-Тал). */
+var ANCIENT_ELVES_NOTES = [
+          {id:0,title:'📜 Табличка Первого Сада',text:'«До того, как появились короны, мы слушали корни. До того, как возвели стены, мы спрашивали у рек, где им течь».\n\nЭльфы называли свой город Лаэр-Тал — Сад Памяти. Каждый цветок здесь сажали в честь события, а каждый папоротник берегли как свидетельство того, что жизнь умеет возвращаться.'},
+          {id:1,title:'🌿 Реликварий Семени',text:'«Мы не строили город над лесом. Мы просили лес вырасти вместе с нами».\n\nПервые мастера смешивали мраморную пыль с землёй и позволяли корням оплетать колонны. Так появились живые арки: они крепли, пока жители заботились о саде. Когда забота исчезла, камень остался один.'},
+          {id:2,title:'💠 Осколок Лунного Источника',text:'«Вода помнит не лица, а добрые поступки».\n\nВ центре Лаэр-Тала бил источник, в котором хранились воспоминания горожан. В дни праздников каждый приносил к нему один светлый миг. Источник сиял сильнее, когда воспоминаниями делились, а не прятали их.'},
+          {id:3,title:'🗝️ Печать Последнего Совета',text:'«Когда пришла Тихая Зима, мы спорили не о том, как спастись, а о том, что достойно быть сохранённым».\n\nОдни хотели запечатать магию в кристаллах. Другие — отдать её корням, чтобы лес пережил гибель города. Совет не успел закончить голосование. Поэтому в руинах до сих пор горят два цвета: холодный свет кристаллов и мягкое сияние живых побегов.'},
+          {id:4,title:'🌙 Святилище Двух Обетов',text:'«Пусть камень хранит форму, а корни — смысл. Ни один из них не властен над другим» — так звучал древний обет Лаэр-Тала.\n\nВ этом святилище юные эльфы давали обещание беречь и созданное руками, и выросшее само. На стенах вырезали знак из двух линий: кристалл и побег, соединённые у общего истока. Позднее Совет раскололся именно из-за того, что когда-то считалось неразделимым. Говорят, святилище всё ещё светится, когда рядом кто-то выбирает заботу вместо власти.'},
+          {id:5,title:'💠 Хранители Кристалла',text:'«Память нельзя оставлять на волю ветра. Её нужно огранить, чтобы Тихая Зима не смогла стереть имена».\n\nХранители Кристалла верили, что воспоминания и магию можно сохранить в совершенных камнях. Они строили высокие башни, создавали рунические печати и считали порядок величайшей формой заботы. Их слабостью стала уверенность, что всё живое можно удержать, если запереть его достаточно крепко. Голубой знак на этой стороне города отмечал дома мастеров и архивистов.'},
+          {id:6,title:'🌿 Стражи Корней',text:'«Ни одно семя не переживёт вечность в стеклянной клетке. Дай ему землю — и оно найдёт собственный путь».\n\nСтражи Корней считали, что память должна жить в поступках, садах и песнях, а не в запечатанных кристаллах. Они выращивали живые арки, учили детей читать следы воды и оставляли часть города нетронутой, чтобы лес мог говорить своим языком. Но и они ошибались: доверяя переменам, Стражи слишком поздно заметили, как быстро угасал источник. Зелёный знак отмечал места их собраний и садов.'},
+          {id:7,title:'💠 Святилище Кристалла',text:'«Если мы сохраним каждое имя, ни одна жизнь не исчезнет окончательно».\n\nЗдесь Хранители Кристалла проводили обряд Тихой Грани. Они помещали в камень не души, а воспоминания: голоса близких, песни праздников и последние слова ушедших. Со временем некоторые мастера стали считать, что сохранённое важнее настоящего. Святилище осталось холодным, потому что его хранители боялись любой перемены сильнее самой утраты.'},
+          {id:8,title:'🌿 Святилище Корней',text:'«Пусть память меняется, как лес меняется с каждым сезоном».\n\nСтражи Корней приносили сюда семена из каждого дома и сажали их вокруг общего живого узла. Они верили, что память должна не застывать, а давать новые ростки. Когда источник начал угасать, корни пытались разделить его силу со всем городом — и истощились первыми. Здесь до сих пор пробиваются молодые листья: не доказательство победы, а обещание, что жизнь может начаться снова.'},
+          {id:9,title:'🕊️ Записка последнего посредника',text:'«Я оставил один фонарь у источника. Синий свет — для тех, кто боится забыть. Зелёный — для тех, кто боится перестать расти. Если вы оба ещё помните дорогу домой, приходите. Я больше не прошу вас согласиться. Только выслушать друг друга».'+'\n\n'+'Письмо принадлежало Эленвару, младшему хранителю архивов. В ночь перед расколом он ходил между двумя святилищами, убеждая Совет отложить решение до рассвета. Никто не пришёл. На обратной стороне он успел дописать: «Я думал, примирение означает найти слова, которые победят спор. Теперь понимаю: нужно было найти место, где никто не обязан побеждать». Рядом с запиской лежит погасший фонарь. А у его основания растут два крошечных ростка: один хранит холодный голубой свет кристаллов, другой — мягкое зелёное сияние корней. Они не сливаются в один цвет, но растут рядом — словно кто-то всё-таки услышал Эленвара.'}
+        ];;
 
 var LORE_SOURCES=[
   {id:'note',    arr:LORE_NOTES,       prefix:'',         title:'📜 Записка',
@@ -5896,10 +5910,9 @@ function _buildFloorInternal(showLore){
 
   if(showLore){
     if(currentLocation!=='druid') _showFloorLore(floorNum===1);
-    /* v8.4.2 — avoid stacking the diary modal over village notes on floor 1. */
-    if(floorNum !== 1 || currentLocation !== 'village'){
-      _showHeroDiary(currentLocation, floorNum);
-    }
+    /* v9.0.67 — дневник героя показывается и в деревне (было условие, из-за
+       которого запись village1 никогда не открывалась). */
+    _showHeroDiary(currentLocation, floorNum);
   }
   _rollFloorCurse();
   _rollFloorEvent();
@@ -6981,7 +6994,7 @@ function _spawnElderDoor(stRoom,finalFloor){
 /* 8.10 — Открытие щели (модалка выбора) */
 function _openElderDoor(){
   if(_elderFinalActive) return;
-  showModal(
+  showGameModal(
     '<h2>🚪 Щель в стене</h2>'
     + '<div class="lore-text">'
     + 'Старая трещина в камне. За ней — темнота. И — что-то ещё.<br><br>'
@@ -6990,11 +7003,12 @@ function _openElderDoor(){
     + 'Ты можешь открыть. Или — вернуться к мечу.'
     + '</div>'
     + '<button class="btn gold" onclick="openElderDoorConfirm()">🕳️ Открыть (мирный финал)</button>'
-    + '<button class="btn danger" onclick="closeModal()">⚔️ Нет, я буду биться</button>'
+    + '<button class="btn danger" onclick="closeGameModal()">⚔️ Нет, я буду биться</button>'
   );
   SfxPlay('altar');
 }
 function openElderDoorConfirm(){
+  _modalPausedGame = false;
   closeModalAll();
   _elderDoors=[];
   startElderFinal();
@@ -7216,7 +7230,7 @@ function _showVignette(item){
   }
   for(var i=0;i<groundItems.length;i++)if(groundItems[i]===item){groundItems.splice(i,1);break;}
   if(!stats.vignettesSeen)stats.vignettesSeen=[];if(stats.vignettesSeen.indexOf(item._data.id)<0){stats.vignettesSeen.push(item._data.id);saveStats();}
-  SfxPlay('pickup');showModal('<h2>'+item._data.icon+' '+item._data.name+'</h2><div class="lore-text">'+item._data.text+'</div><button class="btn gold" onclick="closeModal()">Оставить здесь</button>');
+  SfxPlay('pickup');showGameModal('<h2>'+item._data.icon+' '+item._data.name+'</h2><div class="lore-text">'+item._data.text+'</div><button class="btn gold" onclick="closeGameModal()">Оставить здесь</button>');
 }
 
 /* Письма Старейшины на этажах 5, 15, 25 (как физические объекты) */
@@ -7283,7 +7297,7 @@ function _openGroveNote(noteObj){
     _loreReadSetCacheLen=-1;_loreCountCacheLen=-1;
     saveStats();checkAchievements();
   }
-  showModal('<h2 class="lore-title">'+_esc(String(note.title||''))+'</h2><div class="lore-text">'+_esc(String(note.text||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+  showGameModal('<h2 class="lore-title">'+_esc(String(note.title||''))+'</h2><div class="lore-text">'+_esc(String(note.text||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
   SfxPlay('scroll');
   if(isNewCodex)showToast('📜 Записка рощи найдена');
   if(isNewRun){for(var d=decor.length-1;d>=0;d--)if(decor[d]===noteObj){decor.splice(d,1);break;}}
@@ -7294,6 +7308,18 @@ function openGroveNoteFromCodex(noteId){
   for(var i=0;i<GROVE_NOTES.length;i++)if(GROVE_NOTES[i].id===noteId){note=GROVE_NOTES[i];break;}
   if(!note)return;
   showModal('<h2 class="lore-title">'+_esc(String(note.title||''))+'</h2><div class="lore-text">'+_esc(String(note.text||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="openCodex()">⬅️ К Кодексу</button><button class="btn" onclick="closeModal()">Закрыть</button>');
+  SfxPlay('scroll');
+}
+
+
+/* v9.0.67 — открыть полную запись древних эльфов из Кодекса. */
+function openAncientNoteFromCodex(noteId){
+  var note=null;
+  for(var i=0;i<ANCIENT_ELVES_NOTES.length;i++){
+    if(ANCIENT_ELVES_NOTES[i].id===noteId){note=ANCIENT_ELVES_NOTES[i];break;}
+  }
+  if(!note)return;
+  showModal('<h2 class="lore-title">'+_esc(String(note.title||''))+'</h2><div class="lore-text">'+_esc(String(note.text||'')).replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="openCodex()">⬅️ К Кодексу</button><button class="btn" onclick="closeModal()">Закрыть</button>');
   SfxPlay('scroll');
 }
 
@@ -7323,7 +7349,7 @@ function _openElderLetter(letterObj){
     if(!player._runLore)player._runLore={};
     player._runLore[_key]=true;
   }
-  showModal('<h2 class="lore-title">📜 Письмо Старейшины</h2><div class="lore-text">'+_esc(String(_letterText||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+  showGameModal('<h2 class="lore-title">📜 Письмо Старейшины</h2><div class="lore-text">'+_esc(String(_letterText||'')).replace(/\n/g,'<br>')+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
   SfxPlay('altar');
   if(_isNew){
     for(var j=decor.length-1;j>=0;j--){if(decor[j]===letterObj){decor.splice(j,1);break;}}
@@ -10073,6 +10099,9 @@ function bagCount(){return bag.length;}
    [SECTION 12] МОДАЛКИ
    ===================================================================== */
 var _closeModalLockUntil=0,_showModalLockUntil=0;
+/* v9.0.67 — флаг: модалка открыта поверх активной игры.
+   При открытии ставим игру на паузу, при закрытии — снимаем. */
+var _modalPausedGame = false;
 function _esc(s){
   if(typeof s!=='string')return '';
   return s.replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
@@ -10087,6 +10116,48 @@ function showModal(html){
   p.innerHTML=html;
   m.classList.add('show');m.style.display='flex';m.style.visibility='visible';m.style.zIndex='60';
   void m.offsetHeight;rebindInlineOnclicks(p);
+}
+/* v9.0.67 — показать модалку из игрового процесса: ставит игру на паузу.
+   Используется для торговца, эхо-камней, алтарей, диалогов NPC и т.д. */
+function showGameModal(html){
+  if(typeof html!=='string')return;
+  /* v9.0.68-FIX: игровая модалка важнее короткого антидребезга showModal.
+     Сначала снимаем lock, иначе пауза могла включиться без показа окна. */
+  _showModalLockUntil = 0;
+  if(!inHub && !gameOver && !gamePaused && !_elderFinalActive){
+    _modalPausedGame = true;
+    gamePaused = true;
+    var _t = document.getElementById('touch');
+    if(_t) _t.style.display = 'none';
+    var _pb = document.getElementById('pickBtn');
+    if(_pb) _pb.classList.remove('show');
+    stopMusic();
+  }
+  showModal(html);
+}
+
+/* v9.0.67 — закрыть игровую модалку и снять паузу, если она была
+   поставлена именно ей. Не мешает паузе, очереди записок и финалу. */
+function closeGameModal(){
+  var _shouldResume = _modalPausedGame;
+  _modalPausedGame = false;
+  var m = document.getElementById('modal');
+  var p = document.getElementById('modalPanel');
+  if(p) p.innerHTML = '';
+  if(m){ m.classList.remove('show'); m.style.display = 'none'; m.style.visibility = 'hidden'; }
+  /* Явное закрытие разрешает сразу открыть следующую реплику/подтверждение. */
+  _showModalLockUntil = 0;
+  _closeModalLockUntil = 0;
+  if(_currentLoreOnClose){
+    try{ _currentLoreOnClose(); }catch(e){ dbg('lore onClose: ' + e.message); }
+    _currentLoreOnClose = null;
+  }
+  if(_shouldResume && !_loreQueueActive && !_elderFinalActive && !gameOver && !inHub){
+    gamePaused = false;
+    var _t = document.getElementById('touch');
+    if(_t) _t.style.display = isTouch ? 'block' : 'none';
+    if(!meta.mute) startMusic(floorNum === 1 ? 'village' : (boss ? 'boss' : 'dungeon'));
+  }
 }
 function rebindInlineOnclicks(root){
   try{
@@ -10125,6 +10196,9 @@ function _clearLoreQueueTimer(){
 
 
 function closeModal(){
+  /* v9.0.68-FIX: старый обработчик закрытия внутри игровой модалки
+     не должен превращать её закрытие в открытие меню паузы. */
+  if(_modalPausedGame){closeGameModal();return;}
   /* v7.0 (из v6.5.5): защита от двойного закрытия */
   var _nowCM=Date.now();if(_nowCM<_closeModalLockUntil)return;_closeModalLockUntil=_nowCM+80;
   var m=document.getElementById('modal');if(!m)return;
@@ -10227,9 +10301,14 @@ function _processLoreQueue(){
     var item=_loreQueue.shift();
     /* FIX v4.9.15 — сохраняем callback для вызова при закрытии */
     _currentLoreOnClose = item.onClose || null;
+    /* v9.0.66-FIX: разрешаем только специальную метку дня дневника.
+       Остальной текст по-прежнему экранируется, чтобы не исполнять HTML. */
+    var _loreBody=_esc(String(item.text==null?'':item.text)).replace(/\n/g,'<br>');
+    _loreBody=_loreBody.replace(/^&lt;div class=&quot;lore-meta&quot;&gt;(.*?)&lt;\/div&gt;/,
+      '<div class="lore-meta">$1</div>');
     showModal(
       '<h2 class="lore-title">'+_esc(String(item.title==null?'':item.title))+'</h2>'+
-      '<div class="lore-text">'+_esc(String(item.text==null?'':item.text)).replace(/\n/g,'<br>')+'</div>'+
+      '<div class="lore-text">'+_loreBody+'</div>'+
       '<button class="btn" onclick="closeModal()">Закрыть</button>'
     );
   } finally {
@@ -10237,6 +10316,7 @@ function _processLoreQueue(){
   }
 }
 function closeModalAll(){
+  _modalPausedGame = false;
   if(typeof _clearLoreQueueTimer==='function')_clearLoreQueueTimer();
   var m=document.getElementById('modal');var p=document.getElementById('modalPanel');
   if(p)p.innerHTML='';
@@ -10249,7 +10329,21 @@ function closeModalAll(){
   if(_currentLoreOnClose)_currentLoreOnClose=null;
 }
 var modalEl=document.getElementById('modal');
-if(modalEl)modalEl.addEventListener('click',function(e){if(e.target.id==='modal')closeModal();});
+/* v9.0.69 — закрываем модалку по фону только если жест НАЧАЛСЯ на самом фоне.
+   Если окно открылось прямо во время pointerdown по игровому canvas/кнопке,
+   последующий click может попасть в новый overlay и тут же закрыть окно. */
+var _modalBackdropPointerDown=false;
+if(modalEl){
+  modalEl.addEventListener('pointerdown',function(e){
+    _modalBackdropPointerDown=(e.target===modalEl);
+  },true);
+  modalEl.addEventListener('pointercancel',function(){_modalBackdropPointerDown=false;},true);
+  modalEl.addEventListener('click',function(e){
+    var _startedOnBackdrop=_modalBackdropPointerDown;
+    _modalBackdropPointerDown=false;
+    if(e.target===modalEl && _startedOnBackdrop)closeModal();
+  });
+} 
 
 /* =====================================================================
    [SECTION 13] ХАБ, КНОПКИ
@@ -10424,7 +10518,7 @@ function showHub(){
   _loreQueueActive=false;_loreProcessing=false;_lorePausedGame=false;
   if(Array.isArray(_loreQueue))_loreQueue.length=0;
   _currentLoreOnClose=null;
-  inHub=true;gameEndingShown=false;closeModalAll();
+  inHub=true;_modalPausedGame=false;gameEndingShown=false;closeModalAll();
   /* v9.0.56 — cancel delayed death effects when leaving the run for the hub. */
   if(_deathSfxTimer){clearTimeout(_deathSfxTimer);_deathSfxTimer=null;}
   /* Не переносим табло смерти из прошлого забега поверх следующего. */
@@ -11560,6 +11654,7 @@ function openCodex(){
     +'<div class="tab" onclick="showCodexTab(\'book\',this)">📖 Промокшая книга</div>'
     +'<div class="tab" onclick="showCodexTab(\'druid\',this)">🌿 Записки друидов</div>'
     +'<div class="tab" onclick="showCodexTab(\'bandits\',this)">⚔️ Разбойники</div>'
+    +'<div class="tab" onclick="showCodexTab(\'ancient\',this)">✨ Древние эльфы</div>'
     +'<div class="tab" onclick="showCodexTab(\'grove\',this)">🌳 Записки рощи</div>'
     +'<div class="tab" onclick="showCodexTab(\'paths\',this)">⚔️ Пути</div>'
     +'</div>';
@@ -11654,7 +11749,7 @@ function openCodex(){
 
   /* v6.5.2 — ФИКС: AELIS_DIARY.length-1, потому что floor 26 не считается в opened
    (он открывается только при полном сборе, но не увеличивает счётчик). */
-  total+=(AELIS_DIARY.length-1)+HERO_DIARY.length+ELDER_LETTERS.length+TRAITOR_NOTES.length+AELIS_FRAGMENTS.length+HUNTER_NOTES.length+TRADER_NOTES.length+GUARD_NOTES.length+FORTRESS_NOTES.length;
+  total+=(AELIS_DIARY.length-1)+HERO_DIARY.length+ELDER_LETTERS.length+TRAITOR_NOTES.length+AELIS_FRAGMENTS.length+HUNTER_NOTES.length+TRADER_NOTES.length+GUARD_NOTES.length+FORTRESS_NOTES.length+ANCIENT_ELVES_NOTES.length;
   // Записки эльфов-предателей (СНАЧАЛА считаем, потом выводим счётчик)
   html+='<div id="codex_traitor" style="display:none">';
   for(var _ti=0;_ti<TRAITOR_NOTES.length;_ti++){
@@ -11835,6 +11930,26 @@ function openCodex(){
     +'<i style="font-style:italic;color:'+(_captainMapRead?'#d6c28b':'#5a4020')+'">'+(_captainMapRead?'На выцветшем пергаменте отмечен проход под старым трактом. Рядом вырезан знак корня, ведущий к эльфийским руинам. На полях чужой рукой добавлено: «Не открывать печать. Он должен остаться под корнями». Ниже — едва различимая тропа на северо-восток.':'Капитан что-то скрывает. Победи его, чтобы узнать, что отмечено на карте.')+'</i></div></div>';
   html+='</div>';
 
+  /* v9.0.67 — Записки древних эльфов Лаэр-Тала. */
+  html+='<div id="codex_ancient" style="display:none">';
+  html+='<p style="font-size:11px;color:#a08060;font-style:italic">Записи из Затерянного города Лаэр-Тал: два пути древних эльфов и попытка примирения.</p>';
+  if(!Array.isArray(stats.loreRead)) stats.loreRead=[];
+  for(var _ani=0;_ani<ANCIENT_ELVES_NOTES.length;_ani++){
+    var _an=ANCIENT_ELVES_NOTES[_ani];
+    var _anKey='ancient'+_an.id;
+    var _anRead=stats.loreRead.indexOf(_anKey)>=0;
+    if(_anRead) opened++;
+    html+='<div class="itemRow '+(_anRead?'done':'')+'" style="align-items:flex-start">'
+      +'<div class="itemIcon">'+(_anRead?'📜':'🔒')+'</div>'
+      +'<div class="itemInfo"><b>'+(_anRead?_an.title:'???')+'</b><br>'
+      +'<i style="font-style:italic;color:'+(_anRead?'#c0e0c0':'#5a4020')+'">'
+      +(_anRead?_an.text.substring(0,180).replace(/\n/g,' ')+'…':'Запись ещё не найдена')
+      +'</i>'
+      +(_anRead?'<button class="btn gold small" style="margin-top:6px" onclick="openAncientNoteFromCodex('+_an.id+')">Читать полностью</button>':'')
+      +'</div></div>';
+  }
+  html+='</div>';
+
   /* v8.5.4 — Записки Священной Рощи */
   html+='<div id="codex_grove" style="display:none">';
   html+='<p style="font-size:11px;color:#a08060;font-style:italic">Записки из Священной Рощи: Древо, Тирион, дети и последняя жрица.</p>';
@@ -11892,7 +12007,7 @@ function openCodex(){
 
 function showCodexTab(tab,el){
   /* v4.9.43 — ФИКС: убрана зависимость от window.event (Safari/Firefox) */
-  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_bandits','codex_grove','codex_paths'];
+  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_bandits','codex_ancient','codex_grove','codex_paths'];
   for(var i=0;i<ids.length;i++){
     var s=document.getElementById(ids[i]);
     if(s)s.style.display='none';
@@ -19054,12 +19169,14 @@ function updateRunModeBadge(){
     }
     return;
   }
-  if(runMode==='daily')el.textContent='📅 Daily · Этаж '+floorNum;
-  else if(runMode==='cursed')el.textContent='☠️ Проклятый · Этаж '+floorNum;
-  else if(runMode==='endless')el.textContent='♾️ Бесконечный · Этаж '+floorNum;
-  else if(runMode==='hardcore')el.textContent='☠️ Хардкор · Этаж '+floorNum;
-  else if(runMode==='speed')el.textContent='⚡ Скорость · Этаж '+floorNum;
-  else el.textContent='Этаж '+floorNum;
+  /* v9.0.70 — возвращена исходная нумерация: деревня = этаж 1, далее этаж 2 и т.д. */
+  var _visFloor = floorNum;
+  if(runMode==='daily')el.textContent='📅 Daily · Этаж '+_visFloor;
+  else if(runMode==='cursed')el.textContent='☠️ Проклятый · Этаж '+_visFloor;
+  else if(runMode==='endless')el.textContent='♾️ Бесконечный · Этаж '+_visFloor;
+  else if(runMode==='hardcore')el.textContent='☠️ Хардкор · Этаж '+_visFloor;
+  else if(runMode==='speed')el.textContent='⚡ Скорость · Этаж '+_visFloor;
+  else el.textContent='Этаж '+_visFloor;
 
   /* v7.2.0 — на 25 этаже показываем, что письмо прочитано. */
   if(floorNum === 25 && player && player._runLore && player._runLore['elder25']){
@@ -19186,6 +19303,7 @@ function endRun(reason){
   if(_runEnded)return;
   /* v9.0.60 — invalidate callbacks and clear delayed work before any transition. */
   _runGeneration++;
+  _modalPausedGame = false;
   _cancelRunScopedAsyncWork();
   _loreQueueActive=false;_loreProcessing=false;_lorePausedGame=false;
   if(Array.isArray(_loreQueue))_loreQueue.length=0;
@@ -19250,6 +19368,8 @@ function endRun(reason){
 }
 function die(){
   if(gameOver||!player)return;
+  _modalPausedGame = false;
+  _loreQueueActive = false;
   /* v6.5.10 — ФИКС: защита от повторного вызова в одном кадре.
      Раньше лава + шипы могли вызвать die() дважды — перо/сфера
      сгорали впустую. */
@@ -19597,8 +19717,17 @@ function _releasePointerInput(){
 }
 function _releaseTransientInput(){keys={};_releasePointerInput();}
 window.addEventListener('blur',_releaseTransientInput);
+/* v9.0.70 — мобильный браузер может потерять фокус/захват указателя без обычного pointerup. */
+document.addEventListener('visibilitychange',function(){if(document.hidden)_releaseTransientInput();});
+window.addEventListener('pagehide',_releaseTransientInput);
+document.addEventListener('pointerup',function(e){
+  if(joyPointerId!==null && e.pointerId===joyPointerId)_releasePointerInput();
+},true);
+document.addEventListener('pointercancel',function(e){
+  if(joyPointerId!==null && e.pointerId===joyPointerId)_releasePointerInput();
+},true);
 /* v9.0.64 — do not let a second finger's pointerup/cancel interrupt joystick movement.
-   Joystick uses pointer capture and releases only its own pointer; blur still clears all input. */
+   Fallback handlers above only release the joystick's own active pointer. */
 var _lastTapTime=0;
 canvas.addEventListener('pointerdown',function(e){
   if(inHub){e.preventDefault();return;}
@@ -19649,6 +19778,10 @@ if(joy){
   }
   joy.addEventListener('pointerup',_endJoyPointer);
   joy.addEventListener('pointercancel',_endJoyPointer);
+  /* v9.0.70 — страховка от потерянного pointer capture на мобильных браузерах. */
+  joy.addEventListener('lostpointercapture',function(e){
+    if(joyPointerId!==null && e.pointerId===joyPointerId)_endJoyPointer(e);
+  });
 }
 function moveJoyXY(clientX,clientY){
   var dx=clientX-joyCX,dy=clientY-joyCY;var len=Math.sqrt(dx*dx+dy*dy)||1;var max=45;
@@ -19739,7 +19872,7 @@ function handleCanvasTap(clientX,clientY){
     var _trd=decor[_tri];if(!_trd.isTowerRuin)continue;
     var _trx=_trd.x*TILE+TILE/2,_try_=_trd.y*TILE+TILE/2;
     if(Math.abs(wx-_trx)<TILE*2.2&&Math.abs(wy-_try_)<TILE*2.2){
-      if(dist2(_trx,_try_,player.x,player.y)<140*140){showModal('<h2 class="lore-title">'+TOWER_RUIN_LORE.title+'</h2><div class="lore-text">'+TOWER_RUIN_LORE.text.replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');SfxPlay('altar');}
+      if(dist2(_trx,_try_,player.x,player.y)<140*140){showGameModal('<h2 class="lore-title">'+TOWER_RUIN_LORE.title+'</h2><div class="lore-text">'+TOWER_RUIN_LORE.text.replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');SfxPlay('altar');}
       else showToast('Подойди ближе');return;
     }
   }
@@ -19828,20 +19961,18 @@ function handleCanvasTap(clientX,clientY){
       var _alx=dd.x*TILE+TILE/2,_aly=dd.y*TILE+TILE/2;
       if(dist2(wx,wy,_alx,_aly)<62*62){
         if(dist2(_alx,_aly,player.x,player.y)>=100*100){showToast('Подойди ближе к реликвии');return;}
-        var _ancientLore=[
-          {title:'📜 Табличка Первого Сада',text:'«До того, как появились короны, мы слушали корни. До того, как возвели стены, мы спрашивали у рек, где им течь».\n\nЭльфы называли свой город Лаэр-Тал — Сад Памяти. Каждый цветок здесь сажали в честь события, а каждый папоротник берегли как свидетельство того, что жизнь умеет возвращаться.'},
-          {title:'🌿 Реликварий Семени',text:'«Мы не строили город над лесом. Мы просили лес вырасти вместе с нами».\n\nПервые мастера смешивали мраморную пыль с землёй и позволяли корням оплетать колонны. Так появились живые арки: они крепли, пока жители заботились о саде. Когда забота исчезла, камень остался один.'},
-          {title:'💠 Осколок Лунного Источника',text:'«Вода помнит не лица, а добрые поступки».\n\nВ центре Лаэр-Тала бил источник, в котором хранились воспоминания горожан. В дни праздников каждый приносил к нему один светлый миг. Источник сиял сильнее, когда воспоминаниями делились, а не прятали их.'},
-          {title:'🗝️ Печать Последнего Совета',text:'«Когда пришла Тихая Зима, мы спорили не о том, как спастись, а о том, что достойно быть сохранённым».\n\nОдни хотели запечатать магию в кристаллах. Другие — отдать её корням, чтобы лес пережил гибель города. Совет не успел закончить голосование. Поэтому в руинах до сих пор горят два цвета: холодный свет кристаллов и мягкое сияние живых побегов.'},
-          {title:'🌙 Святилище Двух Обетов',text:'«Пусть камень хранит форму, а корни — смысл. Ни один из них не властен над другим» — так звучал древний обет Лаэр-Тала.\n\nВ этом святилище юные эльфы давали обещание беречь и созданное руками, и выросшее само. На стенах вырезали знак из двух линий: кристалл и побег, соединённые у общего истока. Позднее Совет раскололся именно из-за того, что когда-то считалось неразделимым. Говорят, святилище всё ещё светится, когда рядом кто-то выбирает заботу вместо власти.'},
-          {title:'💠 Хранители Кристалла',text:'«Память нельзя оставлять на волю ветра. Её нужно огранить, чтобы Тихая Зима не смогла стереть имена».\n\nХранители Кристалла верили, что воспоминания и магию можно сохранить в совершенных камнях. Они строили высокие башни, создавали рунические печати и считали порядок величайшей формой заботы. Их слабостью стала уверенность, что всё живое можно удержать, если запереть его достаточно крепко. Голубой знак на этой стороне города отмечал дома мастеров и архивистов.'},
-          {title:'🌿 Стражи Корней',text:'«Ни одно семя не переживёт вечность в стеклянной клетке. Дай ему землю — и оно найдёт собственный путь».\n\nСтражи Корней считали, что память должна жить в поступках, садах и песнях, а не в запечатанных кристаллах. Они выращивали живые арки, учили детей читать следы воды и оставляли часть города нетронутой, чтобы лес мог говорить своим языком. Но и они ошибались: доверяя переменам, Стражи слишком поздно заметили, как быстро угасал источник. Зелёный знак отмечал места их собраний и садов.'},
-          {title:'💠 Святилище Кристалла',text:'«Если мы сохраним каждое имя, ни одна жизнь не исчезнет окончательно».\n\nЗдесь Хранители Кристалла проводили обряд Тихой Грани. Они помещали в камень не души, а воспоминания: голоса близких, песни праздников и последние слова ушедших. Со временем некоторые мастера стали считать, что сохранённое важнее настоящего. Святилище осталось холодным, потому что его хранители боялись любой перемены сильнее самой утраты.'},
-          {title:'🌿 Святилище Корней',text:'«Пусть память меняется, как лес меняется с каждым сезоном».\n\nСтражи Корней приносили сюда семена из каждого дома и сажали их вокруг общего живого узла. Они верили, что память должна не застывать, а давать новые ростки. Когда источник начал угасать, корни пытались разделить его силу со всем городом — и истощились первыми. Здесь до сих пор пробиваются молодые листья: не доказательство победы, а обещание, что жизнь может начаться снова.'},
-          {title:'🕊️ Записка последнего посредника',text:'«Я оставил один фонарь у источника. Синий свет — для тех, кто боится забыть. Зелёный — для тех, кто боится перестать расти. Если вы оба ещё помните дорогу домой, приходите. Я больше не прошу вас согласиться. Только выслушать друг друга».'+'\n\n'+'Письмо принадлежало Эленвару, младшему хранителю архивов. В ночь перед расколом он ходил между двумя святилищами, убеждая Совет отложить решение до рассвета. Никто не пришёл. На обратной стороне он успел дописать: «Я думал, примирение означает найти слова, которые победят спор. Теперь понимаю: нужно было найти место, где никто не обязан побеждать». Рядом с запиской лежит погасший фонарь. А у его основания растут два крошечных ростка: один хранит холодный голубой свет кристаллов, другой — мягкое зелёное сияние корней. Они не сливаются в один цвет, но растут рядом — словно кто-то всё-таки услышал Эленвара.'}
-        ];
-        var _al=_ancientLore[Math.max(0,Math.min(_ancientLore.length-1,dd.loreIndex||0))];
-        showModal('<h2 class="lore-title">'+_al.title+'</h2><div class="lore-text">'+_al.text.replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="closeModal()">Сохранить в памяти</button>');SfxPlay('altar');return;
+        var _al=ANCIENT_ELVES_NOTES[Math.max(0,Math.min(ANCIENT_ELVES_NOTES.length-1,dd.loreIndex||0))];
+        if(!_al){showToast('Запись не читается');return;}
+        if(!Array.isArray(stats.loreRead)) stats.loreRead=[];
+        var _anKey='ancient'+_al.id;
+        if(stats.loreRead.indexOf(_anKey)<0){
+          stats.loreRead.push(_anKey);
+          if(typeof _invalidateLoreCaches==='function')_invalidateLoreCaches();
+          saveStats();
+          checkAchievements();
+          showToast('📜 Записка древних эльфов найдена');
+        }
+        showGameModal('<h2 class="lore-title">'+_al.title+'</h2><div class="lore-text">'+_al.text.replace(/\n/g,'<br><br>')+'</div><button class="btn gold" onclick="closeGameModal()">Сохранить в памяти</button>');SfxPlay('altar');return;
       }
     }
     var _isLoreType=(dd.isGrave||dd.type==='skeletonSit'||dd.type==='ritualCircle'||dd.type==='shrineAltar');
@@ -19861,7 +19992,7 @@ function handleCanvasTap(clientX,clientY){
       var _esx=dd2.x*TILE+TILE/2,_esy=dd2.y*TILE+TILE/2;
       if(dist2(wx,wy,_esx,_esy)<55*55){
         if(dist2(_esx,_esy,player.x,player.y)>=90*90){showToast('Подойди ближе');return;}
-        showModal('<h2>🪨 Эхо-камень</h2><div class="lore-text">'+dd2.text+'</div><button class="btn gold" onclick="closeModal()">Слушать корни</button>');
+        showGameModal('<h2>🪨 Эхо-камень</h2><div class="lore-text">'+dd2.text+'</div><button class="btn gold" onclick="closeGameModal()">Слушать корни</button>');
         SfxPlay('altar');return;
       }
     }
@@ -19903,7 +20034,7 @@ function handleCanvasTap(clientX,clientY){
       if(dist2(wx,wy,lx,ly)<50*50){
         if(dist2(lx,ly,player.x,player.y)<80*80){
           var _loreTitle=(currentLocation==='castle')?'📖 Открытая книга':'📜 Эхо-камень';
-          showModal('<h2 class="lore-title">'+_loreTitle+'</h2><div class="lore-text">'+(dd2.text||'...')+'</div><button class="btn" onclick="closeModal()">Закрыть</button>');
+          showGameModal('<h2 class="lore-title">'+_loreTitle+'</h2><div class="lore-text">'+(dd2.text||'...')+'</div><button class="btn" onclick="closeGameModal()">Закрыть</button>');
           SfxPlay('altar');
         }else showToast('Подойди ближе');
         return;
@@ -19995,7 +20126,7 @@ function _openBanditNote(obj){
   if(!Array.isArray(stats.loreRead))stats.loreRead=[];
   var key='bandit'+note.id,isNew=stats.loreRead.indexOf(key)<0;
   if(isNew){stats.loreRead.push(key);if(typeof _invalidateLoreCaches==='function')_invalidateLoreCaches();saveStats();checkAchievements();showToast('📜 Найдена записка разбойников');}
-  showModal('<h2 class="lore-title">📜 '+note.title+'</h2><div class="lore-text">'+note.text+'</div><button class="btn gold" onclick="closeModal()">Сложить записку</button>');
+  showGameModal('<h2 class="lore-title">📜 '+note.title+'</h2><div class="lore-text">'+note.text+'</div><button class="btn gold" onclick="closeGameModal()">Сложить записку</button>');
   SfxPlay('scroll');
 }
 
@@ -20004,25 +20135,25 @@ function _showLoreObject(dd){
   if(dd.isGrave){
     if(!dd._loreText)dd._loreText={name:dd.graveName,text:dd.graveText};/* v7.0.1-FIX: имя в модалке = имя над могилой */
     var _g=dd._loreText;if(!_g)return;
-    showModal('<h2>🪦 Могила</h2><p style="font-size:14px;color:#e8d0a0;font-weight:bold;margin-bottom:6px">'+_g.name+'</p><div class="lore-text" style="font-size:13px">'+_g.text+'</div><button class="btn" onclick="closeModal()">Почтить память</button>');
+    showGameModal('<h2>🪦 Могила</h2><p style="font-size:14px;color:#e8d0a0;font-weight:bold;margin-bottom:6px">'+_g.name+'</p><div class="lore-text" style="font-size:13px">'+_g.text+'</div><button class="btn" onclick="closeGameModal()">Почтить память</button>');
     SfxPlay('altar');return;
   }
   if(dd.type==='skeletonSit'){
     if(!dd._loreText)dd._loreText=pick(TRAVELER_LORE);
     var _l=dd._loreText;if(!_l)return;
-    showModal('<h2>'+_l.name+'</h2><div class="lore-text">'+_l.text+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+    showGameModal('<h2>'+_l.name+'</h2><div class="lore-text">'+_l.text+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
     SfxPlay('altar');return;
   }
   if(dd.type==='ritualCircle'){
     if(!dd._loreText)dd._loreText=pick(RITUAL_LORE);
     var _r=dd._loreText;if(!_r)return;
-    showModal('<h2>'+_r.title+'</h2><div class="lore-text">'+_r.text+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+    showGameModal('<h2>'+_r.title+'</h2><div class="lore-text">'+_r.text+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
     SfxPlay('altar');return;
   }
   if(dd.type==='shrineAltar'){
     if(!dd._loreText)dd._loreText=pick(SHRINE_LORE);
     var _s=dd._loreText;if(!_s)return;
-    showModal('<h2>'+_s.title+'</h2><div class="lore-text">'+_s.text+'</div><button class="btn gold" onclick="closeModal()">Закрыть</button>');
+    showGameModal('<h2>'+_s.title+'</h2><div class="lore-text">'+_s.text+'</div><button class="btn gold" onclick="closeGameModal()">Закрыть</button>');
     SfxPlay('altar');return;
   }
 }
@@ -20038,13 +20169,13 @@ function openFortressNotes(){
     html+='<p class="lore" style="font-size:11px;margin:6px 0">'+_f.text+'</p>';
   }
   html+='<button class="btn gold" onclick="closeFortressNotes()">Почтить память</button>';
-  showModal(html);
+  showGameModal(html);
   SfxPlay('altar');
 }
 
 function closeFortressNotes(){
   saveStats();
-  closeModal();
+  closeGameModal();
 }
 /* v5.9.0 — Диалог стража у ворот в лес.
    Первые 3 подхода — разные реплики. Потом — короткая. */
@@ -20055,7 +20186,7 @@ function talkToGateKeeper(){
 
   /* Первые 3 раза — разные реплики. Потом — короткая. */
   if(_talk === 0){
-    showModal(
+    showGameModal(
       '<h2>🧝 Страж Ворот</h2>' +
       '<p style="font-style:italic;color:#d0b890;line-height:1.6">' +
       '«Лес помнит его. Каждая тропа, каждое дерево. ' +
@@ -20064,7 +20195,7 @@ function talkToGateKeeper(){
       '<button class="btn gold" onclick="gateKeeperNext()">Понял</button>'
     );
   } else if(_talk === 1){
-    showModal(
+    showGameModal(
       '<h2>🧝 Страж Ворот</h2>' +
       '<p style="font-style:italic;color:#d0b890;line-height:1.6">' +
       '«Пещера — вниз. Ворота — в лес. Ты сам выберешь, куда идти. ' +
@@ -20073,7 +20204,7 @@ function talkToGateKeeper(){
       '<button class="btn gold" onclick="gateKeeperNext()">Понял</button>'
     );
   } else if(_talk === 2){
-    showModal(
+    showGameModal(
       '<h2>🧝 Страж Ворот</h2>' +
       '<p style="font-style:italic;color:#d0b890;line-height:1.6">' +
       '«Мой брат ушёл этой тропой. Сказал — вернусь. Я жду его сорок лет. ' +
@@ -20083,13 +20214,13 @@ function talkToGateKeeper(){
     );
   } else {
     /* v5.9.0 — После 3 реплик — ВСЕГДА предложение войти */
-    showModal(
+    showGameModal(
       '<h2>🧝 Страж Ворот</h2>' +
       '<p style="font-style:italic;color:#d0b890;line-height:1.6">' +
       '«Иди. Лес ждёт.»' +
       '</p>' +
       '<button class="btn gold" onclick="enterForestFromDialog()">Войти в лес</button>' +
-      '<button class="btn" onclick="closeModal()">Не сейчас</button>'
+      '<button class="btn" onclick="closeGameModal()">Не сейчас</button>'
     );
   }
 }
@@ -20098,18 +20229,18 @@ function gateKeeperNext(){
   stats.gateKeeperTalks = (stats.gateKeeperTalks || 0) + 1;
   saveStats();
   SfxPlay('pickup');
-  closeModal();
+  closeGameModal();
   /* v5.9.0 — После 3-й реплики — показываем «В лес» сразу.
      После 3+ — страж всегда предлагает войти через talkToGateKeeper. */
   if(stats.gateKeeperTalks === 3){
-    showModal(
+    showGameModal(
       '<h2>🍂 В лес</h2>' +
       '<p style="font-style:italic;color:#d0b890;line-height:1.6">' +
       'Ты выходишь за ворота. Тропа ведёт вглубь деревьев. ' +
       'Осень здесь гуще — листья падают и не гниют.' +
       '</p>' +
       '<button class="btn gold" onclick="enterForestFromDialog()">Идти</button>' +
-      '<button class="btn" onclick="closeModal()">Пока нет</button>'
+      '<button class="btn" onclick="closeGameModal()">Пока нет</button>'
     );
   } else {
     showToast('🧝 Страж ждёт');
@@ -20125,7 +20256,7 @@ function talkToServant(){
   var _talk = stats.servantTalks;
 
   if(_talk === 0){
-    showModal(
+    showGameModal(
       '<h2>👻 Призрак слуги</h2>' +
       '<p style="font-style:italic;color:#a0c0e0;line-height:1.6">' +
       '«Гость... Давно не было гостей. Я — Элиан. Я служил здесь, когда Тирион был ещё мальчиком. ' +
@@ -20135,7 +20266,7 @@ function talkToServant(){
       '<button class="btn gold" onclick="servantNext()">Расскажи мне о нём</button>'
     );
   } else if(_talk === 1){
-    showModal(
+    showGameModal(
       '<h2>👻 Призрак слуги</h2>' +
       '<p style="font-style:italic;color:#a0c0e0;line-height:1.6">' +
       '«Он был Архимагом. Восьмым. Он не хотел — я помню, как он сказал мне: „Элиан, я боюсь“. ' +
@@ -20145,7 +20276,7 @@ function talkToServant(){
       '<button class="btn gold" onclick="servantNext()">А что случилось потом?</button>'
     );
   } else if(_talk === 2){
-    showModal(
+    showGameModal(
       '<h2>👻 Призрак слуги</h2>' +
       '<p style="font-style:italic;color:#a0c0e0;line-height:1.6">' +
       '«Он ушёл к корню. Я не знал зачем. Он сказал мне: „Я вернусь до весны“. ' +
@@ -20155,14 +20286,14 @@ function talkToServant(){
       '<button class="btn gold" onclick="servantNext()">Что ты знаешь о корне?</button>'
     );
   } else {
-    showModal(
+    showGameModal(
       '<h2>👻 Призрак слуги</h2>' +
       '<p style="font-style:italic;color:#a0c0e0;line-height:1.6">' +
       '«Корень — под деревней. Под самой деревней. Он старше нас всех. ' +
       'Тирион не хотел зла. Он хотел остановить смерть. Он не понял, что смерть — часть леса. ' +
       'Освободи его, гость. Я не могу — я всего лишь слуга».' +
       '</p>' +
-      '<button class="btn" onclick="closeModal()">Уйти</button>'
+      '<button class="btn" onclick="closeGameModal()">Уйти</button>'
     );
   }
 }
@@ -20171,7 +20302,7 @@ function servantNext(){
   stats.servantTalks = (stats.servantTalks || 0) + 1;
   saveStats();
   SfxPlay('pickup');
-  closeModal();
+  closeGameModal();
   showToast('👻 Призрак слуги ждёт тебя снова');
 }
 
@@ -20195,7 +20326,7 @@ function talkToPriestess(){
   var _readElder25=!!(player&&player._runLore&&player._runLore['elder25']);
   if(_readElder25&&player&&!player._priestessElderShown){
     player._priestessElderShown=true;
-    showModal(
+    showGameModal(
       '<h2>🌿 Жрица Древа</h2>'+
       '<p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+
       '«Ты читал его письмо. То, что он написал тебе... вернее, тому, кто пойдёт. Он просил: не убей его. Освободи.'+
@@ -20203,14 +20334,14 @@ function talkToPriestess(){
       'Он прав. Тирион — не чудовище. Он — тот, кто слишком долго держал. Древо — тоже держит. Только не его, а себя. И я не знаю, чей груз тяжелее».'+
       '<br><br>'+
       '«Когда ты найдёшь его внизу — вспомни эти слова. Не убей. Освободи.»'+
-      '</p><button class="btn gold" onclick="closeModal()">Я помню</button>'
+      '</p><button class="btn gold" onclick="closeGameModal()">Я помню</button>'
     );
     SfxPlay('altar');
     return;
   }
   var lines=['«Древо ещё дышит. Прислушайся к его корням».','«Мы храним здесь память о мире до Осени».','«Не всякая тишина означает смерть».'];
   var line=lines[Math.floor(gameRNG()*lines.length)];
-  showModal('<h2>🌿 Жрица Древа</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');
+  showGameModal('<h2>🌿 Жрица Древа</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeGameModal()">Уйти</button>');
   SfxPlay('altar');
 }
 var _ELDER_PRIEST_LINES=[
@@ -20220,7 +20351,7 @@ var _ELDER_PRIEST_LINES=[
 '«Не бойся того, кто внизу. Он был добрым. Он до сих пор добрый. Просто осень длиннее, чем он».',
 '«Спасибо, что пришёл. Мы ждали. Я ждал. Уже не помню, сколько лет».'
 ];
-function talkToElderPriest(){var line=_ELDER_PRIEST_LINES[Math.floor(gameRNG()*_ELDER_PRIEST_LINES.length)];showModal('<h2>🧙 Старый жрец</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
+function talkToElderPriest(){var line=_ELDER_PRIEST_LINES[Math.floor(gameRNG()*_ELDER_PRIEST_LINES.length)];showGameModal('<h2>🧙 Старый жрец</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeGameModal()">Уйти</button>');SfxPlay('altar');}
 var _YOUNG_PRIEST_LINES=[
 '«Я не застала Древо живым. Мне рассказывали. Я слушала и плакала. Как можно плакать по тому, чего не видел?»',
 '«Когда-нибудь оно снова запоёт. Я верю. Я буду здесь. Я услышу».',
@@ -20228,8 +20359,8 @@ var _YOUNG_PRIEST_LINES=[
 '«Ты — тот, кто идёт вниз? Тогда не забывай нас. Мы здесь. Мы ждём».',
 '«Я вырастила эти цветы сама, из семян, которые нашла в корнях. Они не умирают. Как и мы».'
 ];
-function talkToYoungPriest(){var line=_YOUNG_PRIEST_LINES[Math.floor(gameRNG()*_YOUNG_PRIEST_LINES.length)];showModal('<h2>🌿 Молодая жрица</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
-function talkToGhostChild(){var lines=['«Мы ждём, когда Древо вспомнит весну».','«Ты тоже слышишь, как корни шепчут?»','«Не уходи надолго. Здесь темно, когда никто не приходит».','«Под листьями всё ещё тепло».'];var line=lines[Math.floor(gameRNG()*lines.length)];showModal('<h2>👻 Дитя рощи</h2><p style="font-style:italic;color:#c9e7ee;line-height:1.6">'+line+'</p><button class="btn" onclick="closeModal()">Уйти</button>');SfxPlay('altar');}
+function talkToYoungPriest(){var line=_YOUNG_PRIEST_LINES[Math.floor(gameRNG()*_YOUNG_PRIEST_LINES.length)];showGameModal('<h2>🌿 Молодая жрица</h2><p style="font-style:italic;color:#c0e0b0;line-height:1.6">'+line+'</p><button class="btn" onclick="closeGameModal()">Уйти</button>');SfxPlay('altar');}
+function talkToGhostChild(){var lines=['«Мы ждём, когда Древо вспомнит весну».','«Ты тоже слышишь, как корни шепчут?»','«Не уходи надолго. Здесь темно, когда никто не приходит».','«Под листьями всё ещё тепло».'];var line=lines[Math.floor(gameRNG()*lines.length)];showGameModal('<h2>👻 Дитя рощи</h2><p style="font-style:italic;color:#c9e7ee;line-height:1.6">'+line+'</p><button class="btn" onclick="closeGameModal()">Уйти</button>');SfxPlay('altar');}
 
 function _openSacredTree(){
   /* v8.5.10-FIX: защита от вызова без player. */
@@ -20271,9 +20402,9 @@ function _openSacredTree(){
   html += '<button class="btn" onclick="sacredTreeListen()">👂 Послушать Древо</button>';
 
   /* Закрыть */
-  html += '<button class="btn" onclick="closeModal()">Уйти</button>';
+  html += '<button class="btn" onclick="closeGameModal()">Уйти</button>';
 
-  showModal(html);
+  showGameModal(html);
   SfxPlay('altar');
 }
 
@@ -20327,9 +20458,9 @@ var _lastMemoryShrine=null;
 function openMemoryShrine(shrine){
  var _items=[];for(var i=0;i<bag.length;i++){var it=bag[i];if(it.kind==='potion')_items.push({idx:i,kind:'potion',icon:'🧪',name:'Зелье',reward:'potion'});else if(it.kind==='scroll')_items.push({idx:i,kind:'scroll',icon:'📜',name:SCROLLS[it.id]?SCROLLS[it.id].name:'Свиток',reward:'scroll'});else if(it.kind==='weapon')_items.push({idx:i,kind:'weapon',icon:'⚔️',name:WEAPONS[it.id]?WEAPONS[it.id].name:'Оружие',reward:'weapon'});else if(it.kind==='armor')_items.push({idx:i,kind:'armor',icon:'🛡️',name:ARMORS[it.id]?ARMORS[it.id].name:'Броня',reward:'armor'});else if(it.kind==='jewel')_items.push({idx:i,kind:'jewel',icon:'💎',name:JEWELS[it.id]?JEWELS[it.id].name:'Камень',reward:'jewel'});}
  var html='<h2>🕯️ Алтарь Памяти</h2><p style="font-style:italic;color:#a080b0;font-size:12px">«Оставь что-то. Взамен получишь. Так делали до Тириона. Так делают после.»</p>';
- if(!_items.length){showModal(html+'<p style="color:#a08060;font-size:12px">У тебя нечего оставить. Вернись с чем-нибудь.</p><button class="btn" onclick="closeModal()">Уйти</button>');return;}
+ if(!_items.length){showGameModal(html+'<p style="color:#a08060;font-size:12px">У тебя нечего оставить. Вернись с чем-нибудь.</p><button class="btn" onclick="closeGameModal()">Уйти</button>');return;}
  for(var j=0;j<_items.length;j++){var x=_items[j],r=MEMORY_SHRINE_REWARDS[x.reward];html+='<div class="itemRow"><div class="itemIcon">'+x.icon+'</div><div class="itemInfo"><b>'+x.name+'</b><br><i>Оставить → '+r.label+'</i></div><button class="btn gold small" onclick="memoryShrineOffer('+x.idx+',\''+x.reward+'\')">Оставить</button></div>';}
- html+='<button class="btn" onclick="closeModal()">Уйти</button>';_lastMemoryShrine=shrine;showModal(html);
+ html+='<button class="btn" onclick="closeGameModal()">Уйти</button>';_lastMemoryShrine=shrine;showGameModal(html);
 }
 function memoryShrineOffer(idx,key){var r=MEMORY_SHRINE_REWARDS[key];if(!r||!player||!bag[idx])return;bag.splice(idx,1);
  if(r.type==='dmgBonus')player.altarDmgBonus=(player.altarDmgBonus||0)+r.value;
@@ -20342,7 +20473,7 @@ function memoryShrineOffer(idx,key){var r=MEMORY_SHRINE_REWARDS[key];if(!r||!pla
    if(typeof player.gold !== 'number' || !isFinite(player.gold)) player.gold = 0;
    player.gold += _v;
  }
- SfxPlay('altar');showToast('🕯️ '+r.label);updateHUD();updateInventoryUI();closeModal();if(_lastMemoryShrine){decor=decor.filter(function(d){return d!==_lastMemoryShrine;});_lastMemoryShrine=null;}
+ SfxPlay('altar');showToast('🕯️ '+r.label);updateHUD();updateInventoryUI();closeGameModal();if(_lastMemoryShrine){decor=decor.filter(function(d){return d!==_lastMemoryShrine;});_lastMemoryShrine=null;}
 }
 
 function openAltar(altar){
@@ -20354,8 +20485,8 @@ function openAltar(altar){
   html+='<button class="btn gold" onclick="altarChoose(\'speed\')">⚡ +12% скорости (до конца этажа) · −15✦</button>';
   html+='<button class="btn gold" onclick="altarChoose(\'crit\')">💥 +8% крита (до конца этажа) · −25✦</button>';
   html+='<button class="btn" onclick="altarChoose(\'lucky\')">🍀 Случайный бафф (25% проклятие)</button>';
-  html+='<button class="btn" onclick="closeModal()">Уйти</button>';
-  showModal(html);_lastAltar=altar;
+  html+='<button class="btn" onclick="closeGameModal()">Уйти</button>';
+  showGameModal(html);_lastAltar=altar;
 }
 function altarChoose(kind){
   SfxPlay('altar');
@@ -20639,11 +20770,12 @@ function askTakeItem(it){
   else if(it.kind==='legendary'&&leg&&leg.lore)loreText=leg.lore;
   else if(it.kind==='scroll'&&sc&&sc.lore)loreText=sc.lore;
   var loreHtml=loreText?'<p class="lore">'+loreText+'</p>':'';
-  showModal('<h2>'+title+'</h2><p style="font-size:12px;color:#a08060">'+subtitle+cmp+'</p>'+loreHtml+'<button class="btn gold" onclick="takeItem(\''+it.id+'\',\''+it.kind+'\')">Взять</button><button class="btn" onclick="closeModal()">Нет</button>');
+  showGameModal('<h2>'+title+'</h2><p style="font-size:12px;color:#a08060">'+subtitle+cmp+'</p>'+loreHtml+'<button class="btn gold" onclick="takeItem(\''+it.id+'\',\''+it.kind+'\')">Взять</button><button class="btn" onclick="closeGameModal()">Нет</button>');
 }
 function takeItem(id,kind){
   /* v9.0.59 — modal callbacks can outlive the active run; never mutate a dead/ended run. */
-  if(!_isGameActive()||gamePaused)return;
+  if(!_isGameActive()||(gamePaused&&!_modalPausedGame))return;
+  closeGameModal();
   /* v5.6.0 — защита от двойного тапа: если предмет уже взят — выходим.
      Без этой проверки двойной клик мог создать предмет из воздуха. */
   var _found=false;
@@ -20654,9 +20786,9 @@ function takeItem(id,kind){
       break;
     }
   }
-  if(!_found){closeModal();return;}
+  if(!_found){closeGameModal();return;}
   if(kind==='legendary'){
-    if(!LEGENDARY_ITEMS[id]){closeModal();return;}
+    if(!LEGENDARY_ITEMS[id]){closeGameModal();return;}
     if(!player.equippedAccessory){
       player.equippedAccessory=id;if(typeof _invalidateWeaponStatsCache==='function')_invalidateWeaponStatsCache();
       if(id==='phoenix_feather')player.phoenixUsed=false;
@@ -20664,15 +20796,15 @@ function takeItem(id,kind){
         ACCOUNT.legendaryCollection.push(id);
         try{localStorage.setItem('de_legendaryCol',JSON.stringify(ACCOUNT.legendaryCollection));}catch(e){}
       }
-      SfxPlay('pickup');closeModal();updateInventoryUI();
+      SfxPlay('pickup');closeGameModal();updateInventoryUI();
       showToast('⭐ '+LEGENDARY_ITEMS[id].name+' экипирован!');
     }else{
       var oldAccName=LEGENDARY_ITEMS[player.equippedAccessory]?LEGENDARY_ITEMS[player.equippedAccessory].name:'?';
-      showModal('<h2>⭐ '+LEGENDARY_ITEMS[id].name+'</h2>'+
+      showGameModal('<h2>⭐ '+LEGENDARY_ITEMS[id].name+'</h2>'+
         '<p style="font-size:12px;color:#a08060">Сейчас экипировано: <b>'+oldAccName+'</b></p>'+
         '<p style="font-size:11px;color:#806040">Заменить? Старый предмет вернётся на пол.</p>'+
         '<button class="btn gold" onclick="swapLegendary(\''+id+'\')">Заменить</button>'+
-        '<button class="btn" onclick="closeModal()">Оставить текущий</button>');
+        '<button class="btn" onclick="closeGameModal()">Оставить текущий</button>');
       groundItems.push({x:player.x,y:player.y+30,kind:'legendary',id:id});
     }
     return;
@@ -20680,22 +20812,23 @@ function takeItem(id,kind){
   if(kind==='weapon'||kind==='armor'||kind==='jewel'||kind==='scroll'){
     if(!bagAdd({kind:kind,id:id,count:kind==='scroll'?1:undefined})){
       _dropAtPlayer({kind:kind,id:id,count:kind==='scroll'?1:undefined});
-      showToast('🎒 Сумка полна!');closeModal();return;
+      showToast('🎒 Сумка полна!');closeGameModal();return;
     }
   }
-  SfxPlay('pickup');closeModal();updateHUD();updateInventoryUI();
+  SfxPlay('pickup');closeGameModal();updateHUD();updateInventoryUI();
 }
 
 function swapLegendary(newId){
   /* v9.0.59 — reject a delayed confirmation after death, hub return, or run completion. */
-  if(!_isGameActive()||gamePaused)return;
-  if(!LEGENDARY_ITEMS[newId]){closeModal();return;}
-  if(player.equippedAccessory===newId){closeModal();return;}
+  if(!_isGameActive()||(gamePaused&&!_modalPausedGame))return;
+  closeGameModal();
+  if(!LEGENDARY_ITEMS[newId]){closeGameModal();return;}
+  if(player.equippedAccessory===newId){closeGameModal();return;}
   var _removed=false;
   for(var i=0;i<groundItems.length;i++){
     if(groundItems[i].id===newId&&groundItems[i].kind==='legendary'){groundItems.splice(i,1);_removed=true;break;}
   }
-  if(!_removed){closeModal();showToast('⭐ Предмет уже у тебя');return;}
+  if(!_removed){closeGameModal();showToast('⭐ Предмет уже у тебя');return;}
   if(player.equippedAccessory){
     groundItems.push({x:player.x+randi(-20,20),y:player.y+randi(20,35),kind:'legendary',id:player.equippedAccessory});
   }
@@ -20705,7 +20838,7 @@ function swapLegendary(newId){
     ACCOUNT.legendaryCollection.push(newId);
     try{localStorage.setItem('de_legendaryCol',JSON.stringify(ACCOUNT.legendaryCollection));}catch(e){}
   }
-  SfxPlay('pickup');closeModal();updateInventoryUI();
+  SfxPlay('pickup');closeGameModal();updateInventoryUI();
   showToast('⭐ '+LEGENDARY_ITEMS[newId].name+' экипирован!');
 }
 
@@ -21021,7 +21154,7 @@ function showTraderTab(tab){
     html+='<div class="itemRow"><div class="itemIcon">🎒</div><div class="itemInfo"><b>Сумка '+bagCount()+'/'+bagSize+'</b><br><i>+3 ячейки</i></div>'+
     (maxBag?'<span class="price">макс</span>':'<button class="btn gold small" onclick="expandBag()">'+bagCost+'✦</button>')+'</div>';
   }
-  html+='<button class="btn" onclick="closeModal()">Закрыть</button>';showModal(html);
+  html+='<button class="btn" onclick="closeGameModal()">Закрыть</button>';showGameModal(html);
 }
 function sellItem(bagIdx,price){
   var it=bag[bagIdx];if(!it)return;
