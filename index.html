@@ -662,19 +662,19 @@ var WEAPONS={
     lore:'Стражи стояли у входа в деревню. Когда Тирион ушёл — они остались. Теперь их нет, но клинок всё ещё помнит их стойку.'},
   fireSword:{name:'Пламя Старейшины 🔥',dmg:14,cd:22,big:false,magic:'fire',shape:'arc',tempo:'normal',comboBonus:0.08,
     lore:'Старейшина сам зажёг этот клинок, когда понял, что Тириона не спасти. Огонь — не ярость. Огонь — милосердие.'},
-  iceSword:{name:'Слёзы Зимы ❄️',dmg:12,cd:16,big:false,magic:'ice',shape:'arc',tempo:'fast',comboBonus:0.10,
+  iceSword:{name:'Слёзы Зимы ❄️',dmg:12,cd:22,big:false,magic:'ice',shape:'arc',tempo:'fast',comboBonus:0.10,
     lore:'Лёд не для убийства. Лёд — чтобы остановить. Чтобы дать время. Чтобы кто-то успел.'},
   vampSword:{name:'Клык Аэлиса 🩸',dmg:12,cd:22,big:false,magic:'vamp',shape:'arc',tempo:'normal',comboBonus:0.15,
     lore:'Клинок, найденный на 24-м этаже. Он пил кровь врагов — но и кровь своего хозяина. Аэлис не вернулся. Клинок — вернулся. Когда ты держишь его, ты слышишь шёпот. Это не Аэлис. Это клинок. Он говорит: «Я не хотел».' },
   thunderHammer:{name:'Гнев Небес ⚡',dmg:26,cd:40,big:true,magic:'stun',shape:'circle',tempo:'charged',comboBonus:0,
     lore:'Молот, выкованный в грозу. Кузнец не выжил — но молот бьёт так, будто мстит за него.'},
-  cursedSword:{name:'Осколок Тириона 💀',dmg:30,cd:34,big:true,magic:'curse',shape:'arc',tempo:'charged',comboBonus:0,
+  cursedSword:{name:'Осколок Тириона 💀',dmg:30,cd:38,big:true,magic:'curse',shape:'arc',tempo:'charged',comboBonus:0,
     lore:'Часть корня, вырезанная в форме клинка. Он шепчет. Он помнит. Он ждёт. Он не режет — он вспоминает. Каждый удар — это его память о том, кем он был. Ты не бьёшь. Ты напоминаешь.'},
-  bow:{name:'Лук Первого Охотника 🏹',dmg:8,cd:28,big:false,ranged:true,shape:'line',tempo:'normal',comboBonus:0,
+  bow:{name:'Лук Первого Охотника 🏹',dmg:8,cd:22,big:false,ranged:true,shape:'line',tempo:'normal',comboBonus:0,
     lore:'Лук, с которого началась охота. Он не для войны. Он для еды. Но подземелье — не лес.'},
   fireStaff:{name:'Посох Голоса Огня 🔥',dmg:14,cd:48,big:false,ranged:true,aoe:32,aoeColor:'#ff6020',shape:'arc',tempo:'normal',comboBonus:0,
     lore:'Посох, который говорит с огнём. Он не приказывает. Он просит. И огонь слушается.'},
-  berserkAxe:{name:'Топор Берсерка 🪓',dmg:12,cd:20,big:false,magic:'rage',shape:'arc',tempo:'fast',comboBonus:0.15,
+  berserkAxe:{name:'Топор Берсерка 🪓',dmg:11,cd:24,big:false,magic:'rage',shape:'arc',tempo:'fast',comboBonus:0.15,
     lore:'Топор, который держали только в ярости. В покое — он тяжёл. В бою — он лёгок.'},
   paladinMace:{name:'Рассветный Молот 🔨',dmg:9,cd:26,big:false,magic:'holy',shape:'wide',tempo:'charged',comboBonus:0,
     lore:'Молот, благословлённый утренним светом. Он не для убийства — для защиты. Но защита иногда требует крови.'},
@@ -684,7 +684,7 @@ var WEAPONS={
     lore:'Лук, который стреляет дальше, чем видит глаз. Стрела летит туда, куда смотрит сердце. Снайпер никогда не целился в лицо. Он говорил: «Лицо — это память. Я не хочу её помнить».'},
   hunterBow:{name:'Лук Охотника 🏹',dmg:7,cd:26,big:false,ranged:true,shape:'line',tempo:'normal',comboBonus:0.10,
     lore:'Лук, который стреляет тремя стрелами. Одна — для врага. Одна — для друга. Одна — для себя.'},
-  rogueDagger:{name:'Тень Разбойника 🗡️',dmg:8,cd:10,big:false,magic:'backstab',shape:'arc',tempo:'fast',comboBonus:0.20,
+  rogueDagger:{name:'Тень Разбойника 🗡️',dmg:9,cd:16,big:false,magic:'backstab',shape:'arc',tempo:'fast',comboBonus:0.15,
     lore:'Кинжал, который не отражает свет. Он не хочет, чтобы его видели. Он хочет, чтобы его боялись.'},
   /* v6.5.9 — ФИКС #3: посохи подклассов теперь СИЛЬНЕЕ стартового.
      Было: pyro 11, cryo 8, necro 7 — все слабее fireStaff (10).
@@ -700,7 +700,7 @@ var WEAPONS={
   spear:{name:'Копьё Пограничника 🗡️',dmg:11,cd:26,big:false,shape:'line',tempo:'normal',comboBonus:0.10,
     lore:'Копьё, которым эльфы охраняли границу леса. Оно бьёт дальше меча — но только вперёд. Пограничник знал: сзади — дом. Спереди — всё остальное.'},
 
-  twinBlades:{name:'Парные Клинки Близнецов ⚔️',dmg:7,cd:12,big:false,shape:'arc',tempo:'fast',comboBonus:0.25,
+  twinBlades:{name:'Парные Клинки Близнецов ⚔️',dmg:6,cd:14,big:false,shape:'arc',tempo:'fast',comboBonus:0.25,
     lore:'Два клинка, выкованных в один день. Близнецы не расставались. Когда один пал — второй продолжил бой. Оба клинка помнят.'},
 
   shieldMace:{name:'Булава Хранителя ⚔️',dmg:13,cd:30,big:true,shape:'circle',tempo:'charged',magic:'stun',comboBonus:0,
@@ -745,11 +745,11 @@ var WEAPONS={
     lore:'Лук, который не издаёт звука. Стрела идёт тихо — как мысль. Охотники говорили: если враг не услышал выстрела — значит, ты уже прощён.'},
   boneBow:{name:'Костяной Лук 🦴',dmg:11,cd:30,big:false,ranged:true,shape:'line',tempo:'charged',comboBonus:0,pierce:2,
     lore:'Лук, вырезанный из ребра костяного лорда. Он не стреляет стрелами — он стреляет памятью. Нежить боится его, потому что он напоминает им, кем они были.'},
-  memoryStaff:{name:'Посох Памяти 📖',dmg:12,cd:44,big:false,ranged:true,aoe:34,aoeColor:'#c0a0ff',shape:'arc',tempo:'normal',comboBonus:0,magic:'memory',
+  memoryStaff:{name:'Посох Памяти 📖',dmg:14,cd:40,big:false,ranged:true,aoe:34,aoeColor:'#c0a0ff',shape:'arc',tempo:'normal',comboBonus:0,magic:'memory',
     lore:'Посох, вырезанный из корня дерева, которое помнит Тириона до падения. Он не создаёт магию — он её вспоминает. Иногда — вспоминает слишком сильно и бьёт дважды.'},
   mourningStaff:{name:'Посох Скорби 🖤',dmg:10,cd:40,big:false,ranged:true,aoe:30,aoeColor:'#4a4a5a',shape:'arc',tempo:'normal',comboBonus:0,magic:'mourn',
     lore:'Посох, который носили плакальщицы на похоронах. Он не убивает — он оплакивает. Враги рядом с ним замедляются, потому что слышат плач.'},
-  rootStaff:{name:'Посох Корня 🌳',dmg:16,cd:50,big:false,ranged:true,aoe:40,aoeColor:'#60a040',shape:'arc',tempo:'normal',comboBonus:0,magic:'root',
+  rootStaff:{name:'Посох Корня 🌳',dmg:20,cd:44,big:false,ranged:true,aoe:40,aoeColor:'#60a040',shape:'arc',tempo:'normal',comboBonus:0,magic:'root',
     lore:'Посох, выросший из корня, который Тирион не успел отрубить. Он тянется к врагам — не для атаки, а чтобы удержать. Удержать от того, чтобы умереть. Он не понимает, что уже поздно.'}
 };
 /* v5.4.3 — гейтинг лута по этажам.
@@ -805,44 +805,44 @@ var ARMORS={
   chain:{name:'Кольчуга Стража',hp:50,price:90,role:'warrior',
     effect:'damageReduction',effectValue:0.10,
     lore:'Кольчуга, найденная на теле стража. Он стоял до конца. Кольчуга помнит его вес.'},
-  elvenmail:{name:'Мантия Тириона',hp:90,price:160,role:'warrior',
+  elvenmail:{name:'Мантия Тириона',hp:80,price:160,role:'warrior',
     effect:'damageBonus',effectValue:0.05,
     lore:'Мантия Архимага до падения. Она ещё пахнет травой. И немного — пеплом. Он снял её перед тем, как уйти к корню. Повесил на стул. Сказал: «Я вернусь до весны. Она мне не нужна».'},
 
   /* ===== ЛУЧНИК (лёгкая) ===== */
-  rangerJacket:{name:'Куртка Следопыта',hp:15,price:40,role:'archer',
+  rangerJacket:{name:'Куртка Следопыта',hp:20,price:40,role:'archer',
     effect:'speedBonus',effectValue:0.10,
     lore:'Куртка, сшитая из кожи лесных оленей. Она пахнет хвоей. И немного — дымом.'},
-  shadowCloak:{name:'Плащ Тени',hp:30,price:90,role:'archer',
+  shadowCloak:{name:'Плащ Тени',hp:40,price:90,role:'archer',
     effect:'dodge',effectValue:0.05,
     lore:'Плащ, который не отражает свет. Он не хочет, чтобы его видели. Он хочет, чтобы его боялись.'},
-  archerVest:{name:'Латный жилет Стрелка',hp:45,price:160,role:'archer',
+  archerVest:{name:'Латный жилет Стрелка',hp:60,price:160,role:'archer',
     effect:'rangedBonus',effectValue:0.10,
     lore:'Жилет, найденный на 12 этаже. Хозяин так и не снял его. Он стрелял до конца.'},
 
   /* ===== МАГ (магическая) ===== */
-  apprenticeRobe:{name:'Роба Ученика',hp:10,price:40,role:'mage',
+  apprenticeRobe:{name:'Роба Ученика',hp:15,price:40,role:'mage',
     effect:'staffBonus',effectValue:0.05,
     lore:'Роба, которую Старейшина сшил первому ученику. Она ещё помнит, как он боялся темноты.'},
-  adeptRobe:{name:'Мантия Адепта',hp:25,price:90,role:'mage',
+  adeptRobe:{name:'Мантия Адепта',hp:35,price:90,role:'mage',
     effect:'staffCd',effectValue:0.10,
     lore:'Мантия, найденная в библиотеке Тириона. Она пахнет чернилами. И чем-то ещё — древним.'},
-  archmageRobe:{name:'Одеяние Архимага',hp:40,price:160,role:'mage',
+  archmageRobe:{name:'Одеяние Архимага',hp:55,price:160,role:'mage',
     effect:'magicBonus',effectValue:0.15,
     lore:'Одеяние самого Тириона. Оно всё ещё тёплое. Он не носил его, когда уходил. Он знал, что не вернётся. Оно живое. Оно дышит. Оно помнит. Ты чувствуешь — оно не хочет тебя. Оно хочет его.'},
 
   /* ===== v7.4.0 — НОВАЯ БРОНЯ (лорная) ===== */
-  oathPlate:{name:'Латы Клятвы',hp:65,price:130,role:'warrior',effect:'oath',effectValue:0.20,
+  oathPlate:{name:'Латы Клятвы',hp:60,price:130,role:'warrior',effect:'oath',effectValue:0.20,
     lore:'Латы, которые Страж надел в день, когда дал клятву. Они тяжёлые. Они помнят вес его рук. Когда он умирал — латы не сняли. Не смогли.'},
-  ashPlate:{name:'Пепельная Броня',hp:80,price:200,role:'warrior',effect:'ashBurn',effectValue:0.10,
+  ashPlate:{name:'Пепельная Броня',hp:75,price:200,role:'warrior',effect:'ashBurn',effectValue:0.10,
     lore:'Броня, пропитанная пеплом сгоревшей кузницы. Она не защищает — она мстит. Каждый удар по ней оставляет на враге след огня.'},
-  whisperCloak:{name:'Плащ Шёпота',hp:25,price:130,role:'archer',effect:'silentWalk',effectValue:1.0,
+  whisperCloak:{name:'Плащ Шёпота',hp:40,price:130,role:'archer',effect:'silentWalk',effectValue:1.0,
     lore:'Плащ, сшитый из паутины королевы пауков. Она сама его отдала — первому охотнику, который не стал её убивать. Она сказала: «Ты не боишься тишины. Возьми.»'},
-  boneVest:{name:'Костяной Жилет',hp:40,price:200,role:'archer',effect:'boneAura',effectValue:1.0,
+  boneVest:{name:'Костяной Жилет',hp:55,price:200,role:'archer',effect:'boneAura',effectValue:1.0,
     lore:'Жилет, сделанный из рёбер эльфов-предателей. Они сами попросили: «Возьми наши кости. Мы не хотим быть его слугами.» Ты носишь их. Они помнят, кем были.'},
-  memoryRobe:{name:'Роба Памяти',hp:30,price:130,role:'mage',effect:'memoryKill',effectValue:1.0,
+  memoryRobe:{name:'Роба Памяти',hp:45,price:130,role:'mage',effect:'memoryKill',effectValue:1.0,
     lore:'Роба, которую Старейшина сшил для Тириона. Тирион не взял её — сказал, что не заслужил. Она осталась висеть на стуле. Сорок лет. Она всё ещё пахнет травой.'},
-  mourningRobe:{name:'Одеяние Скорби',hp:35,price:200,role:'mage',effect:'mournBurst',effectValue:20,
+  mourningRobe:{name:'Одеяние Скорби',hp:50,price:200,role:'mage',effect:'mournBurst',effectValue:20,
     lore:'Одеяние, которое носили плакальщицы. Оно плачет даже когда хозяин молчит. В момент смерти — оно кричит. И крик этот слышат все. Плакальщицы сами выбрали этот путь. Они не хотели умирать. Они хотели помогать умирать. Это разное.'}
 };
 /* v5.4.3 — общий список всех броней (для совместимости) */
@@ -3082,7 +3082,7 @@ var BALANCE={
   classes:{
     /* Цели v7.5.3: танк живучий, лучник мобильный, маг силён по площади,
        но ни один класс не должен быть лучшим одновременно во всём. */
-    warrior:{hpMul:1.25, speedMul:1.03, dmgMul:1.00},
+    warrior:{hpMul:1.25, speedMul:1.03, dmgMul:0.90},
     archer: {hpMul:0.78, speedMul:1.15, dmgMul:1.15},
     mage:   {hpMul:0.75, speedMul:1.05, dmgMul:1.00}
   },
@@ -13160,7 +13160,7 @@ if(!REDUCED_MOTION){
 }
   if(player.subPassive==='ignite'){
     e.burning=Math.max(e.burning||0,4);
-    e.burnDmg=Math.max(e.burnDmg||0, 12 + Math.floor(floorNum*1.6));
+    e.burnDmg=Math.max(e.burnDmg||0, 8 + Math.floor(floorNum*1.0));
     /* v6.5.2 — ФИКС: сбрасываем флаг распространения при повторном поджоге */
     e.burnSpreadDone=false;
     /* v8.4.2 — порог берём из уже рассчитанного кеша, если он актуален. */
