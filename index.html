@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf v9.2.0 — bug fixes and compendium refresh. -->
+<!-- Dungeon Elf v9.6.8 — gameplay loop and combat performance optimizations. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Dungeon Elf v9.2.0</title>
+<title>Dungeon Elf v9.6.8</title>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;background:#1a1208;overflow:hidden;font-family:Georgia,serif;color:#e8d0a0;touch-action:none;-webkit-user-select:none;user-select:none;}
 #game{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block;background:#1a1208;image-rendering:pixelated;pointer-events:auto;}
@@ -465,7 +465,7 @@ html,body,#hub{background:#090c12;color:#c6c8c9;}
 <button class="menuBtn" style="min-width:120px;" data-action="achievements">🏆 Достижения</button>
 <button class="menuBtn" style="min-width:120px;" data-action="stats">📊 Статистика</button>
 </div>
-<div class="credits"><span id="versionLabel">v9.2.0 · PATCHED</span> · сделано с ♥</div>
+<div class="credits"><span id="versionLabel">v9.6.8 · PATCHED</span> · сделано с ♥</div>
 </div>
 <div id="touch">
 <div id="joy"><div class="nub"></div></div>
@@ -486,7 +486,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.2.0';
+var GAME_VERSION='9.6.8';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -3165,8 +3165,8 @@ var BALANCE={
   curse:{
     /* Кровоточащие стены */
     bleedingBase: 1,
-    bleedingPerFloor: 0.3,
-    bleedingInterval: 60,       // кадров между тиками
+    bleedingPerFloor: 0.2,      /* v9.6.3 — было 0.3 */
+    bleedingInterval: 90,       /* v9.6.3 — было 60. Тик реже: 1.5 сек вместо 1 сек. */
 
     /* Жадность */
     greedGoldMul: 2.0,          // ×золото
@@ -3529,7 +3529,7 @@ var BALANCE={
 
     /* Лучник: снайпер — одиночная цель; охотник — мобильность/утилита;
        разбойник — фланги и риск, а не просто бесплатная скорость. */
-    sniper:     {hpMul:0.90, speedMul:0.96, dmgMul:1.08},
+    sniper:     {hpMul:0.90, speedMul:0.96, dmgMul:1.00}, /* v9.5.6 — базовый множитель урона 1.08 → 1.00 */
     hunter:     {hpMul:1.04, speedMul:1.15, dmgMul:0.94},
     rogue:      {hpMul:0.92, speedMul:1.10, dmgMul:0.98},
 
@@ -4814,6 +4814,8 @@ function _cancelRunScopedAsyncWork(){
 function _isCurrentRunGeneration(token){return token===_runGeneration&&!_runEnded&&!gameOver&&!!player;}
 
 var bloodTiles=[];var secretWalls=[];var deathSlowdown=0;var lastDeathPos=null;
+/* v9.6.6 — визуальные обломки обвала. */
+var _fallingDebris=[];
 var bag=[];var bagSize=8;var bagMaxSize=15;
 var inHub=true;
 var gamePaused=false;
@@ -4946,6 +4948,8 @@ function _clearRunState(){
   secretWalls.length=0;
   breakableWalls.length=0;
   toasts.length=0;
+  /* v9.6.6 — сброс обломков между забегами. */
+  if(typeof _fallingDebris!=='undefined')_fallingDebris.length=0;
   /* v6.5.3 — ФИКС: floorEvent и activeCurses не сбрасывались. */
   floorEvent=null;
   activeCurses=[];
@@ -6000,6 +6004,8 @@ function _resetFloorState(){
     player.curseHaste=false;player.curseFragility=false;
   }
   floorCurse=null;
+  /* v9.6.6 — обломки не переживают смену этажа. */
+  if(typeof _fallingDebris!=='undefined')_fallingDebris.length=0;
   var _clReset=document.getElementById('curseLabel');
   if(_clReset){_clReset.classList.remove('show');_clReset.textContent='';}
   resetFloorTransient();
@@ -6311,7 +6317,17 @@ function _rollFloorCurse(){
   var _canCurse = !isVillage && (runMode==='cursed' || floorNum >= _bc.minFloor);
   var _shouldCurse = (runMode==='cursed' && _bc.cursedModeAlways) || gameRNG() < _bc.rollChance;
   if(_canCurse && _shouldCurse){
-    floorCurse=pick(CURSES);floorCurse.apply();
+    /* v9.6.3 — не даём одно и то же проклятие два этажа подряд.
+       Игрок не получит одно проклятие повторно на соседнем этаже. */
+    var _prevCurseId = player._lastCurseId || null;
+    var _availableCurses = [];
+    for(var _ci=0; _ci<CURSES.length; _ci++){
+      if(CURSES[_ci].id !== _prevCurseId) _availableCurses.push(CURSES[_ci]);
+    }
+    if(_availableCurses.length === 0) _availableCurses = CURSES;
+    floorCurse = _availableCurses[Math.floor(gameRNG()*_availableCurses.length)];
+    player._lastCurseId = floorCurse.id;
+    floorCurse.apply();
     var _hpRatioPre=player.maxHp>0?player.hp/player.maxHp:1;
     applySubclassBonuses();
     player.hp=Math.max(1,Math.min(player.maxHp,Math.round(player.maxHp*_hpRatioPre)));
@@ -6722,7 +6738,7 @@ var _phr=[NPC_PHRASES_MOURN,_pool,NPC_PHRASES_GUIDE][ni%3];npcs.push({x:spot.x,y
   var _startHp2=_bp2.baseHp+(hasUpgrade('hpBoost')?_bp2.hpBoostUpgrade:0);
   var _startSpeed2=_bp2.baseSpeed*(hasUpgrade('speedBoost')?_bp2.speedBoostMul:1.0);
   if(!player){
-    player={x:centerX*TILE,y:centerY*TILE,r:12,speed:_startSpeed2,hp:_startHp2,maxHp:_startHp2,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
+    player={x:centerX*TILE,y:centerY*TILE,r:12,speed:_startSpeed2,hp:_startHp2,maxHp:_startHp2,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
     weaponLevel=1;if(typeof _invalidateWeaponStatsCache==='function')_invalidateWeaponStatsCache();armorLevel=1;
   }
   else{player.x=centerX*TILE;player.y=centerY*TILE;}
@@ -7189,6 +7205,7 @@ for(var ch=0;ch<rooms.length;ch++){if(rooms[ch].isStart)continue;if(ch===6)conti
       arenaBoss.hp=Math.floor(arenaBoss.hp*_ba2.hpMul);arenaBoss.maxHp=arenaBoss.hp;
       arenaBoss.gold=Math.floor(arenaBoss.gold*_ba2.goldMul);
       arenaBoss.room=ch;arenaBoss.isArenaBoss=true;
+arenaBoss.isMiniBoss=true;  /* v9.3.0 — arena-босс учитывается как мини-босс в XP */
       enemies.push(arenaBoss);
     } else if(gameRNG()<0.12){
       var trapNum=randi(1,3);for(var tr=0;tr<trapNum;tr++){
@@ -7624,7 +7641,7 @@ function buildGrove(){
   var _entryX=_cX,_entryY=_cY+8;
   if(!player){
     var startHp=BALANCE.player.baseHp;
-    player={x:_entryX*TILE,y:_entryY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,
+    player={x:_entryX*TILE,y:_entryY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,
       lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,
       weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],
       equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,
@@ -8066,7 +8083,7 @@ decor.push({x: _castleX, y: _castleY + 3, type: 'forestPath', s: 1.0, seed: game
   if(!player){
     player = {
       x: _entryX*TILE, y: _entryY*TILE, r: 12, speed: 2.8,
-      hp: _fStartHp, maxHp: _fStartHp, lvl: 1, xp: 0, xpToNext: 23,
+      hp: _fStartHp, maxHp: _fStartHp,lvlHpBonus:0, lvl: 1, xp: 0, xpToNext:15,
       lvlDmgBonus: 0, gold: 0, kills: 0, keys: 0,
       facing: 0, atkCd: 0, atkAnim: 0, invuln: 0, bounceY: 0,
       weapon: 'sword', armor: null, potions: 0,
@@ -8211,7 +8228,7 @@ function buildAncientElves(){
   }
   /* Игрок появляется на открытой дорожке; выход обратно виден сразу. */
   var sx=10,sy=ey-2;
-  if(!player){var sh=BALANCE.player.baseHp;player={x:sx*TILE,y:sy*TILE,r:12,speed:2.8,hp:sh,maxHp:sh,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};}else{player.x=sx*TILE;player.y=sy*TILE;}
+  if(!player){var sh=BALANCE.player.baseHp;player={x:sx*TILE,y:sy*TILE,r:12,speed:2.8,hp:sh,maxHp:sh,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};}else{player.x=sx*TILE;player.y=sy*TILE;}
 }
 
 /* v9.0.18 — Лагерь разбойников: боковая ветка осеннего леса. */
@@ -8370,7 +8387,7 @@ function buildBanditCamp(){
   var noteSpots=[[10,cy,'bookOpen'],[16,cy+6,'elderLetter'],[cx-5,cy-7,'bookOpen'],[cx+2,cy+6,'bookOpen'],[cx+7,cy-4,'elderLetter'],[cx+12,cy+5,'bookOpen'],[cx+13,cy+1,'elderLetter']];
   for(var ni=0;ni<BANDIT_NOTES.length;ni++)decor.push({x:noteSpots[ni][0],y:noteSpots[ni][1],type:noteSpots[ni][2],s:1,seed:ni,isBanditNote:true,banditNoteId:BANDIT_NOTES[ni].id});
   /* Игрок появляется у входа, а не в центре лагеря. */
-  if(!player){var hp=BALANCE.player.baseHp;player={x:8*TILE,y:cy*TILE,r:12,speed:2.8,hp:hp,maxHp:hp,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};}
+  if(!player){var hp=BALANCE.player.baseHp;player={x:8*TILE,y:cy*TILE,r:12,speed:2.8,hp:hp,maxHp:hp,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};}
   else{player.x=8*TILE;player.y=cy*TILE;}
   /* Гарантированная чистая дорожка от входа к костру. */
   for(var pathY=cy-1;pathY<=cy+1;pathY++)for(var pathX=7;pathX<=cx-2;pathX++)map[pathY][pathX]=0;
@@ -8457,7 +8474,7 @@ function buildDruidCircle(){
   var _entryX = _cX;
   var _entryY = _cY + 8;   // 8 клеток вниз от центра — на краю поляны
 
-  if(!player){var startHp=BALANCE.player.baseHp;player={x:_entryX*TILE,y:_entryY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,
+  if(!player){var startHp=BALANCE.player.baseHp;player={x:_entryX*TILE,y:_entryY*TILE,r:12,speed:2.8,hp:startHp,maxHp:startHp,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,
     lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,
     potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,
     poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:meta.playerClass||'warrior',subclass:meta.playerSubclass||null,
@@ -8676,7 +8693,7 @@ function buildCastle(){
     var startHp = BALANCE.player.baseHp;
     player = {
       x: _entranceX*TILE, y: (_entranceY-1)*TILE, r: 12, speed: 2.8,
-      hp: startHp, maxHp: startHp, lvl: 1, xp: 0, xpToNext: 23,
+      hp: startHp, maxHp: startHp,lvlHpBonus:0, lvl: 1, xp: 0, xpToNext:15,
       lvlDmgBonus: 0, gold: 0, kills: 0, keys: 0,
       facing: 0, atkCd: 0, atkAnim: 0, invuln: 0, bounceY: 0,
       weapon: 'sword', armor: null, potions: 0,
@@ -9036,7 +9053,7 @@ function buildDungeon(){
   var startHp=_bp.baseHp+(hasUpgrade('hpBoost')?_bp.hpBoostUpgrade:0);
   var startSpeed=_bp.baseSpeed*(hasUpgrade('speedBoost')?_bp.speedBoostMul:1.0);
   if(!player){
-    player={x:startRoom.cx*TILE,y:startRoom.cy*TILE,r:12,speed:startSpeed,hp:startHp,maxHp:startHp,lvl:1,xp:0,xpToNext:23,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
+    player={x:startRoom.cx*TILE,y:startRoom.cy*TILE,r:12,speed:startSpeed,hp:startHp,maxHp:startHp,lvlHpBonus:0,lvl:1,xp:0,xpToNext:15,lvlDmgBonus:0,gold:0,kills:0,keys:0,facing:0,atkCd:0,atkAnim:0,invuln:0,bounceY:0,weapon:'sword',armor:null,potions:0,potionTypes:{30:0,70:0,100:0},scrollSlots:[null,null,null],equippedAccessory:null,consumables:[],critChance:0,luckBonus:0,vampireHit:0,poisonImmune:false,regen:0,weaponXp:0,invisUsed:false,potionsUsedOnFloor:false,class:(_pendingClass||meta.playerClass||'warrior'),subclass:(_pendingSubclass||meta.playerSubclass||null),craftInv:{ruby:0,sapphire:0,emerald:0,gold:0,potion:0,scroll:0}};
     weaponLevel=1;if(typeof _invalidateWeaponStatsCache==='function')_invalidateWeaponStatsCache();armorLevel=1;
   }
   else{player.x=startRoom.cx*TILE;player.y=startRoom.cy*TILE;}
@@ -9335,6 +9352,13 @@ function scaleEnemyHp(baseHp){
   var mul = 1 + floorBonus;
   if(mul > _be.hpCapSoft) mul = _be.hpCapSoft + (mul - _be.hpCapSoft) * _be.hpCapDecay;
   if(floorNum > 10) mul *= 1 + (floorNum - 10) * _be.hpLateBoost;
+  /* v9.3.3 — в данже перекачанный игрок встречает более жирных мобов.
+     В боковых локациях (лес, лагерь, замок, роща, город, круг друидов) — не применяется. */
+  if(currentLocation === 'dungeon' && player && player.lvl > floorNum * 1.5){
+    var _lvlMul = 1 + (player.lvl - floorNum * 1.5) * 0.05;
+    if(_lvlMul > 2.0) _lvlMul = 2.0;  /* кап ×2, чтобы не сломать игру */
+    mul *= _lvlMul;
+  }
   return Math.floor(baseHp * mul);
 }
 function scaleEnemyDmg(baseDmg){
@@ -9344,6 +9368,13 @@ function scaleEnemyDmg(baseDmg){
   var mul = 1 + floorBonus;
   if(mul > _be.dmgCapSoft) mul = _be.dmgCapSoft + (mul - _be.dmgCapSoft) * _be.dmgCapDecay;
   if(floorNum > 10) mul *= 1 + (floorNum - 10) * _be.dmgLateBoost;
+  /* v9.3.3 — в данже перекачанный игрок получает более больных мобов.
+     Урон растёт мягче HP: ×0.05 за уровень сверх нормы, кап ×1.6. */
+  if(currentLocation === 'dungeon' && player && player.lvl > floorNum * 1.5){
+    var _lvlMul = 1 + (player.lvl - floorNum * 1.5) * 0.05;
+    if(_lvlMul > 1.6) _lvlMul = 1.6;
+    mul *= _lvlMul;
+  }
   return Math.max(1, Math.floor(baseDmg * mul));
 }
 /* v4.9.45 — таблица спавна: тип → функция */
@@ -9639,12 +9670,10 @@ var SUBCLASSES = {
     {
       id: 'sniper', icon: '🎯', name: 'Снайпер',
       desc: 'Убивает издалека, слаб вблизи',
-      pros: '×1,9 при неподвижности 60 кадров · ×1,4 после 30 кадров',
-      cons: '×0,6 урона при движении · −30% HP · −10% скорости',
-      /* v5.4.16 — ФИКС: снайпер был слаб в начале (штраф −40%),
-         но +70% на дистанции плохо работал. Поднял штраф вблизи
-         с −40% до −20%, и вынесено dmgMul на 1.0.
-         Теперь: standing, >220px = 1.9×, <100px = 0.8×. */
+      pros: '×1,5 при неподвижности 60 кадров · ×1,25 после 30 кадров',
+      cons: '×0,6 урона при движении',
+      /* v9.5.6 — бонусы за неподвижность: ×1,5 после 60 кадров,
+         ×1,25 после 30 кадров; при движении штраф ×0,6. */
       /* Числовые множители — в BALANCE.subclasses.sniper. */
       passive: 'sniper',
       lore: 'Он охотился на оленей. Не на эльфов. Но когда пришлось — прицелился. Выстрел был один. Он не промахнулся. С тех пор он не может смотреть на оленей. Но смотрит — на цель.',
@@ -9853,24 +9882,30 @@ function getWeaponsForPlayer(){
    Причина: на 25 этаже враги имели ×5.7 HP, а игрок — только ×4.6.
    Теперь игрок к 25 этажу имеет ~700 HP против ~7600 HP финального босса. */
 function calcMaxHp(armorBonus, subclass, cs){
-  /* v7.3.1 — все числа вынесены в BALANCE.player. */
   var _bp = BALANCE.player;
+  /* --- БАЗА: только то, что умножается на класс/подкласс --- */
   var _floorBonus = Math.max(0, floorNum - _bp.hpStartFloor);
   var base = _bp.baseHp
     + _floorBonus * _bp.hpPerFloor
     + (hasUpgrade('hpBoost') ? _bp.hpBoostUpgrade : 0);
-  var total = Math.floor((base + armorBonus) * cs.hpMul);
+
+  /* --- МНОЖИТЕЛИ: класс, потом подкласс --- */
+  var total = Math.floor(base * cs.hpMul);
   if(subclass && subclass.hpMul) total = Math.floor(total * subclass.hpMul);
-  /* v5.4.3 — ФИКС: аддитивные штрафы HP вместо мультипликативных.
-     Было: ×0.7 (проклятие) × ×0.8 (навык) = ×0.56.
-     Стало: −0.3 − 0.2 = ×0.5. */
-  /* v7.3.5 — penalty из BALANCE.curse. */
+
+  /* --- ПЛОСКИЕ БОНУСЫ: броня, алтарь, уровни. НЕ умножаются. --- */
+  total += (armorBonus || 0);
+  if(player && player.altarHpBonus) total += player.altarHpBonus;
+  /* v9.3.1 — HP-бонус от уровней: плоский, не умножается на класс/подкласс. */
+  if(player && player.lvlHpBonus) total += player.lvlHpBonus;
+
+  /* --- ШТРАФЫ: аддитивно, применяются один раз. --- */
   var _hpPenalty = 0;
-  if(player.curseFragility===true) _hpPenalty += BALANCE.curse.fragilityHpPenalty;
-  /* v7.3.12 — из BALANCE.skills. */
-  if(hasSkill('fire_fragile')) _hpPenalty += BALANCE.skills.fire_fragile.hpPenalty;
-  if(player.hardcoreHpPenalty) _hpPenalty += player.hardcoreHpPenalty; /* v8.4.1 */
+  if(player && player.curseFragility === true) _hpPenalty += BALANCE.curse.fragilityHpPenalty;
+  if(hasSkill('fire_fragile'))                 _hpPenalty += BALANCE.skills.fire_fragile.hpPenalty;
+  if(player && player.hardcoreHpPenalty)       _hpPenalty += player.hardcoreHpPenalty;
   if(_hpPenalty > 0) total = Math.floor(total * (1 - _hpPenalty));
+
   return Math.max(1, total);
 }
 
@@ -9905,9 +9940,8 @@ function applySubclassBonuses(){
   var armorBonus = 0;
   if(player.armor && ARMORS[player.armor]) armorBonus = ARMORS[player.armor].hp;
   armorBonus += (armorLevel-1)*10;
+  /* v9.3.1 — altarHpBonus теперь учитывается внутри calcMaxHp. */
   player.maxHp = calcMaxHp(armorBonus, s, cs);
-  /* v5.4.13 — временный бафф HP от алтаря */
-  if(player.altarHpBonus) player.maxHp += player.altarHpBonus;
   if(player.hp > player.maxHp) player.hp = player.maxHp;
 
   /* --- Скорость --- */
@@ -10036,15 +10070,19 @@ function getWeaponStats(){
   if(player.equippedAccessory&&LEGENDARY_ITEMS[player.equippedAccessory]&&LEGENDARY_ITEMS[player.equippedAccessory].stats){
     accBonus=LEGENDARY_ITEMS[player.equippedAccessory].stats.dmg||0;
   }
-  /* v5.7.11 — +1 урон за каждый уровень персонажа. */
+  /* v5.7.11 — +1 урон за каждый уровень персонажа.
+     v9.6.2 — _lvlDmgBonus вынесен из базы и прибавляется ПОСЛЕ множителей.
+     Раньше бонус за уровень умножался на класс/подкласс/темп; теперь он плоский. */
   var _lvlDmgBonus = player.lvlDmgBonus||0;
-  var baseDmg=w.dmg+(weaponLevel-1)*2+dmgBonus+accBonus+_lvlDmgBonus;
+  var baseDmg=w.dmg+(weaponLevel-1)*2+dmgBonus+accBonus;
   var cs=getClassStats();
   baseDmg=baseDmg*cs.dmgMul;
   /* v5.4.3 — темп атаки влияет на урон и CD */
   var tempo=w.tempo||'normal';
   var t=TEMPOS[tempo]||TEMPOS.normal;
   var finalDmg=Math.floor(baseDmg*(1+skillBonus+altarBonus)*t.dmgMul);
+  /* v9.6.2 — плоский бонус за уровни. Не умножается на класс/подкласс/темп. */
+  finalDmg += _lvlDmgBonus;
   /* v5.4.3 — бонус брони мага: +5% урона посохом */
   if(player.armorStaffBonus>0 && w.ranged) finalDmg=Math.floor(finalDmg*(1+player.armorStaffBonus));
   var finalCd=Math.floor((w.cd||20)*t.cdMul);
@@ -10110,6 +10148,9 @@ var _SOLID_DECOR = {
 
 /* Проверка: пересекается ли круг (x, y, r) с твёрдым декором */
 function _decorCollides(x, y, r){
+  /* v9.5.4 PERF: общий радиус и быстрый прямоугольный pre-check перед dist². */
+  var _decorR = r + 14;
+  var _decorR2 = _decorR * _decorR;
   for(var i = 0; i < decor.length; i++){
     var d = decor[i];
     if(!_SOLID_DECOR[d.type]) continue;
@@ -10121,10 +10162,14 @@ function _decorCollides(x, y, r){
         d.type==='dead_tree'||d.type==='stump'||d.type==='fallenTree'||
         d.type==='berryBush'||d.type==='trailDirt')) continue;
     var cx = d.x * TILE + TILE/2;
+    var dx = x - cx;
+    /* Быстрый отсев по X: при выходе за радиус столкновение невозможно. */
+    if(dx <= -_decorR || dx >= _decorR) continue;
     var cy = d.y * TILE + TILE/2;
-    var dx = x - cx, dy = y - cy;
-    /* Радиус препятствия — 14px (примерно как дерево) */
-    if(dx*dx + dy*dy < (r + 14) * (r + 14)) return true;
+    var dy = y - cy;
+    /* Сначала прямоугольный отсев по Y, затем точная круговая проверка. */
+    if(dy <= -_decorR || dy >= _decorR) continue;
+    if(dx*dx + dy*dy < _decorR2) return true;
   }
   return false;
 }
@@ -10938,6 +10983,7 @@ function _collectRunData(){
       _sellCount: player._sellCount || null,
       _runLore: player._runLore || {},
       _runBook: player._runBook || {},
+      _lastCurseId: player._lastCurseId || null,
       bagPurchased: player.bagPurchased || 0,
       altarHpBonus: player.altarHpBonus || 0,
       altarDmgBonus: player.altarDmgBonus || 0,
@@ -11354,13 +11400,16 @@ function startRun(mode){
   if(player){
     player.class = _pendingClass;
     player.subclass = _pendingSubclass;
-    /* v9.2.0 FIX: reset per-run counters and diary. */
+    /* v9.3.2 FIX: reset per-run counters and diary. */
     player._sellCount = null;
     player._diaryShown = {};
     /* v5.7.9 — миграция старых сейвов свитков к {id, count}. */
     _migrateScrolls();
     /* Один раз пересчитываем статы с подклассом */
     applySubclassBonuses();
+    /* v9.3.2 FIX: на старте забега игрок всегда на фул HP.
+       Раньше hp оставался = baseHp (100), а maxHp уже учитывал класс/подкласс. */
+    player.hp = player.maxHp;
   }
   
   if(runMode==='cursed'){var _curse=pick(CURSES);if(_curse)activeCurses.push(_curse.id);}
@@ -11401,8 +11450,10 @@ function startRun(mode){
     syncPotionCount();
   }
   if(runMode==='hardcore'){
+    /* v9.3.1 — ФИКС: maxHp не умножаем вручную, calcMaxHp сам применит −30%. */
     player.hardcoreHpPenalty=0.3;
-    player.maxHp=Math.floor(player.maxHp*0.7);player.hp=player.maxHp;
+    applySubclassBonuses();
+    player.hp=player.maxHp;
     showToast('☠️ Хардкор: 1 жизнь');
   }
   else if(runMode==='speed'){showToast('⚡ Скорость: меньше этажей');}
@@ -12238,17 +12289,31 @@ function showCodexTab(tab,el){
 
 /* v9.1.1 — справочник баланса синхронизирован с действующими механиками; числовые классы и оружие также генерируются из BALANCE/WEAPONS. */
 /* v9.2.0 — patch changelog removed from player compendium; current mechanics are generated from BALANCE. */;
+function openCompendiumSection(index){
+  var d=document.getElementById('compendium-section-'+index);
+  if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'});}
+}
 function openCompendium(){
-  var html='<h2>📖 Справочник</h2>';
-  html+='<p style="font-size:11px;color:#a08060">Все эффекты, проклятия и предметы игры</p>';
+  /* v9.5.6 — справочник разбит на сворачиваемые главы с быстрым указателем. */
+  var html='<h2>📖 Кодекс знаний</h2>';
+  html+='<p style="font-size:11px;color:#a08060">Выбери главу ниже. Разделы раскрываются отдельно, чтобы длинный справочник не превращался в бесконечную ленту.</p>';
+  html+='<div class="compendium-index" style="display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 12px;">';
   for(var i=0;i<COMPENDIUM.length;i++){
     var sec=COMPENDIUM[i];
-    html+='<h3>'+sec.section+'</h3>';
+    html+='<button class="btn small" style="font-size:10px;padding:5px 7px;" onclick="openCompendiumSection('+i+')">'+sec.section+'</button>';
+  }
+  html+='</div>';
+  for(var i=0;i<COMPENDIUM.length;i++){
+    var sec=COMPENDIUM[i];
+    html+='<details id="compendium-section-'+i+'" '+(i===0?'open':'')+' style="margin:7px 0;border:1px solid #51402b;border-radius:8px;background:rgba(20,14,8,.35);padding:0 9px;scroll-margin-top:8px;">';
+    html+='<summary style="cursor:pointer;padding:10px 2px;color:#d8b978;font-weight:bold;">'+sec.section+' <span style="font-size:10px;color:#9c8a6d;font-weight:normal;">('+sec.entries.length+')</span></summary>';
+    html+='<div style="padding:0 0 7px;">';
     for(var j=0;j<sec.entries.length;j++){
       var en=sec.entries[j];
       var loreHtml=en.lore?'<p class="lore">'+en.lore+'</p>':'';
       html+='<div class="itemRow info"><div class="itemInfo"><b>'+en.name+'</b><br><i>'+en.desc+'</i>'+loreHtml+'</div></div>';
     }
+    html+='</div></details>';
   }
   html+='<button class="btn" onclick="closeModal()">Закрыть</button>';showModal(html);
 }
@@ -12692,8 +12757,9 @@ function doRangedAttack(){
   if(player._rangedMovingPenalty)_baseDmg=Math.floor(_baseDmg*0.8);
   if(player.subPassive==='sniper'){
     var _sniperStill=player._stillFrames||0;
-    if(_sniperStill>=60)_baseDmg=Math.floor(_baseDmg*1.9);
-    else if(_sniperStill>=30)_baseDmg=Math.floor(_baseDmg*1.4);
+    /* v9.5.6 — смягчён бонус за неподвижность; штраф за бег сохранён. */
+    if(_sniperStill>=60)_baseDmg=Math.floor(_baseDmg*1.5);
+    else if(_sniperStill>=30)_baseDmg=Math.floor(_baseDmg*1.25);
     else if(_sniperStill<6)_baseDmg=Math.floor(_baseDmg*0.6);
   }
   /* v5.4.3 — line shape: стрела пробивает врагов насквозь.
@@ -13365,7 +13431,23 @@ if(!player._killstreak){player._killstreak=0;player._killstreakTimer=0;}
 player._killstreak++;
 player._killstreakTimer=180;
 /* v7.0 (из v6.5.12): XP чуть больше за убийство — уровни идут быстрее. */
-var _xpGain=e.boss?50:(e.elite?12:6);
+/* v9.3.0 — XP: обычный 7, элитка 13, страж 25, босс 55. */
+/* Цель: полная зачистка 25 этажей = ровно 50 уровень. */
+var _xpGain=e.boss?55:(e.isMiniBoss?25:(e.elite?13:7));
+
+/* v9.3.3 — в боковых локациях XP падает, если игрок перекачан для этой зоны.
+   Перекач перестаёт быть бесконечной стратегией: игрок идёт в данж. */
+if(currentLocation !== 'dungeon' && currentLocation !== 'village' && player){
+  var _zoneCap = (currentLocation === 'forest')         ? 8  :
+                 (currentLocation === 'banditCamp')     ? 12 :
+                 (currentLocation === 'ancientElves')   ? 15 :
+                 (currentLocation === 'castle')         ? 18 :
+                 (currentLocation === 'grove')          ? 10 :
+                 (currentLocation === 'druid')          ? 10 : 10;
+  if(player.lvl > _zoneCap){
+    _xpGain = Math.max(1, Math.floor(_xpGain * 0.3));
+  }
+}
 player.xp+=_xpGain;
 /* Level up: ровная кривая, до 3 уровней за раз. */
 /* v7.3.1 — числа вынесены в BALANCE.player. */
@@ -13376,7 +13458,8 @@ while(player.xp>=_xpToNext&&player.lvl<_bp.maxLevel&&_levelsGained<3){
 player.xp-=_xpToNext;
 player.lvl++;
 _levelsGained++;
-/* v7.3.1 — +HP за уровень из BALANCE. */
+/* v9.3.0 — HP от уровней хранится отдельно, чтобы не теряться при пересчёте maxHp. */
+player.lvlHpBonus = (player.lvlHpBonus || 0) + _bp.hpPerLevel;
 player.maxHp+=_bp.hpPerLevel;
 player.hp+=_bp.hpPerLevel;
 if(player.class==='mage'){player.maxMana=(player.maxMana||BALANCE.mana.baseMax)+1;player.mana=Math.min(player.maxMana,(player.mana||0)+1);}
@@ -13384,8 +13467,8 @@ if(player.class==='mage'){player.maxMana=(player.maxMana||BALANCE.mana.baseMax)+
 if(player.lvlDmgBonus<_bp.dmgCapPerLevel){
 player.lvlDmgBonus=(player.lvlDmgBonus||0)+_bp.dmgPerLevel;
 }
-/* v7.0 (из v6.5.12): плоская кривая XP = 12 + lvl*4. */
-_xpToNext=12+player.lvl*4;
+/* v9.3.0 — кривая XP сглажена: 12 + lvl*3. Цель — 50 уровень за полную зачистку 25 этажей. */
+_xpToNext=12+player.lvl*3;
 SfxPlay('levelUp');
 showToast('⭐ Уровень '+player.lvl+' (+'+_bp.hpPerLevel+' HP · +'+_bp.dmgPerLevel+' урон)');
 if(!REDUCED_MOTION){
@@ -14017,7 +14100,9 @@ function _updateAllySkeleton(e,dt,_enemiesLen){
     var ae=enemies[ai];
     if(ae.ally||ae.hp<=0)continue;
     if(ae.disguised)continue;
-    var ad=dist2(ae.x,ae.y,e.x,e.y);
+    /* v9.5.1 PERF: эквивалентный квадрат расстояния без вызова dist2 в поиске цели союзника. */
+    var _adx=ae.x-e.x,_ady=ae.y-e.y;
+    var ad=_adx*_adx+_ady*_ady;
     if(ad<tdist){tdist=ad;tgt=ae;}
   }
 
@@ -14103,6 +14188,12 @@ function _updateStatusEffects(e,dt){
   }
 }
 
+/* v9.6.8 PERF: общий список таймеров перезарядки врагов. */
+var ENEMY_COOLDOWN_FIELDS = [
+  'shootCd', 'tpCd', 'jumpCd', 'breathCd',
+  'summonCd', 'healCd', 'volleyCd', 'sporeCd', 'rootCd'
+];
+
 function updateEnemies(dt){
   if(inHub)return;
   /* v7.0 (из v6.5.5): чистим массив от undefined после splice */
@@ -14123,6 +14214,9 @@ function updateEnemies(dt){
     }
   }
   var _hasSkeletons = !!_skels && _skels.length > 0;
+  /* v9.6.8 PERF: кешируем комнату игрока лениво, только если она нужна. */
+  var _playerRoom;
+  var _playerRoomComputed = false;
   for(var i=0;i<_enemiesLen;i++){
     var e=enemies[i];
     if(!e)continue;
@@ -14139,14 +14233,15 @@ if(e.ally){
     if(e._spiderWeb){e.hurtFlash=Math.max(0,e.hurtFlash-dt);continue;}
     // v8.2.1 — пробуждение босса друидов
     if(e.dormant){
-      var _dToPlayer = Math.sqrt(dist2(e.x, e.y, player.x, player.y));
-      var _awakenRange = 140;
+      /* v9.5.5 PERF: спящему боссу нужна только проверка радиуса; sqrt не требуется. */
+      var _dToPlayer2 = dist2(e.x, e.y, player.x, player.y);
+      var _awakenRange2 = 140 * 140;
       // Прогресс идёт только когда игрок рядом — босс не проснётся заранее.
-      if(_dToPlayer < _awakenRange){
+      if(_dToPlayer2 < _awakenRange2){
         e.awakenProgress = Math.min(1, e.awakenProgress + dt * 0.012);
       }
 
-      if(_dToPlayer < _awakenRange && !e.awakenSound){
+      if(_dToPlayer2 < _awakenRange2 && !e.awakenSound){
         e.awakenSound = true;
         SfxPlay('bossRoar');
         showToast('🌿 Дух пробуждается...');
@@ -14164,7 +14259,7 @@ if(e.ally){
         }
       }
 
-      if(_dToPlayer < _awakenRange && e.awakenProgress >= 0.5){
+      if(_dToPlayer2 < _awakenRange2 && e.awakenProgress >= 0.5){
         e.dormant = false;
         e.aggro = true;
       }
@@ -14197,8 +14292,11 @@ if(e.ally){
     if(e.slowed!==undefined&&e.slowed>0){e.slowed-=dt;if(e.slowed<=0)e.slowed=0;}
     if(e.stunned!==undefined&&e.stunned>0){e.stunned-=dt;if(e.stunned<=0)e.stunned=0;continue;}
     e.hurtFlash=Math.max(0,e.hurtFlash-dt);e.atkCd=Math.max(0,e.atkCd-dt);e.bounce+=0.08;if(e.bounce>6.2832)e.bounce-=6.2832;
-    var _cds=['shootCd','tpCd','jumpCd','breathCd','summonCd','healCd','volleyCd','sporeCd','rootCd'];
-    for(var ci=0;ci<_cds.length;ci++){if(e[_cds[ci]]!==undefined)e[_cds[ci]]-=dt;}
+    /* v9.6.8 PERF: используем общий список без создания массива для каждого врага. */
+    for(var ci=0;ci<ENEMY_COOLDOWN_FIELDS.length;ci++){
+      var _cdField=ENEMY_COOLDOWN_FIELDS[ci];
+      if(e[_cdField]!==undefined)e[_cdField]-=dt;
+    }
     if(e.boss&&e.type==='qspider'&&e.hp<e.maxHp*0.5&&!e.webPhase){
       e.webPhase=true;e.webActive=true;e.webHp=200;e.invulnerable=true;
       var _webX=e.x+30,_webY=e.y+20;if(collideCircle(_webX,_webY,12)){_webX=e.x-30;_webY=e.y-20;}var _web=spawnEnemyByType('spider',_webX,_webY);_web.hp=_web.maxHp=200;_web._spiderWeb=true;_web.aggro=true;_web.room=e.room;enemies.push(_web);
@@ -14230,8 +14328,11 @@ if(e.ally){
     if(d>600&&!e.aggro&&!e.boss)continue;
     if(d>800&&!e.boss){e.atkCd=Math.max(0,e.atkCd-dt);continue;}
     e.facing=Math.atan2(dy,dx);
-    var playerRoom=whichRoom(player.x,player.y);
-    var sameRoom=(playerRoom===e.room)||(e.room===-1)||e.boss;
+    if(!_playerRoomComputed){
+      _playerRoom = whichRoom(player.x,player.y);
+      _playerRoomComputed = true;
+    }
+    var sameRoom=(_playerRoom===e.room)||(e.room===-1)||e.boss;
     /* v7.4.0 — Плащ Шёпота: враги позже агрятся */
     var _aggroRange = (player._curseEnemySight||0)>0 ? player._curseEnemySight : (player.armorSilentWalk ? 130 : 200);
     /* v7.4.0 — Костяной Жилет: нежить не агрится первой */
@@ -14294,12 +14395,19 @@ if(e.ally){
     if(e.aggro){
       var _atkTarget=player;var _atkTargetR=player.r;var _atkTargetD=d;
       if(_hasSkeletons){
+        /* v9.5.3 PERF: при выборе цели сравниваем квадраты дистанций,
+           а корень извлекаем только один раз после поиска ближайшей цели. */
+        var _atkTargetD2=d*d;
         for(var _ci=0;_ci<_skels.length;_ci++){
           var _ce=_skels[_ci];
           if(_ce.hp<=0)continue;
-          var _cd2=Math.sqrt((_ce.x-e.x)*(_ce.x-e.x)+(_ce.y-e.y)*(_ce.y-e.y));
-          if(_cd2<_atkTargetD){_atkTarget=_ce;_atkTargetR=_ce.r;_atkTargetD=_cd2;}
+          var _sdx=_ce.x-e.x,_sdy=_ce.y-e.y;
+          var _cd2=_sdx*_sdx+_sdy*_sdy;
+          if(_cd2<_atkTargetD2){
+            _atkTarget=_ce;_atkTargetR=_ce.r;_atkTargetD2=_cd2;
+          }
         }
+        if(_atkTarget!==player)_atkTargetD=Math.sqrt(_atkTargetD2);
       }
       if(_atkTargetD>e.r+_atkTargetR+2){
   var _tdx=_atkTarget.x-e.x,_tdy=_atkTarget.y-e.y;
@@ -14414,7 +14522,9 @@ function updateProjectiles(dt){
         var e=enemies[ei];if(e.hp<=0)continue;
         if(e.ally)continue;
         if(e.type==='mimic'&&e.disguised)continue;
-        if(dist2(p.x,p.y,e.x,e.y)<(e.r+6)*(e.r+6)){
+        /* v9.5.0 PERF: квадрат расстояния без вызова dist2 в горячем цикле. */
+        var _pdx=p.x-e.x,_pdy=p.y-e.y;
+        if(_pdx*_pdx+_pdy*_pdy<(e.r+6)*(e.r+6)){
           /* v5.4.8 — не бить одного и того же врага дважды */
           if(!p._hitSet)p._hitSet={};
           if(p._hitSet[ei])continue;
@@ -14450,7 +14560,9 @@ function updateProjectiles(dt){
               var ae=enemies[ai];if(ae.hp<=0)continue;
               if(ae.ally)continue;
               if(ae.type==='mimic'&&ae.disguised)continue;
-              if(dist2(ae.x,ae.y,p.x,p.y)<aoeR2){
+              /* v9.5.0 PERF: та же проверка радиуса AoE без вызова dist2. */
+              var _aox=ae.x-p.x,_aoy=ae.y-p.y;
+              if(_aox*_aox+_aoy*_aoy<aoeR2){
                 ae._attackedByPlayer=true;
                 damageEnemy(ae,_dmgNow);
                 _dmgTextPush(ae.x,ae.y-20,''+_dmgNow,30,PAL.dmgText);
@@ -14468,7 +14580,9 @@ function updateProjectiles(dt){
               for(var _cai=0;_cai<enemies.length;_cai++){
                 var _cae=enemies[_cai];
                 if(!_cae||_cae===p._critDirectTarget||_cae.hp<=0||_cae.ally||_cae.type==='mimic'&&_cae.disguised)continue;
-                if(dist2(_cae.x,_cae.y,p.x,p.y)<_critR2){
+                /* v9.5.0 PERF: та же проверка радиуса крит-взрыва. */
+                var _cax=_cae.x-p.x,_cay=_cae.y-p.y;
+                if(_cax*_cax+_cay*_cay<_critR2){
                   _cae._attackedByPlayer=true;
                   damageEnemy(_cae,_critSplash);
                   _dmgTextPush(_cae.x,_cae.y-32,'💥 '+_critSplash,22,'#ffb060');
@@ -14486,7 +14600,9 @@ function updateProjectiles(dt){
               for(var _bwi=breakableWalls.length-1;_bwi>=0;_bwi--){
                 var _bw=breakableWalls[_bwi];
                 var _bwx=_bw.x*TILE+TILE/2, _bwy=_bw.y*TILE+TILE/2;
-                if(dist2(_bwx,_bwy,p.x,p.y)<aoeR2){
+                /* v9.5.0 PERF: та же проверка расстояния до разрушаемой стены. */
+                var _bwdx=_bwx-p.x,_bwdy=_bwy-p.y;
+                if(_bwdx*_bwdx+_bwdy*_bwdy<aoeR2){
                   _bw.hp-=1;
                   _dmgTextPush(_bwx,_bwy-10,'💥',20,'#c08040');
                   if(_bw.hp<=0){
@@ -14535,7 +14651,9 @@ function updateProjectiles(dt){
       if(solidAt(p.x,p.y)){projectiles.splice(i,1);continue;}
       continue;
     }
-    if(dist2(p.x,p.y,player.x,player.y)<22*22&&player.invuln<=0){
+    /* v9.5.2 PERF: эквивалентная проверка дистанции вражеского снаряда без dist2(). */
+    var _epdx=p.x-player.x,_epdy=p.y-player.y;
+    if(_epdx*_epdx+_epdy*_epdy<22*22&&player.invuln<=0){
       /* v5.4.9 — откат: снаряды врагов бьют на полный урон. */
       var dmgTaken=p.dmg;
       /* v7.3.14 — def из BALANCE.legendary.thorns_armor. */
@@ -14575,8 +14693,8 @@ lastHitBy=_projNames[p.type]||'снаряд';
     if(solidAt(p.x,p.y)){projectiles.splice(i,1);continue;}
   }
 }
-/* v9.0.45 — bounded particle creation: cap before allocating new objects. */
-var _MAX_BLOOD_PARTICLES=120;
+/* v9.3.4 PERF — на мобилке меньше частиц, экономим CPU и нагрев. */
+var _MAX_BLOOD_PARTICLES = (('ontouchstart' in window) || (navigator.maxTouchPoints>0)) ? 60 : 120;
 function _pushBloodParticle(p){
   if(!Array.isArray(bloodParticles)||bloodParticles.length>=_MAX_BLOOD_PARTICLES)return false;
   bloodParticles.push(p);
@@ -14584,6 +14702,20 @@ function _pushBloodParticle(p){
 }
 function updateParticles(dt){
   if(bloodParticles.length>120)bloodParticles.splice(0,bloodParticles.length-120);
+  /* v9.6.6 — физика визуальных обломков. */
+  for(var _di=_fallingDebris.length-1;_di>=0;_di--){
+    var _deb=_fallingDebris[_di];
+    _deb.x+=_deb.vx*dt; _deb.y+=_deb.vy*dt; _deb.vy+=0.4*dt;
+    _deb.rot+=_deb.rotSpd*dt; _deb.life-=dt;
+    if(_deb.y>=_deb.targetY&&_deb.vy>0&&!_deb.landed){
+      _deb.landed=true; _deb.y=_deb.targetY; _deb.vy=0; _deb.vx*=0.3;
+      for(var _lp=0;_lp<3;_lp++){
+        var _la=gameRNG()*Math.PI*2;
+        _pushBloodParticle({x:_deb.x,y:_deb.targetY,vx:Math.cos(_la)*1.0,vy:-0.4-gameRNG()*0.5,life:25+Math.floor(gameRNG()*12),color:'rgba(120,110,95,0.5)'});
+      }
+    }
+    if(_deb.life<=0)_fallingDebris.splice(_di,1);
+  }
   for(var i=bloodParticles.length-1;i>=0;i--){
     var b=bloodParticles[i];
     if(!b){bloodParticles.splice(i,1);continue;}
@@ -15205,7 +15337,19 @@ if(floorEvent && floorEvent.id === 'collapse' && floorEvent.collapseTick){
       /* Ставим стену */
       map[cby][cbx] = 1;
       floorCacheCanvas = null;
+      _invalidateStaticDecor();
       decor = decor.filter(function(d){ return !(d.x === cbx && d.y === cby); });
+      /* v9.6.6 — каменные обломки падают в клетку, ставшую стеной. */
+      if(!REDUCED_MOTION){
+        var _debCount=3+Math.floor(gameRNG()*3);
+        for(var _dj=0;_dj<_debCount;_dj++){
+          var _dax=cbx*TILE+TILE/2+randi(-18,18),_day=cby*TILE-60-randi(0,30);
+          var _dtx=cbx*TILE+TILE/2+randi(-6,6),_dty=cby*TILE+TILE/2;
+          _fallingDebris.push({x:_dax,y:_day,vx:(_dtx-_dax)/40,vy:0,targetY:_dty,
+            size:4+Math.floor(gameRNG()*4),color:gameRNG()<0.5?'#6a5a48':'#4a3e30',
+            rot:gameRNG()*Math.PI*2,rotSpd:(gameRNG()-0.5)*0.15,life:90,landed:false});
+        }
+      }
 
       /* Визуал — пыль и камни */
       if(!REDUCED_MOTION){
@@ -15261,6 +15405,7 @@ if(floorEvent && floorEvent.id === 'collapse' && floorEvent.collapseTick){
     } else {
       showToast('💥 Обвал!');
     }
+    if(_pending.length>0&&!REDUCED_MOTION)screenShake=Math.max(screenShake,10);
     _ensurePathToStairs(true, _pending);
 
     floorEvent.collapseTick = 1800;  /* следующий через 30 сек */
@@ -16189,7 +16334,7 @@ var DECOR_DRAWERS={
 
   /* v8.6.9 — колодец из старого камня с водой и деревянной перекладиной */
   well:function(ctx,cx,cy,d){
-    var sc=(d.s||1)*1.12;
+    var sc=(d.s||1)*0.78;
     ctx.save();
     ctx.fillStyle='rgba(8,10,9,0.34)';ctx.beginPath();ctx.ellipse(cx,cy+10*sc,17*sc,5*sc,0,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#3c403d';ctx.fillRect(cx-13*sc,cy-1*sc,26*sc,10*sc);
@@ -16689,24 +16834,7 @@ DECOR_DRAWERS.throne=function(ctx,cx,cy,d){
   ctx.save();ctx.fillStyle='rgba(9,12,9,.36)';ctx.beginPath();ctx.ellipse(cx,cy+4*s,16*s,2*s,0,0,Math.PI*2);ctx.fill();
   _px([[-13,-8,26,16,'#3c2926'],[-11,-20,5,16,'#694333'],[6,-20,5,16,'#694333'],[-8,-23,16,4,'#b08a4b'],[-7,-15,14,10,'#743d3b'],[-4,-14,8,7,'#a65a4c'],[-2,-13,4,4,'#e8d38a'],[-12,6,24,3,'#b08a4b'],[-15,-17,3,10,'#7f5b3e'],[12,-17,3,10,'#7f5b3e']]);ctx.restore();
 };
-/* Stage 3: layered fungi and stone/moss micro-detail. */
-DECOR_DRAWERS.glow_mushroom=function(ctx,cx,cy,d){
-  var s=(d.s||1)*1.5,seed=d.seed||0,p=.5+.5*Math.sin(_visualTime*.002+seed*11);
-  ctx.save();shadow(ctx,cx,cy,14,5,s);
-  box(ctx,cx,cy,s,[[-4,-6,8,12,'#e0dfc8'],[-6,2,12,3,'#b0b29a'],[-11,-13,22,6,'#2d757e'],[-9,-18,18,6,'#38a8b5'],[-4,-20,9,3,'#8ae6d5'],[-8,-13,4,3,'#d0fff0'],[4,-15,4,3,'#c0f8f0'],[-1,-9,3,3,'#e0fff8']]);
-  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.20+p*.15;ctx.fillStyle='#69ffe5';ctx.beginPath();ctx.arc(cx,cy-11*s,20*s,0,Math.PI*2);ctx.fill();ctx.restore();
-};
-DECOR_DRAWERS.mushroom=function(ctx,cx,cy,d){
-  var s=(d.s||1)*1.5,seed=d.seed||0,cap=seed>.66?'#e8664a':seed>.33?'#d88adf':'#e07040';
-  ctx.save();shadow(ctx,cx,cy,14,5,s);
-  box(ctx,cx,cy,s,[[-4,-7,8,14,'#e8d0a8'],[-7,3,14,4,'#c8b088'],[-11,-14,22,7,cap],[-8,-18,16,5,cap],[-4,-20,8,3,'#ffd88a'],[-7,-13,4,3,'#ffe8c8'],[4,-15,3,3,'#ffe8c8'],[-2,-9,4,3,'#fff8d8']]);ctx.restore();
-};
-DECOR_DRAWERS.giantMush=function(ctx,cx,cy,d){
-  var s=(d.s||1)*1.6,p=.5+.5*Math.sin(_visualTime*.0018+(d.seed||0)*6);
-  ctx.save();shadow(ctx,cx,cy,22,6,s);
-  box(ctx,cx,cy,s,[[-6,-7,12,15,'#d9d2b7'],[-9,1,18,4,'#9e9277'],[-15,-16,30,10,'#8e3f8e'],[-12,-21,24,7,'#bd61b1'],[-6,-24,12,4,'#e5a0db'],[-10,-14,4,3,'#f6d9ee'],[5,-17,4,3,'#f6d9ee'],[-2,-11,4,3,'#baffdf']]);
-  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.10+p*.12;ctx.fillStyle='#a0ffd9';ctx.beginPath();ctx.arc(cx,cy-12*s,28*s,0,Math.PI*2);ctx.fill();ctx.restore();
-};
+/* v9.6.7: mushroom drawers are finalized at the end of the game script. */
 /* v9.2.2 FIX: self-contained rock drawer; no out-of-scope box()/shadow() calls. */
 DECOR_DRAWERS.rock=function(ctx,cx,cy,d){
   var s=(d&&d.s)||1, seed=(d&&d.seed)||0;
@@ -17207,6 +17335,33 @@ function drawDecor(d){
   else if((t==='ritualCircle'||t==='shrineAltar')&&_def){
     var _renderPal = d.isSacredTree ? _sacredTreePal : _def.pal;
     drawSprite(_def.spr,_renderPal,cx,cy+_yOff,_sc);
+    /* v9.6.5 — восстановление читаемости ритуального круга поверх базового спрайта.
+       Оставляем исходный пиксельный спрайт и добавляем контрастный контур, чтобы
+       круг не терялся на тёмном полу и при масштабировании мобильного canvas. */
+    if(t==='ritualCircle'){
+      /* v9.6.5 — размер сигнала круга привязан к TILE, а не к маленькому
+         масштабу спрайта: ранее контур сжимался вместе с d.s/_sc и терялся. */
+      var _ritPulse=0.5+0.5*Math.sin((_visualTime||0)*0.003+(d.seed||0)*5);
+      var _ritRx=Math.max(18,TILE*0.46), _ritRy=Math.max(7,TILE*0.17);
+      var _ritY=cy+Math.max(2,TILE*0.10);
+      ctx.save();
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=0.24+_ritPulse*0.16;
+      ctx.fillStyle='#ff334f';
+      ctx.beginPath();ctx.ellipse(cx,_ritY,_ritRx+3,_ritRy+3,0,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=0.96;
+      ctx.strokeStyle='#ff365d';
+      ctx.lineWidth=Math.max(2,TILE*0.045);
+      ctx.beginPath();ctx.ellipse(cx,_ritY,_ritRx,_ritRy,0,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle='#ffd5df';ctx.lineWidth=Math.max(1.5,TILE*0.025);
+      ctx.beginPath();ctx.ellipse(cx,_ritY,_ritRx*0.68,_ritRy*0.62,0,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#fff0f4';
+      for(var _ri=0;_ri<8;_ri++){
+        var _ra=_ri*Math.PI/4;
+        ctx.beginPath();ctx.arc(cx+Math.cos(_ra)*_ritRx*0.84,_ritY+Math.sin(_ra)*_ritRy*0.84,Math.max(1.5,TILE*0.035),0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    }
   }
   else if(_fn){_fn(ctx,cx,cy,d);}
   else if(_def){
@@ -17326,6 +17481,36 @@ function drawDecor(d){
   /* v9.0.11 — пиксельные акценты для декора, проходящего через drawDecor.
      Грибы намеренно рисуются отдельным передним проходом и эту функцию не вызывают. */
   _drawEnvironmentPixelAccents(d, cx, cy);
+
+  /* v9.6.6 — финальный независимый проход для ритуального круга.
+     Рисуем ПОСЛЕ всех акцентов/эффектов декора, чтобы круг не перекрывался
+     последующей отрисовкой и оставался видимым даже при очень малом масштабе спрайта. */
+  if(t === 'ritualCircle'){
+    var _rcPulse = 0.5 + 0.5 * Math.sin((typeof _visualTime === 'number' ? _visualTime : 0) * 0.003 + (d.seed || 0) * 5);
+    var _rcRx = Math.max(20, TILE * 0.48);
+    var _rcRy = Math.max(8, TILE * 0.19);
+    var _rcY = cy + Math.max(2, TILE * 0.10);
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(70, 8, 35, 0.30)';
+    ctx.beginPath(); ctx.ellipse(cx, _rcY, _rcRx + 3, _rcRy + 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.88 + _rcPulse * 0.12;
+    ctx.strokeStyle = '#ff365d';
+    ctx.lineWidth = Math.max(2, TILE * 0.045);
+    ctx.beginPath(); ctx.ellipse(cx, _rcY, _rcRx, _rcRy, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#ffd5df';
+    ctx.lineWidth = Math.max(1.5, TILE * 0.025);
+    ctx.beginPath(); ctx.ellipse(cx, _rcY, _rcRx * 0.66, _rcRy * 0.60, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#fff0f4';
+    for (var _rcI = 0; _rcI < 8; _rcI++) {
+      var _rcA = _rcI * Math.PI / 4;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(_rcA) * _rcRx * 0.84, _rcY + Math.sin(_rcA) * _rcRy * 0.84, Math.max(1.5, TILE * 0.035), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 /* ============================================================
@@ -18259,6 +18444,8 @@ function updateAmbientMotes(dt){
 }
 function drawAmbientMotes(){
   if(REDUCED_MOTION||!_ambientMotes.length)return;
+  /* v9.3.4 PERF — на мобилке огоньки рисуются каждый второй кадр. */
+  if(isTouch && (_frameCounter & 1)) return;
   for(var i=0;i<_ambientMotes.length;i++){
     var m=_ambientMotes[i],pulse=0.25+0.45*(0.5+0.5*Math.sin(m.phase));
     ctx.globalAlpha=pulse;
@@ -18270,6 +18457,8 @@ function drawAmbientMotes(){
   ctx.globalAlpha=1;
 }
 function drawWeather(){
+  /* v9.3.4 PERF — на мобилке погода рисуется каждый второй кадр. */
+  if(isTouch && (_frameCounter & 1)) return;
   var len=weatherParticles.length;
   if(len===0)return;
   var _now=Date.now();
@@ -18302,8 +18491,11 @@ function drawParticles(){
     var _cx=cam.x,_cy=cam.y;
     for(var i=0;i<bpLen;i++){
       var b=bloodParticles[i];
+      var _bpx=b.x-_cx,_bpy=b.y-_cy;
+      /* v9.4.0 PERF: пропускаем только частицы крови вне экрана; их симуляция не меняется. */
+      if(_bpx < -4 || _bpy < -4 || _bpx > VW+4 || _bpy > VH+4)continue;
       ctx.fillStyle=b.color;
-      ctx.fillRect((b.x-_cx)|0,(b.y-_cy)|0,3,3);
+      ctx.fillRect(_bpx|0,_bpy|0,3,3);
     }
   }
   var dtLen=dmgTexts.length;
@@ -18314,6 +18506,8 @@ function drawParticles(){
   for(var j=0;j<dtLen;j++){
     var t=dmgTexts[j];
     var sx2=t.x-_cx2,sy2=t.y-_cy2;
+    /* Большой запас по краям сохраняет длинные числа и текстовые метки у границы. */
+    if(sx2 < -100 || sy2 < -40 || sx2 > VW+100 || sy2 > VH+40)continue;
     var a=t.life>20?1:t.life/20;
     ctx.globalAlpha=a;
     ctx.fillStyle='#000';
@@ -18325,6 +18519,8 @@ function drawParticles(){
   ctx.textAlign='left';
 }
 var _lightMaskCanvas=null,_lightMaskCtx=null,_lightMaskW=0,_lightMaskH=0;
+/* v9.3.4 PERF — кеш спрайтов градиента света. */
+var _lightRevealCache=null;
 /* v9.1.8 PERF: offscreen-кеш статичного декора. */
 var _staticDecorCanvas=null;
 var _staticDecorDirty=true;
@@ -18381,12 +18577,38 @@ function drawLighting(){
 
   /* Вычитаем только из слоя темноты, не из игрового изображения. */
   lctx.globalCompositeOperation='destination-out';
+  /* v9.3.4 PERF — кеш спрайтов градиента света. Радиус округляем до 5px. */
+  function _getLightRevealSprite(r, strength){
+    if(!_lightRevealCache) _lightRevealCache = {};
+    var _rk = Math.round(r/5)*5;
+    if(_rk < 5) _rk = 5;
+    var _key = _rk + '|' + Math.round(strength*100);
+    var _sprite = _lightRevealCache[_key];
+    if(_sprite) return _sprite;
+    _sprite = document.createElement('canvas');
+    _sprite.width = _rk*2;
+    _sprite.height = _rk*2;
+    var _sctx = _sprite.getContext('2d');
+    var _g = _sctx.createRadialGradient(_rk,_rk,Math.max(2,_rk*0.08),_rk,_rk,_rk);
+    _g.addColorStop(0,'rgba(0,0,0,'+strength+')');
+    _g.addColorStop(0.58,'rgba(0,0,0,'+(strength*0.78)+')');
+    _g.addColorStop(1,'rgba(0,0,0,0)');
+    _sctx.fillStyle = _g;
+    _sctx.beginPath();
+    _sctx.arc(_rk,_rk,_rk,0,Math.PI*2);
+    _sctx.fill();
+    /* Ограничение кеша: не больше 40 спрайтов. */
+    var _keys = Object.keys(_lightRevealCache);
+    if(_keys.length >= 40){
+      for(var _ki=0;_ki<20;_ki++){delete _lightRevealCache[_keys[_ki]];}
+    }
+    _lightRevealCache[_key] = _sprite;
+    return _sprite;
+  }
   function reveal(x,y,r,strength){
-    var g=lctx.createRadialGradient(x,y,Math.max(2,r*0.08),x,y,r);
-    g.addColorStop(0,'rgba(0,0,0,'+strength+')');
-    g.addColorStop(0.58,'rgba(0,0,0,'+(strength*0.78)+')');
-    g.addColorStop(1,'rgba(0,0,0,0)');
-    lctx.fillStyle=g;lctx.beginPath();lctx.arc(x,y,r,0,Math.PI*2);lctx.fill();
+    var _sprite = _getLightRevealSprite(r, strength);
+    var _rk = _sprite.width / 2;
+    lctx.drawImage(_sprite, Math.round(x-_rk), Math.round(y-_rk));
   }
   var pulse=0.94+Math.sin(now*0.006)*0.035+Math.sin(now*0.017)*0.018;
   var lights=[];
@@ -18548,6 +18770,18 @@ function _renderFloodOverlay(){
   ctx.fillStyle='rgba(77,190,231,'+(0.12+_fl*0.018)+')';ctx.fill();
   ctx.restore();
 }
+/* v9.3.8 PERF: выводим только видимый фрагмент полноразмерных кэшей.
+   Исходные canvas и качество пикселей не меняются; координаты на экране сохраняются. */
+function _drawCameraCrop(sourceCanvas){
+  if(!sourceCanvas||!sourceCanvas.width||!sourceCanvas.height)return;
+  var sx=Math.max(0,cam.x), sy=Math.max(0,cam.y);
+  var ex=Math.min(sourceCanvas.width,cam.x+VW);
+  var ey=Math.min(sourceCanvas.height,cam.y+VH);
+  if(ex<=sx||ey<=sy)return;
+  var sw=ex-sx, sh=ey-sy;
+  ctx.drawImage(sourceCanvas,sx,sy,sw,sh,sx-cam.x,sy-cam.y,sw,sh);
+}
+
 function _renderFloor(x0,y0,x1,y1){
   /* v7.3.16 — кешируем весь пол в один canvas. */
   if(!floorCacheCanvas || floorCacheCanvas.width !== MAP_W*TILE || floorCacheCanvas.height !== MAP_H*TILE){
@@ -18574,7 +18808,7 @@ function _renderFloor(x0,y0,x1,y1){
       }
     }
   }
-  ctx.drawImage(floorCacheCanvas, -cam.x, -cam.y);
+  _drawCameraCrop(floorCacheCanvas);
 }
 /* v9.1.8 PERF: рисуем весь статичный декор один раз в offscreen canvas. */
 function _buildStaticDecorCanvas(){
@@ -18593,7 +18827,8 @@ function _buildStaticDecorCanvas(){
     var t=d.type;
     if(t==='spikeTrap'||t==='druidTeleport'||t==='campfire'||t==='torch'||
        t==='candle'||t==='glow_mushroom'||t==='lavaCrack'||t==='magma_crystal'||
-       t==='fire_geyser'||t==='candleTall'||t==='deadCandle'||t==='ritualCandle')continue;
+       t==='fire_geyser'||t==='candleTall'||t==='deadCandle'||t==='ritualCandle'||
+       t==='mushroom'||t==='giantMush'||t==='mushBlue'||t==='mushRed'||t==='glowMold')continue;
     _drawDecorToContext(_dctx, d);
   }
   _staticDecorDirty=false;
@@ -18781,24 +19016,26 @@ function _renderEntityLayer(){
 
   /* v9.1.8 PERF: статичный декор рисуем один раз из offscreen-кеша. */
   if(_staticDecorDirty||!_staticDecorCanvas)_buildStaticDecorCanvas();
-  if(_staticDecorCanvas)ctx.drawImage(_staticDecorCanvas,-cam.x,-cam.y);
+  if(_staticDecorCanvas)_drawCameraCrop(_staticDecorCanvas);
 
   /* Динамический декор (огонь, деревья священные, эпик) — рисуем каждый кадр. */
   for(var di=0;di<_decorLen;di++){
     var dd=decor[di];
     var ddT=dd.type;
     if(ddT==='grass'||ddT==='leafpile'||ddT==='crack'||ddT==='lily'||ddT==='web'||ddT==='spikeTrap'||ddT==='water_puddle'||ddT==='moss'||ddT==='cobweb'||ddT==='snow_pile'||ddT==='water_lily'||ddT==='druidTeleport'||ddT==='trailDirt')continue;
-    /* v9.0.5 — грибы рисуются отдельным передним проходом, чтобы кроны деревьев не скрывали их. */
-    if(ddT==='mushroom'||ddT==='glow_mushroom'||ddT==='giantMush'||ddT==='mushBlue'||ddT==='mushRed'||ddT==='glowMold')continue;
+    /* v9.6.6: грибы идут через штатную сортировку draw-list. */
     var _ddx=dd.x*TILE-cam.x,_ddy=dd.y*TILE-cam.y;
-    if(_ddx<-160||_ddy<-160||_ddx>VW+160||_ddy>VH+160)continue;
+    /* v9.3.9 PERF: tighter culling for dynamic decor; keep margin for large glows/shadows. */
+    if(_ddx<-96||_ddy<-112||_ddx>VW+96||_ddy>VH+112)continue;
     /* v9.1.8 PERF: статика уже в кеше — пропускаем. */
     if(!dd.isSacredTree&&!dd.isEpic&&!dd.isTowerRuin&&!dd.isEchoStone){
       var _tSkip=dd.type;
       if(_tSkip!=='spikeTrap'&&_tSkip!=='druidTeleport'&&_tSkip!=='campfire'&&
          _tSkip!=='torch'&&_tSkip!=='candle'&&_tSkip!=='glow_mushroom'&&
          _tSkip!=='lavaCrack'&&_tSkip!=='magma_crystal'&&_tSkip!=='fire_geyser'&&
-         _tSkip!=='candleTall'&&_tSkip!=='deadCandle'&&_tSkip!=='ritualCandle')continue;
+         _tSkip!=='candleTall'&&_tSkip!=='deadCandle'&&_tSkip!=='ritualCandle'&&
+         _tSkip!=='mushroom'&&_tSkip!=='giantMush'&&_tSkip!=='mushBlue'&&
+         _tSkip!=='mushRed'&&_tSkip!=='glowMold')continue;
     }
     /* v9.0.11 — грибы уже пропущены выше и рисуются отдельным передним проходом. */
     var _decorSortY = dd.y*TILE+TILE;
@@ -18942,42 +19179,7 @@ function _renderEntityLayer(){
     else _safeDrawDecor(item.ref);
   }
 
-  /* v9.0.7 — независимая и уменьшенная отрисовка грибов.
-     В v9.0.5 грибы всё ещё проходили через drawDecor/_safeDrawDecor; если
-     общий drawer/helper падал, отдельный проход тоже ничего не показывал.
-     Здесь рисуем гриб непосредственно на canvas, не используя общие функции. */
-  for(var _mfi=0;_mfi<_decorLen;_mfi++){
-    var _mf=decor[_mfi];
-    if(!_mf||(_mf.type!=='mushroom'&&_mf.type!=='glow_mushroom'&&_mf.type!=='giantMush'&&_mf.type!=='mushBlue'&&_mf.type!=='mushRed'&&_mf.type!=='glowMold'))continue;
-    var _mfx=_mf.x*TILE-cam.x+TILE/2,_mfy=_mf.y*TILE-cam.y+TILE/2;
-    if(_mfx<-100||_mfy<-120||_mfx>VW+100||_mfy>VH+100)continue;
-    var _ms=Math.max(0.52,Math.min(1.12,(_mf.s||1)*0.68)); /* v9.0.7: грибы компактнее на ~32% */
-    var _mt=_mf.type;
-    var _cap=_mt==='mushBlue'?'#4299d1':(_mt==='mushRed'?'#d84d4d':(_mt==='glow_mushroom'||_mt==='glowMold'?'#39b8a7':(_mt==='giantMush'?'#a94bb4':((_mf.seed||0)>.5?'#d86b49':'#c96caa'))));
-    var _glow=(_mt==='glow_mushroom'||_mt==='glowMold'||_mt==='giantMush');
-    ctx.save();
-    ctx.globalAlpha=1;
-    if(_glow){
-      ctx.globalCompositeOperation='lighter';
-      var _gr=_mt==='giantMush'?29*_ms:21*_ms;
-      var _gg=ctx.createRadialGradient(_mfx,_mfy-7*_ms,1,_mfx,_mfy-7*_ms,_gr);
-      _gg.addColorStop(0,_mt==='giantMush'?'rgba(120,255,205,0.38)':'rgba(105,255,225,0.34)');
-      _gg.addColorStop(1,'rgba(80,255,210,0)');
-      ctx.fillStyle=_gg;ctx.fillRect(_mfx-_gr,_mfy-_gr,_gr*2,_gr*2);
-      ctx.globalCompositeOperation='source-over';
-    }
-    ctx.fillStyle='rgba(8,12,10,0.48)';ctx.beginPath();ctx.ellipse(_mfx,_mfy+8*_ms,13*_ms,4*_ms,0,0,Math.PI*2);ctx.fill();
-    var _stemW=(_mt==='giantMush'?12:8)*_ms;
-    ctx.fillStyle='#e8dfc2';ctx.fillRect(Math.round(_mfx-_stemW/2),Math.round(_mfy-7*_ms),Math.max(3,Math.round(_stemW)),Math.round(15*_ms));
-    ctx.fillStyle='#a69a7b';ctx.fillRect(Math.round(_mfx-_stemW/2),Math.round(_mfy+3*_ms),Math.max(3,Math.round(_stemW)),Math.max(2,Math.round(4*_ms)));
-    ctx.fillStyle=_cap;
-    ctx.fillRect(Math.round(_mfx-11*_ms),Math.round(_mfy-15*_ms),Math.max(4,Math.round(22*_ms)),Math.max(3,Math.round(7*_ms)));
-    ctx.fillRect(Math.round(_mfx-8*_ms),Math.round(_mfy-19*_ms),Math.max(4,Math.round(16*_ms)),Math.max(3,Math.round(5*_ms)));
-    ctx.fillStyle=_glow?'#c7fff0':'#ffe0a0';ctx.fillRect(Math.round(_mfx-4*_ms),Math.round(_mfy-20*_ms),Math.max(2,Math.round(8*_ms)),Math.max(2,Math.round(3*_ms)));
-    ctx.fillStyle='rgba(255,245,215,0.95)';ctx.fillRect(Math.round(_mfx-7*_ms),Math.round(_mfy-14*_ms),Math.max(2,Math.round(3*_ms)),Math.max(2,Math.round(2*_ms)));
-    ctx.restore();
-  }
-}
+  /* v9.6.6 FIX: удалён дублирующий fallback-проход грибов; рисуем штатным drawDecor. */}
 function _renderTopLayer(){
   drawInteractHighlights();
   drawDoors();
@@ -19086,6 +19288,16 @@ function _drawPlayerHalo(){
   }
   ctx.fillStyle=_haloGrd;
   ctx.fillRect(px-_haloR,py-_haloR,_haloR*2,_haloR*2);
+  /* v9.6.6 — обломки обвала: слой пола, перед отрисовкой стен. */
+  for(var _fdi=0;_fdi<_fallingDebris.length;_fdi++){
+    var _fd=_fallingDebris[_fdi],_fdx=_fd.x-cam.x,_fdy=_fd.y-cam.y;
+    if(_fdx<-40||_fdy<-80||_fdx>VW+40||_fdy>VH+40)continue;
+    ctx.save(); ctx.translate(_fdx,_fdy); ctx.rotate(_fd.rot);
+    if(!_fd.landed){ctx.globalAlpha=0.25;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(0,_fd.targetY-_fd.y,_fd.size*1.4,_fd.size*0.5,0,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;ctx.fillStyle=_fd.color;ctx.fillRect(-_fd.size/2,-_fd.size/2,_fd.size,_fd.size);
+    ctx.fillStyle='rgba(255,220,160,0.25)';ctx.fillRect(-_fd.size/2,-_fd.size/2,_fd.size,Math.max(1,_fd.size*0.3));ctx.restore();
+  }
+
 }
 
 function _renderOverlays(){
@@ -19182,6 +19394,8 @@ function _renderOverlays(){
 /* v7.5.4 — холодная виньетка и пепел: без новых таймеров и случайных объектов. */
 var _darkAtmoCache={w:0,h:0,grd:null};
 function _renderDarkFantasyAtmosphere(){
+  /* v9.3.4 PERF — на мобилке виньетка и пепел рисуются каждый второй кадр. */
+  if(isTouch && (_frameCounter & 1)) return;
   /* v8.4.3 — виньетка и пепел рисуются всегда: это плавная анимация. */
   if(_darkAtmoCache.w!==VW||_darkAtmoCache.h!==VH||!_darkAtmoCache.grd){
     var g=ctx.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*0.22,VW/2,VH/2,Math.max(VW,VH)*0.78);
@@ -19880,9 +20094,12 @@ if(BESTIARY[lastHitBy]){
     var _deathLine='<p style="font-style:italic;color:#c0a080;font-size:12px;margin-bottom:8px">'+_esc(String(getDeathText(_floor)||''))+'</p>';
     var gs=document.getElementById('goStats');
     if(gs)gs.innerHTML=_deathLine+'Этаж: <b>'+_safeNum(_floor)+'</b><br>Убито: <b>'+_safeNum(_kills)+'</b><br>Золото: <b>'+_safeNum(_gold)+'✦</b><br>Время: <b>'+_esc(String(timeStr||''))+'</b><br>Пал от: <b>'+_esc(String(_dn||''))+'</b><br>Урон нанесён: <b>'+_safeNum(_dmg)+'</b><br>Зелий использовано: <b>'+_safeNum(_pots)+'</b><br>✦ В банк: <b>+'+_safeNum(_bankAdd)+'</b><br>🏔️ Рекорд: <b>'+_safeNum(_best)+'</b>';
-    var go=document.getElementById('gameover');if(go)go.classList.add('show');
+    /* v9.3.6 FIX: endRun('death') скрывает gameover. Сначала завершаем
+       забег, затем показываем модалку — иначе игра остаётся в gameOver,
+       но экран смерти скрыт, что выглядит как зависание. */
     clearTimeout(_deathFinalizeTimer);
     _finalizeDeathOnce();
+    var go=document.getElementById('gameover');if(go)go.classList.add('show');
   },1500);
   window._finalizeDeathOnce=function(){
     clearTimeout(_deathFinalizeTimer);
@@ -19936,8 +20153,8 @@ function continueRun(){
 
   player = {
     x: 0, y: 0, r: 12, speed: 2.8,
-    hp: 100, maxHp: 100,
-    lvl: 1, xp: 0, xpToNext: 23, lvlDmgBonus: 0,
+    hp: 100, maxHp: 100,lvlHpBonus:0,
+    lvl: 1, xp: 0, xpToNext:15, lvlDmgBonus: 0,
     gold: 0, kills: 0, keys: 0,
     facing: 0, atkCd: 0, atkAnim: 0, invuln: 0, bounceY: 0,
     weapon: 'sword', armor: null,
@@ -19954,6 +20171,10 @@ function continueRun(){
   var p = data.player || {};
   for(var key in p){
     if(p.hasOwnProperty(key)) player[key] = p[key];
+  }
+  /* v9.3.0 — миграция: если lvlHpBonus не было в сейве, восстановим его из lvl. */
+  if(typeof player.lvlHpBonus !== 'number'){
+    player.lvlHpBonus = Math.max(0, ((player.lvl||1) - 1) * BALANCE.player.hpPerLevel);
   }
   /* v8.5.10-FIX: валидация класса/подкласса после загрузки.
      Если класс не существует в текущей версии — сбрасываем на warrior. */
@@ -21740,9 +21961,28 @@ function openChest(c){
    [SECTION 21] ГЛАВНЫЙ ЦИКЛ
    ===================================================================== */
 var last=(typeof performance!=='undefined'?performance.now():Date.now()),mmTimer=0;
+/* v9.3.7 PERF: ограничиваем только отрисовку 60 FPS.
+   Фиксированный шаг симуляции и игровая логика остаются без изменений. */
+var _lastRenderAt=0;
+var _renderIntervalMs=1000/60;
+function _renderIfDue(now){
+  if(now-_lastRenderAt < _renderIntervalMs-0.5)return false;
+  _lastRenderAt=now;
+  if(!inHub&&player&&map){
+    render();
+    /* v9.6.2 — тосты рисуем только после очистки/отрисовки кадра.
+       Повторная отрисовка на кадрах, пропущенных FPS-ограничителем,
+       наслаивала текст и рамки, из-за чего верхние уведомления рябили. */
+    drawToasts();
+    return true;
+  }
+  return false;
+}
 var _fixedAccumulator=0;
 var _fixedStepMs=1000/60;
 var _fixedMaxSteps=5;
+/* v9.6.8 PERF: финальные drawer-функции грибов инициализируются только один раз. */
+var _mushroomDrawersFinalized = false;
 function loop(){
   var now=(typeof performance!=='undefined'?performance.now():Date.now());
   var elapsed=now-last;last=now;
@@ -21751,7 +21991,61 @@ function loop(){
   if(elapsed>100)elapsed=100;
   _visualTime+=elapsed;
   if(player&&player._dying&&player._dyingUntil&&now>=player._dyingUntil)player._dying=false;
-  requestAnimationFrame(loop);
+  /* ============================================================
+   v9.6.7 — ФИНАЛЬНЫЕ DECOR_DRAWERS ДЛЯ ГРИБОВ
+   Самодостаточные, без внешних box/shadow/px.
+   ============================================================ */
+if(!_mushroomDrawersFinalized){
+(function _finalizeMushroomDrawers(){
+  function _mushShadow(ctx,cx,cy,rx,ry,sc){
+    ctx.fillStyle='rgba(9,12,9,.38)';ctx.beginPath();
+    ctx.ellipse(cx,cy+ry*.8*sc,rx*sc,ry*.45*sc,0,0,Math.PI*2);ctx.fill();
+  }
+  function _mushBox(ctx,cx,cy,sc,rects){
+    for(var i=0;i<rects.length;i++){
+      var r=rects[i];ctx.fillStyle=r[4];
+      ctx.fillRect(Math.round(cx+r[0]*sc),Math.round(cy+r[1]*sc),
+        Math.max(1,Math.round(r[2]*sc)),Math.max(1,Math.round(r[3]*sc)));
+    }
+  }
+  DECOR_DRAWERS.mushroom=function(ctx,cx,cy,d){
+    var seed=d.seed||0,sc=(d.s||1)*0.78;
+    var cap=seed>.66?'#e8664a':seed>.33?'#d88adf':'#e07040';
+    var capHi=seed>.66?'#ff9a7a':seed>.33?'#f0b0f0':'#ff9a60';
+    ctx.save();_mushShadow(ctx,cx,cy,12,4,sc);
+    _mushBox(ctx,cx,cy,sc,[[-3,-6,6,12,'#e8d0a8'],[-5,2,10,3,'#c8b088'],[-10,-12,20,6,cap],[-7,-16,14,5,cap],[-3,-18,6,3,capHi],[-6,-11,3,2,'#ffe8c8'],[3,-13,3,2,'#ffe8c8'],[-1,-8,3,2,'#fff8d8']]);
+    ctx.restore();
+  };
+  DECOR_DRAWERS.glow_mushroom=function(ctx,cx,cy,d){
+    var seed=d.seed||0,sc=(d.s||1)*0.82,pulse=.5+.5*Math.sin((_visualTime||0)*.002+seed*11);
+    ctx.save();ctx.globalCompositeOperation='lighter';var glowR=22*sc;
+    var grd=ctx.createRadialGradient(cx,cy-8*sc,1,cx,cy-8*sc,glowR);
+    grd.addColorStop(0,'rgba(105,255,225,'+(.18+pulse*.16)+')');
+    grd.addColorStop(.5,'rgba(80,220,200,'+(.06+pulse*.05)+')');grd.addColorStop(1,'rgba(80,220,200,0)');
+    ctx.fillStyle=grd;ctx.fillRect(cx-glowR,cy-8*sc-glowR,glowR*2,glowR*2);ctx.globalCompositeOperation='source-over';
+    _mushShadow(ctx,cx,cy,12,4,sc);
+    _mushBox(ctx,cx,cy,sc,[[-3,-6,6,12,'#dfe8d0'],[-5,2,10,3,'#a8b49a'],[-11,-13,22,6,'#2d757e'],[-9,-17,18,6,'#38a8b5'],[-6,-20,12,4,'#5fd8c5'],[-3,-22,6,3,'#a8f0e0'],[-8,-13,4,3,'#d0fff0'],[4,-15,4,3,'#c0f8f0'],[-1,-9,3,3,'#e0fff8'],[-2,-18,2,2,'rgba(200,255,240,'+(.6+pulse*.4)+')'],[3,-13,2,2,'rgba(200,255,240,'+(.5+pulse*.4)+')']]);
+    ctx.restore();
+  };
+  DECOR_DRAWERS.giantMush=function(ctx,cx,cy,d){
+    var seed=d.seed||0,sc=(d.s||1)*0.90,pulse=.5+.5*Math.sin((_visualTime||0)*.0018+seed*6);
+    ctx.save();ctx.globalCompositeOperation='lighter';var glowR=30*sc;
+    var grd=ctx.createRadialGradient(cx,cy-12*sc,2,cx,cy-12*sc,glowR);
+    grd.addColorStop(0,'rgba(160,120,255,'+(.12+pulse*.10)+')');grd.addColorStop(1,'rgba(160,120,255,0)');
+    ctx.fillStyle=grd;ctx.fillRect(cx-glowR,cy-12*sc-glowR,glowR*2,glowR*2);ctx.globalCompositeOperation='source-over';
+    _mushShadow(ctx,cx,cy,20,6,sc);
+    _mushBox(ctx,cx,cy,sc,[[-6,-7,12,15,'#d9d2b7'],[-9,1,18,4,'#9e9277'],[-15,-16,30,10,'#8e3f8e'],[-12,-21,24,7,'#bd61b1'],[-8,-24,16,5,'#d888cf'],[-4,-26,8,3,'#e8a8e0'],[-10,-14,4,3,'#f6d9ee'],[6,-17,4,3,'#f6d9ee'],[-2,-11,4,3,'#baffdf'],[-3,-22,2,2,'rgba(240,200,255,'+(.5+pulse*.4)+')'],[4,-19,2,2,'rgba(240,200,255,'+(.4+pulse*.4)+')']]);
+    ctx.restore();
+  };
+  /* Синие/красные/плесневые варианты тоже получают видимый drawer. */
+  DECOR_DRAWERS.mushBlue=function(ctx,cx,cy,d){var sc=(d.s||1)*0.78;ctx.save();_mushShadow(ctx,cx,cy,12,4,sc);_mushBox(ctx,cx,cy,sc,[[-3,-6,6,12,'#e8d0a8'],[-5,2,10,3,'#c8b088'],[-10,-12,20,6,'#347eb8'],[-7,-16,14,5,'#55b8ed'],[-3,-18,6,3,'#b5e8ff'],[-6,-11,3,2,'#e4f8ff']]);ctx.restore();};
+  DECOR_DRAWERS.mushRed=function(ctx,cx,cy,d){var sc=(d.s||1)*0.78;ctx.save();_mushShadow(ctx,cx,cy,12,4,sc);_mushBox(ctx,cx,cy,sc,[[-3,-6,6,12,'#e8d0a8'],[-5,2,10,3,'#c8b088'],[-10,-12,20,6,'#b82f3b'],[-7,-16,14,5,'#e34b55'],[-3,-18,6,3,'#ffb0a0'],[-6,-11,3,2,'#ffe8c8']]);ctx.restore();};
+  DECOR_DRAWERS.glowMold=function(ctx,cx,cy,d){DECOR_DRAWERS.glow_mushroom(ctx,cx,cy,d);};
+})();
+_mushroomDrawersFinalized = true;
+}
+
+requestAnimationFrame(loop);
   /* v9.1.4 — неактивные состояния: симуляция стоит, рендер по возможности продолжается. */
   if(document.hidden||VW<=0||VH<=0){
     _fixedAccumulator=0;
@@ -21763,14 +22057,15 @@ function loop(){
   }
   if(gamePaused){
     _fixedAccumulator=0;
-    drawToasts();
-    try{if(!inHub&&player&&map)render();}catch(_pe){}
+    try{_renderIfDue(now);}catch(_pe){}
     return;
   }
   if(gameOver){
+    /* v9.3.6 FIX: после смерти мир больше не обновляем и не рендерим.
+       Экран смерти — DOM-оверлей; повторный render() за кадр мог зависать
+       на скопившихся боевых эффектах/частицах мобильного устройства. */
     _fixedAccumulator=0;
     updateToasts(elapsed/16.667);
-    try{if(!inHub&&player&&map)render();}catch(_ge){}
     drawToasts();
     return;
   }
@@ -21795,12 +22090,19 @@ function loop(){
       tickTime+=_fixedStepMs;stats.totalPlayTimeMs+=_fixedStepMs;
       _frameCounter++;
       updatePlayer(dt);
+      /* v9.3.6 FIX: если смерть наступила в updatePlayer, не запускаем
+         остальные подсистемы симуляции в этом же кадре. */
+      if(gameOver){_fixedAccumulator=0;break;}
       /* v6.5.10: счётчик кадров смерти */
       if(player&&player._dyingFrames>0&&!gamePaused){player._dyingFrames--;if(player._dyingFrames<=0)player._dying=false;}
       if(_curseWhisperCd>0&&!gamePaused)_curseWhisperCd--;
       /* v6.5.9-OPT: страховка — если hp<=0, а die() не вызвалась */
       if(player&&player.hp<=0&&!gameOver&&!player._dying){die();}
-      updateEnemies(dt);updateProjectiles(dt);updateParticles(dt);
+      updateEnemies(dt);
+      if(gameOver){_fixedAccumulator=0;break;}
+      updateProjectiles(dt);
+      if(gameOver){_fixedAccumulator=0;break;}
+      updateParticles(dt);
       updateCamera();updateFallingLeaves(dt);updateWeather(dt);updateAmbientMotes(dt);
       _weatherChangeTimer-=dt;if(_weatherChangeTimer<=0){_weatherChangeTimer=1800+randi(0,600);_changeWeatherDynamic();}
       updateToasts(dt);
@@ -21814,7 +22116,8 @@ function loop(){
     /* Не допускаем спираль отложенных обновлений после длительной паузы. */
     if(_steps===_fixedMaxSteps&&_fixedAccumulator>=_fixedStepMs)_fixedAccumulator=0;
     if(_didHitStop)updateHUD();
-    render();drawToasts();
+    /* v9.3.6 FIX: не вызываем тяжёлый игровой render после die() в этом кадре. */
+    if(!gameOver)_renderIfDue(now);
   }catch(err){dbg('LOOP: '+(err&&err.message?err.message:err));}
 }
 
@@ -22412,7 +22715,7 @@ setTimeout(resize,100);setTimeout(resize,400);setTimeout(resize,1000);
     });
   }
   COMPENDIUM.push({
-    section:'??? — Брат',
+    section:'🏁 Концовки',
     entries:_secretEntries
   });
 })();
