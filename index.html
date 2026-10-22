@@ -11362,7 +11362,7 @@ function rebindInlineOnclicks(root){
           if(!m||!_ONCLICK_WHITELIST[m[1]]){dbg('onclick blocked');return;}
           /* Аргументы разрешены только как строковые/числовые/boolean/null литералы. */
           var args=m[2].trim();
-          if(args&&!/^(?:\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|null)\s*)(?:,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|null)\s*)*$/.test(args)){dbg('onclick arguments blocked');return;}
+          if(args && !/^(?:\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|null|this)\s*)(?:,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|true|false|null|this)\s*)*$/.test(args)){dbg('onclick arguments blocked');return;}
           var fn=new Function(code);fn.call(el,e);
         }catch(err){dbg('onclick exec: '+err.message);}
       },false);
@@ -13340,17 +13340,26 @@ function openCodex(){
 }
 
 function showCodexTab(tab,el){
-  /* v4.9.43 — ФИКС: убрана зависимость от window.event (Safari/Firefox) */
-  var ids=['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_bandits','codex_ancient','codex_grove','codex_paths'];
-  for(var i=0;i<ids.length;i++){
-    var s=document.getElementById(ids[i]);
-    if(s)s.style.display='none';
+  var ids = ['codex_notes','codex_aelis','codex_hero','codex_elder','codex_traitor','codex_hunter','codex_trader','codex_guard','codex_fortress','codex_book','codex_druid','codex_bandits','codex_ancient','codex_grove','codex_paths'];
+  for(var i = 0; i < ids.length; i++){
+    var s = document.getElementById(ids[i]);
+    if(s) s.style.display = 'none';
   }
-  var show=document.getElementById('codex_'+tab);
-  if(show)show.style.display='block';
-  var tabs=document.querySelectorAll('#modalPanel .tab');
-  for(var j=0;j<tabs.length;j++)tabs[j].classList.remove('active');
-  if(el&&el.classList)el.classList.add('active');
+  var show = document.getElementById('codex_' + tab);
+  if(show) show.style.display = 'block';
+
+  /* Вместо переданного el — находим активную вкладку по её onclick-атрибуту */
+  var tabs = document.querySelectorAll('#modalPanel .tab');
+  for(var j = 0; j < tabs.length; j++){
+    tabs[j].classList.remove('active');
+  }
+  for(var k = 0; k < tabs.length; k++){
+    var oc = tabs[k].getAttribute('onclick') || '';
+    if(oc.indexOf("'" + tab + "'") >= 0 || oc.indexOf('\"' + tab + '\"') >= 0){
+      tabs[k].classList.add('active');
+      break;
+    }
+  }
 }
 
 /* v9.1.1 — справочник баланса синхронизирован с действующими механиками; числовые классы и оружие также генерируются из BALANCE/WEAPONS. */
