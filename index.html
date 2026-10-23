@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf — single-file release; version is defined by GAME_VERSION in the main script. -->
+<!-- Dungeon Elf 9.9.8 — single-file release; version is defined by GAME_VERSION in the main script. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -906,7 +906,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.9.3';
+var GAME_VERSION='9.9.14';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -977,6 +977,7 @@ function totalLoreEntries(){
     + 1 /* карта капитана */
     + (typeof GROVE_NOTES!=='undefined'?GROVE_NOTES.length:0);
 }
+var _loreCountCache=-1,_loreCountCacheLen=-1;
 function countLoreSeen(){
   if(!Array.isArray(stats.loreRead))return 0;
   var n=0, i, e, key;
@@ -6934,21 +6935,52 @@ function _buildDecalCanvas(){
     decalCtx=decalCanvas.getContext('2d');
     if(!decalCtx||decalCanvas.width<=0||decalCanvas.height<=0)throw new Error('decal canvas unavailable');
     decalCtx.imageSmoothingEnabled=false;
-    for(var i=0;i<groundDecals.length;i++){
-      var gd=groundDecals[i]; if(!gd)continue;
-      try{_drawOneGroundDecal(decalCtx,gd);}
-      catch(_e){_failCount++;var _gt='gd:'+(gd.type||'unknown');_failTypes[_gt]=(_failTypes[_gt]||0)+1;try{decalCtx.globalAlpha=1;decalCtx.globalCompositeOperation='source-over';decalCtx.setLineDash([]);}catch(_e2){}}
-    }
-    /* ПАТЧ 9b — плоские статичные элементы запекаются один раз на этаж. */
+    /* v9.9.4 PERF-FREEZE: порционная запечка ground decals и плоского декора. */
     var _flatTypes={leafpile:1,crack:1,web:1,spikeTrap:1,water_puddle:1,cobweb:1,snow_pile:1,trailDirt:1};
     if(!_currentPerf||!(_currentPerf.wind>0.01)){_flatTypes.grass=1;_flatTypes.lily=1;_flatTypes.moss=1;_flatTypes.water_lily=1;}
-    for(var _fi=0;_fi<decor.length;_fi++){
-      var _fd=decor[_fi]; if(!_fd||!_flatTypes[_fd.type])continue;
-      try{_drawFlatDecalToContext(decalCtx,_fd,_fd.x*TILE,_fd.y*TILE);}
-      catch(_e){_failCount++;_failTypes[_fd.type]=(_failTypes[_fd.type]||0)+1;try{decalCtx.globalAlpha=1;decalCtx.globalCompositeOperation='source-over';decalCtx.setLineDash([]);}catch(_e2){}}
+    var _plan=[];
+    for(var i=0;i<groundDecals.length;i++){
+      var gd=groundDecals[i];if(gd)_plan.push({kind:'gd',ref:gd});
     }
-    _decorFailLog.decalFatal=null;
+    for(var _fi=0;_fi<decor.length;_fi++){
+      var _fd=decor[_fi];if(_fd&&_flatTypes[_fd.type])_plan.push({kind:'flat',ref:_fd});
+    }
+    var _bakeIdx=0;
+    var _BATCH=32;
+    var _bakeToken={};
+    function _bakeStep(){
+      if(_buildDecalCanvas._token!==_bakeToken)return;
+      var _end=Math.min(_bakeIdx+_BATCH,_plan.length);
+      for(var i=_bakeIdx;i<_end;i++){
+        var p=_plan[i];
+        try{
+          if(p.kind==='gd')_drawOneGroundDecal(decalCtx,p.ref);
+          else _drawFlatDecalToContext(decalCtx,p.ref,p.ref.x*TILE,p.ref.y*TILE);
+        }catch(_e){
+          _failCount++;
+          var _tk=(p.kind==='gd'?'gd:':'')+(p.ref.type||'unknown');
+          _failTypes[_tk]=(_failTypes[_tk]||0)+1;
+          try{decalCtx.globalAlpha=1;decalCtx.globalCompositeOperation='source-over';decalCtx.setLineDash([]);}catch(_e2){}
+        }
+      }
+      _bakeIdx=_end;
+      if(_bakeIdx<_plan.length){
+        if(typeof requestIdleCallback==='function')requestIdleCallback(_bakeStep,{timeout:80});
+        else setTimeout(_bakeStep,4);
+      }else{
+        _buildDecalCanvas._baking=false;
+        _decorFailLog.decalFatal=null;
+        _decorFailLog.decalCount=_failCount;
+        _decorFailLog.decalTypes=_failTypes;
+        if(_failCount&&typeof _warn==='function')try{_warn('[Dungeon Elf] decal bake: '+_failCount+' errors',_failTypes);}catch(_ignoreWarn){}
+      }
+    }
+    _buildDecalCanvas._token=_bakeToken;
+    _buildDecalCanvas._baking=true;
+    _bakeStep();
+    return;
   }catch(_decalFatal){
+    _buildDecalCanvas._baking=false;
     decalCanvas=null;decalCtx=null;
     _decorFailLog.decalFatal=String(_decalFatal&&_decalFatal.message||_decalFatal);
   }
@@ -9360,7 +9392,7 @@ function buildBanditCamp(){
   for(var pathY=cy-1;pathY<=cy+1;pathY++)for(var pathX=7;pathX<=cx-2;pathX++)map[pathY][pathX]=0;
   var mobSpots=[
     ['bandit',18,cy-7],['bandit',24,cy+2],['banditArcher',30,cy-7],['banditArcher',34,cy+2],
-    ['banditBrute',34,cy-1],['bandit',cx-7,cy+8],['banditCaptain',cx+10,cy-1]
+    ['banditBrute',34,cy-1],['bandit',cx-7,cy+8],['banditCaptain',cx,cy]
   ];
   for(var mi=0;mi<mobSpots.length;mi++){
     var mob=spawnEnemyByType(mobSpots[mi][0],mobSpots[mi][1]*TILE,mobSpots[mi][2]*TILE);
@@ -9467,16 +9499,21 @@ function buildDruidCircle(){
   var _boss = spawnLeafSpirit(_cX * TILE, _cY * TILE);
   if(_boss){
     _boss.type = 'druidSpirit';
-    _boss.hp = _boss.maxHp = Math.floor(_boss.maxHp * 3);
-    _boss.dmg = Math.floor(_boss.dmg * 1.5);
+    _boss.hp = _boss.maxHp = Math.floor(_boss.maxHp * 3.5);
+    _boss.dmg = Math.floor(_boss.dmg * 1.8);
+    _boss.speed = 1.5;
     _boss.r = Math.floor(_boss.r * 1.5);
     _boss.isMiniBoss = true;
-    _boss.gold = 100;
+    _boss.gold = 150;
     _boss.aggro = false;
     _boss.room = -1;
     _boss.dormant = true;
     _boss.awakenProgress = 0;
     _boss.awakenSound = false;
+    _boss.phase = 1;
+    _boss.volleyCd = 120;
+    _boss.summonCd = 300;
+    _boss.teleportCd = 180;
     enemies.push(_boss);
   }
   // v8.0.0 — телепорт возврата. Синий камень в углу поляны.
@@ -10367,7 +10404,17 @@ var ENEMY_SPAWNERS={
   bandit:function(x,y){return _spawnBase('bandit',x,y);},
   banditArcher:function(x,y){return _spawnBase('banditArcher',x,y,{shootCd:0});},
   banditBrute:function(x,y){return _spawnBase('banditBrute',x,y);},
-  banditCaptain:function(x,y){var e=_spawnBase('banditCaptain',x,y);if(e){e.isMiniBoss=true;e.aggro=false;}return e;},
+  banditCaptain:function(x,y){
+    var e=_spawnBase('banditCaptain',x,y);
+    if(e){
+      e.isMiniBoss=true;
+      e.aggro=false;
+      e.dashCd=0;
+      e.phase2=false;
+      e.armorReduction=0.15;
+    }
+    return e;
+  },
   ghostKnight:spawnGhostKnight,
   shadow:spawnShadow,
   aelis:spawnAelis,
@@ -11283,6 +11330,7 @@ function bagCount(){return bag.length;}
    [SECTION 12] МОДАЛКИ
    ===================================================================== */
 var _closeModalLockUntil=0,_showModalLockUntil=0;
+var _hubContinueTimer=null;
 /* v9.0.67 — флаг: модалка открыта поверх активной игры.
    При открытии ставим игру на паузу, при закрытии — снимаем. */
 var _modalPausedGame = false;
@@ -11893,7 +11941,9 @@ function showHub(){
   /* v7.0.8 — Показ модалки «Продолжить» изнутри showHub.
      v7.0.8 — убран флаг _continueOffered: он блокировал повторный показ.
      Защита от дубликата — через проверку, что модалка уже открыта. */
-  setTimeout(function(){
+  if(typeof _hubContinueTimer!=='undefined' && _hubContinueTimer){clearTimeout(_hubContinueTimer);}
+  _hubContinueTimer=setTimeout(function(){
+    _hubContinueTimer=null;
     if(!inHub) return;
     /* Не показывать, если модалка уже открыта чем-то другим */
     var _mEl = document.getElementById('modal');
@@ -12392,6 +12442,7 @@ function startRun(mode){
   /* v9.0.60 — invalidate callbacks and clear lifecycle timers before resetting state. */
   _runGeneration++;
   _cancelRunScopedAsyncWork();
+  if(_hubContinueTimer){clearTimeout(_hubContinueTimer);_hubContinueTimer=null;}
   /* v4.9.70 — убран guardAction: он блокировал рестарт после смерти */
   /* FIX v4.9.17 — жёстко сбрасываем состояние перед стартом */
   _loreQueueActive=false;
@@ -14279,7 +14330,11 @@ function _dmgTextPush(x,y,text,life,color){
 /** Применяет урон врагу с учётом игровых модификаторов и последствий попадания. @param {object} e @param {number} dmg @returns {void} */
 function damageEnemy(e,dmg){
   if(!e||e.ally)return;
-  if(e._spiderWeb){e.hp-=dmg;_dmgTextPush(e.x,e.y-20,''+Math.floor(dmg),25,'#f0d0ff');if(e.hp<=0){e.hp=0;e._dead=true;for(var _qsi=0;_qsi<enemies.length;_qsi++){if(enemies[_qsi]&&enemies[_qsi].type==='qspider'){enemies[_qsi].webActive=false;enemies[_qsi].invulnerable=false;}}}return;}
+  if(e._spiderWeb){e.hp-=dmg;_dmgTextPush(e.x,e.y-20,''+Math.floor(dmg),25,'#f0d0ff');// Броня капитана: уменьшает получаемый урон на 15%.
+  if(e.armorReduction && e.type==='banditCaptain'){
+    dmg=Math.floor(dmg*(1-e.armorReduction));
+  }
+  if(e.hp<=0){e.hp=0;e._dead=true;for(var _qsi=0;_qsi<enemies.length;_qsi++){if(enemies[_qsi]&&enemies[_qsi].type==='qspider'){enemies[_qsi].webActive=false;enemies[_qsi].invulnerable=false;}}}return;}
   /* v7.2.0 — удар по боссу 25 этажа = игрок выбрал бой.
      Щель исчезает. Обратного пути нет. */
   if(e.boss&&e.final&&floorNum===25&&_elderDoors.length)_elderDoors=[];
@@ -15189,7 +15244,122 @@ var ENEMY_BEHAVIOR={
     }
     return true;   /* поведение взяло управление */
   },
-aelis:function(e,dt,d,dx,dy,spd){
+  banditCaptain:function(e,dt,d,dx,dy,spd){
+    /* Капитан: рывок, броня и подкрепление на второй фазе. */
+    e.dashCd=(e.dashCd||0)-dt;
+    if(e.dashCd<=0 && d>80 && d<350 && d>0){
+      var _dashAng=Math.atan2(dy,dx);
+      moveEntity(e,Math.cos(_dashAng)*80,Math.sin(_dashAng)*80);
+      SfxPlay('teleport');
+      for(var _bp=0;_bp<5;_bp++){
+        _pushBloodParticle({x:e.x,y:e.y,vx:rand(-2,2),vy:rand(-2,2),life:20,color:'#8f2926'});
+      }
+      e.dashCd=180+randi(0,60);
+      return true;
+    }
+    if(e.hp<e.maxHp*0.5 && !e.phase2){
+      e.phase2=true;
+      e.speed*=1.4;
+      e.dmg=Math.floor(e.dmg*1.3);
+      showToast('⚔️ Капитан в ярости! Он зовёт подкрепление!');
+      SfxPlay('bossRoar');
+      for(var _ci=0;_ci<2;_ci++){
+        var _spawnX=e.x+rand(-50,50);
+        var _spawnY=e.y+rand(-50,50);
+        if(!collideCircle(_spawnX,_spawnY,12)){
+          var _mob=spawnEnemyByType('bandit',_spawnX,_spawnY);
+          if(_mob){_mob.aggro=true;_mob.room=e.room;enemies.push(_mob);}
+        }
+      }
+    }
+    if(d<60 && e.atkCd<=0){
+      e.atkCd=60;
+      if(player.invuln<=0){
+        var _capDmg=e.dmg;
+        if(player.armorDamageReduction>0)_capDmg=Math.floor(_capDmg*(1-player.armorDamageReduction));
+        player.hp-=_capDmg;
+        player.invuln=25;
+        lastHitBy='banditCaptain';
+        SfxPlay('playerHit');
+        spawnBlood(player.x,player.y,3);
+        flashDamage();
+        _dmgTextPush(player.x,player.y-20,'-'+_capDmg,40,'#ff6060');
+        updateHUD();
+        if(player.hp<=0)die();
+      }
+      return true;
+    }
+    if(d>40 && d>0)moveEntity(e,(dx/d)*spd*dt,(dy/d)*spd*dt);
+    return true;
+  },
+  druidSpirit:function(e,dt,d,dx,dy,spd){
+    /* Фаза 2: ярость при половине здоровья. */
+    if(e.hp < e.maxHp * 0.5 && e.phase === 1){
+      e.phase = 2;
+      e.speed = 2.0;
+      showToast('🌿 Дух впадает в ярость!');
+      SfxPlay('bossRoar');
+      for(var _dri=0;_dri<12;_dri++){
+        var _dra=_dri/12*Math.PI*2;
+        shootArrow(e.x,e.y,Math.cos(_dra),Math.sin(_dra),Math.max(1,Math.floor(e.dmg*0.5)));
+      }
+    }
+
+    /* Телепорт: держит дистанцию, а во второй фазе чаще меняет позицию. */
+    e.teleportCd -= dt;
+    if(e.teleportCd <= 0 && (d < 120 || e.phase === 2)){
+      var _ta=gameRNG()*Math.PI*2;
+      var _td=150+gameRNG()*100;
+      var _tx=player.x+Math.cos(_ta)*_td;
+      var _ty=player.y+Math.sin(_ta)*_td;
+      if(!collideCircle(_tx,_ty,e.r)){
+        e.x=_tx;e.y=_ty;
+        SfxPlay('teleport');
+      }
+      e.teleportCd=180+randi(0,60);
+    }
+
+    /* Призыв двух временных осенних волков. summonCd тикает в общем цикле. */
+    if(e.summonCd <= 0){
+      for(var _w=0;_w<2;_w++){
+        var _wa=gameRNG()*Math.PI*2;
+        var _wx=e.x+Math.cos(_wa)*60;
+        var _wy=e.y+Math.sin(_wa)*60;
+        if(!collideCircle(_wx,_wy,12)){
+          var _wolf=spawnAutumnWolf(_wx,_wy);
+          if(_wolf){
+            _wolf.aggro=true;
+            _wolf.room=e.room;
+            _wolf.summonLife=900;
+            enemies.push(_wolf);
+          }
+        }
+      }
+      showToast('🐺 Дух призывает стаю!');
+      e.summonCd=(e.phase===2)?400:600;
+    }
+
+    /* Веер листьев. volleyCd тикает в общем цикле. */
+    if(e.volleyCd <= 0 && d < 450){
+      var _baseAng=Math.atan2(player.y-e.y,player.x-e.x);
+      var _spread=(e.phase===2)?5:3;
+      for(var _vk=-_spread;_vk<=_spread;_vk++){
+        var _va=_baseAng+_vk*0.15;
+        shootArrow(e.x,e.y,Math.cos(_va),Math.sin(_va),e.dmg);
+      }
+      SfxPlay('arrow');
+      e.volleyCd=(e.phase===2)?100:180;
+    }
+
+    /* Движение: приближается издалека и отступает, если игрок близко. */
+    if(d > 200){
+      moveEntityGhost(e,(dx/d)*e.speed*dt,(dy/d)*e.speed*dt);
+    }else if(d < 150){
+      moveEntityGhost(e,-(dx/d)*e.speed*dt,-(dy/d)*e.speed*dt);
+    }
+    return true;
+  },
+  aelis:function(e,dt,d,dx,dy,spd){
   /* Телепорт вокруг игрока */
   if(e.teleportCd<=0){
     var _angT=gameRNG()*Math.PI*2;
@@ -15406,6 +15576,14 @@ function updateEnemies(dt){
   for(var i=0;i<enemies.length && i<_MAX_ENEMIES;i++){
     var e=enemies[i];
     if(!e)continue;
+    if(e.summonLife){
+      e.summonLife -= dt;
+      if(e.summonLife <= 0){
+        e.hp = 0;
+        onEnemyDeath(e);
+        continue;
+      }
+    }
     if(e.hp<=0)continue;
     if(e.type==='mimic'&&e.disguised){
       var _mimicDist=dist2(e.x,e.y,player.x,player.y);
@@ -16255,7 +16433,14 @@ if(player.abilityCd>0)player.abilityCd-=dt;
     if(playerDashing<=0){playerDashDir.x=0;playerDashDir.y=0;}
   }
   if(comboTimer>0){comboTimer-=dt;if(comboTimer<=0)comboCount=0;}
-  autoPickupGoldPotion();updatePickupButton();updateComboLabel();
+  autoPickupGoldPotion();
+  /* v9.9.4 PERF: updatePickupButton перебирает groundItems + chests + весь decor
+     (300+ объектов) каждый кадр. Обновляем раз в 10 кадров — кнопка «ВЗЯТЬ»
+     не мигает, но CPU экономится. */
+  if(typeof player._pickBtnTick!=='number')player._pickBtnTick=0;
+  player._pickBtnTick++;
+  if(player._pickBtnTick%10===0)updatePickupButton();
+  updateComboLabel();
   if(map[pty]&&map[pty][ptx]===5){
     var _trapKey=ptx+','+pty;
     if(player._lastTrapKey!==_trapKey||!player._lastTrap||Date.now()-player._lastTrap>1500){
@@ -16945,7 +17130,12 @@ function drawWallTile(sx,sy,tx,ty,wt){
   var h=Math.abs(((tx+17)*73856093)^((ty+31)*19349663)^((floorNum+7)*83492791));
   function pick(a){h=(h*1664525+1013904223)>>>0;return a[h%a.length];}
   var x=sx,y=sy,T=TILE;
-  ctx.save();ctx.imageSmoothingEnabled=false;
+  /* v9.9.4 PERF: состояние контекста сохраняет _renderWalls на весь проход. */
+  var _dfSx_alpha=ctx.globalAlpha;
+  var _dfSx_fill=ctx.fillStyle;
+  var _dfSx_stroke=ctx.strokeStyle;
+  var _dfSx_line=ctx.lineWidth;
+  ctx.imageSmoothingEnabled=false;
   ctx.fillStyle=p.base;ctx.fillRect(x,y,T,T);
   /* Uneven weathered stone face: broad patches rather than a flat square. */
   ctx.fillStyle=p.mid;ctx.fillRect(x+1,y+2,T-2,Math.max(5,T*0.42|0));
@@ -17012,7 +17202,11 @@ function drawWallTile(sx,sy,tx,ty,wt){
     ctx.strokeStyle='rgba(0,0,0,0.92)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+15,y+3);ctx.lineTo(x+18,y+9);ctx.lineTo(x+14,y+14);ctx.lineTo(x+19,y+20);ctx.stroke();
     ctx.strokeStyle='rgba(230,190,125,0.55)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+16,y+4);ctx.lineTo(x+19,y+9);ctx.stroke();
   }
-  ctx.restore();
+  /* v9.9.4 PERF: ручное восстановление стилей; общий save/restore — в _renderWalls. */
+  ctx.globalAlpha=_dfSx_alpha;
+  ctx.fillStyle=_dfSx_fill;
+  ctx.strokeStyle=_dfSx_stroke;
+  ctx.lineWidth=_dfSx_line;
 }
 /* v5.4.17 — простые спрайт-декорации: рисуются одним drawSprite. */
 /* v8.5.8-FIX — объявления спрайтов, используемых DECOR_SPRITES,
@@ -19870,7 +20064,7 @@ var LIVE_DECOR_TYPES={
   /* Интерактивные деревья не запекаются в статический кеш. */
   'sacredTree':1,'dungeonSacredTree':1
 };
-function _invalidateStaticDecor(){ _staticDecorDirty=true; _staticDecorCanvas=null; }
+function _invalidateStaticDecor(){ _staticDecorDirty=true; _staticDecorCanvas=null; _buildStaticDecorCanvas._token=null; _buildStaticDecorCanvas._baking=false; _buildStaticDecorCanvas._failed=false; }
 /* v9.0.46 — cache the static vignette; rebuild only when viewport dimensions change. */
 var _vignetteCanvas=null,_vignetteW=0,_vignetteH=0;
 function _getVignetteCanvas(){
@@ -19979,7 +20173,13 @@ function drawLighting(){
   }
   for(var j=0;j<lights.length;j++){
     var l=lights[j],flicker=0.88+Math.sin(now*0.012+l.seed*13)*0.08+Math.sin(now*0.027+l.seed*5)*0.04;
-    reveal(l.x,l.y,l.r*flicker,0.94);
+    /* v9.9.4 PERF: радиус фиксирован — фликер только через alpha. */
+    var _baseR=l.r;
+    var _sprite=_getLightRevealSprite(_baseR,0.94);
+    var _rk=_sprite.width/2;
+    lctx.globalAlpha=flicker;
+    lctx.drawImage(_sprite,Math.round(l.x-_rk),Math.round(l.y-_rk));
+    lctx.globalAlpha=1;
   }
   /* v9.1.8 PERF: reveal для снарядов отключён — каждый вызов создавал
      createRadialGradient, что давало до 30 градиентов в кадр при залпах. */
@@ -20099,6 +20299,7 @@ function render(){
   }
   var x0=Math.floor(cam.x/TILE),y0=Math.floor(cam.y/TILE);
   var x1=x0+Math.ceil(VW/TILE)+1,y1=y0+Math.ceil(VH/TILE)+1;
+  _renderParallaxBackground();
   _renderFloor(x0,y0,x1,y1);
   _renderGroundLayer();
   _renderEntityLayer();
@@ -20208,11 +20409,12 @@ function _renderFloor(x0,y0,x1,y1){
 }
 /* v9.1.8 PERF: рисуем весь статичный декор один раз в offscreen canvas. */
 function _buildStaticDecorCanvas(){
+  if(_buildStaticDecorCanvas._baking||_buildStaticDecorCanvas._failed)return;
   if(!MAP_W||!MAP_H){_staticDecorDirty=true;return;}
   var _w=MAP_W*TILE,_h=MAP_H*TILE,MAX_DIM=4096,MAX_AREA=6000000; /* v9.7.2-FIX */
   _staticDecorFailedItems=[];
   if(!isFinite(_w)||!isFinite(_h)||_w<=0||_h<=0||_w>MAX_DIM||_h>MAX_DIM||_w*_h>MAX_AREA){
-    _staticDecorCanvas=null;_staticDecorDirty=false;_decorFailLog.mapTooBig=true;return;
+    _staticDecorCanvas=null;_staticDecorDirty=false;_decorFailLog.mapTooBig=true;_buildStaticDecorCanvas._failed=true;return;
   }
   var _failCount=0,_failTypes={};
   try{
@@ -20222,21 +20424,43 @@ function _buildStaticDecorCanvas(){
     var _dctx=_staticDecorCanvas.getContext('2d');
     if(!_dctx)throw new Error('static context unavailable');
     _dctx.imageSmoothingEnabled=false;
-    for(var i=0;i<decor.length;i++){
-      var d=decor[i];if(!d)continue;
-      if(d.isSacredTree||d.isEpic||d.isTowerRuin||d.isEchoStone)continue;
-      if(typeof LIVE_DECOR_TYPES!=='undefined'&&LIVE_DECOR_TYPES[d.type])continue;
-      try{_drawDecorToContext(_dctx,d);}
-      catch(_e){
-        _failCount++;_failTypes[d.type||'unknown']=(_failTypes[d.type||'unknown']||0)+1;
-        _staticDecorFailedItems.push(d);
-        try{_dctx.globalAlpha=1;_dctx.globalCompositeOperation='source-over';_dctx.setLineDash([]);}catch(_e2){}
+    /* v9.9.4 PERF-FREEZE: запекаем порциями, не блокируя кадр на всём декоре. */
+    var _bakeIdx=0;
+    var _BATCH=24;
+    var _bakeToken={};
+    _staticDecorDirty=true;
+    function _bakeStep(){
+      if(_buildStaticDecorCanvas._token!==_bakeToken)return;
+      var _end=Math.min(_bakeIdx+_BATCH,decor.length);
+      for(var i=_bakeIdx;i<_end;i++){
+        var d=decor[i];if(!d)continue;
+        if(d.isSacredTree||d.isEpic||d.isTowerRuin||d.isEchoStone)continue;
+        if(typeof LIVE_DECOR_TYPES!=='undefined'&&LIVE_DECOR_TYPES[d.type])continue;
+        try{_drawDecorToContext(_dctx,d);}
+        catch(_e){
+          _failCount++;_failTypes[d.type||'unknown']=(_failTypes[d.type||'unknown']||0)+1;
+          _staticDecorFailedItems.push(d);
+          try{_dctx.globalAlpha=1;_dctx.globalCompositeOperation='source-over';_dctx.setLineDash([]);}catch(_e2){}
+        }
+      }
+      _bakeIdx=_end;
+      if(_bakeIdx<decor.length){
+        if(typeof requestIdleCallback==='function')requestIdleCallback(_bakeStep,{timeout:80});
+        else setTimeout(_bakeStep,4);
+      }else{
+        _buildStaticDecorCanvas._baking=false;
+        _staticDecorDirty=false;_decorFailLog.staticFatal=null;
+        _decorFailLog.staticCount=_failCount;_decorFailLog.staticTypes=_failTypes;
+        if(decor.length>0&&_failCount>decor.length*0.5){_staticDecorCanvas=null;_buildStaticDecorCanvas._failed=true;}
       }
     }
-    _staticDecorDirty=false;_decorFailLog.staticFatal=null;
-    _decorFailLog.staticCount=_failCount;_decorFailLog.staticTypes=_failTypes;
-    if(decor.length>0&&_failCount>decor.length*0.5)_staticDecorCanvas=null;
+    _buildStaticDecorCanvas._token=_bakeToken;
+    _buildStaticDecorCanvas._baking=true;
+    _bakeStep();
+    return;
   }catch(_staticError){
+    _buildStaticDecorCanvas._baking=false;
+    _buildStaticDecorCanvas._failed=true;
     _staticDecorCanvas=null;_staticDecorDirty=false;
     _decorFailLog.staticFatal=String(_staticError&&_staticError.message||_staticError);
   }
@@ -20296,9 +20520,59 @@ function _drawSpriteToCtx(targetCtx,sp,pal,x,y,ps,fx){
   _forEachPixel(sp,pal,fx,function(cx,r,col){targetCtx.fillStyle=col;targetCtx.fillRect(_left+cx*ps,_top+r*ps,ps,ps);});
 }
 
+/* v9.9.14 — Subtle forest parallax silhouettes, decorative only. */
+function _renderParallaxBackground(){
+  if(!_currentPerf || !_currentPerf.bloom) return;
+  if(inHub || gameOver || !player || !cam || !ctx || !biome) return;
+
+  var biomeName = (typeof biome.name === 'string') ? biome.name : '';
+  var loc = (typeof currentLocation !== 'undefined') ? currentLocation : '';
+  var isForest = (loc === 'forest' || loc === 'druid' || loc === 'village' || biomeName.indexOf('Лес') >= 0);
+  if(!isForest) return;
+
+  var parX = cam.x * 0.85;
+  var parY = cam.y * 0.85;
+
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#0a1a0a';
+
+  var step = 240;
+  var startX = Math.floor(parX / step) * step;
+  var startY = Math.floor(parY / step) * step;
+  for(var y = startY; y < parY + VH + step; y += step){
+    for(var x = startX; x < parX + VW + step; x += step){
+      var seed = (((x / step) * 73 + (y / step) * 37) % 100 + 100) % 100;
+      if(seed > 40) continue;
+
+      var px = x - parX + (seed % 40) - 20;
+      var py = y - parY + (seed % 30);
+      var treeHeight = 60 + (seed % 40);
+      var treeBase = py + treeHeight + 20;
+      var treeBranch = treeBase - 60;
+      var treeTop = treeBase - 110;
+      ctx.beginPath();
+      ctx.moveTo(px, treeBase);
+      ctx.lineTo(px + 25, treeBranch);
+      ctx.lineTo(px + 15, treeBranch);
+      ctx.lineTo(px + 40, treeTop);
+      ctx.lineTo(px + 5, treeBranch - 10);
+      ctx.lineTo(px - 15, treeBranch);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 function _renderGroundLayer(){
-  if(decalCanvas) ctx.drawImage(decalCanvas, -cam.x, -cam.y);
+  if(decalCanvas&&!_buildDecalCanvas._baking) ctx.drawImage(decalCanvas, -cam.x, -cam.y);
   else {
+    /* v9.9.4 PERF-FREEZE: пока кеш запекается, временно рисуем decals живьём. */
+    ctx.save();
+    ctx.translate(-cam.x,-cam.y);
+    for(var _gdf=0;_gdf<groundDecals.length;_gdf++){try{_drawOneGroundDecal(ctx,groundDecals[_gdf]);}catch(_gdFallbackErr){}}
+    ctx.restore();
     /* v9.6.14: если decal-кеш не создался, рисуем плоский декор напрямую. */
     var _flatFallbackTypes={leafpile:1,crack:1,web:1,spikeTrap:1,water_puddle:1,cobweb:1,snow_pile:1,trailDirt:1};
     if(!_currentPerf||!(_currentPerf.wind>0.01)){_flatFallbackTypes.grass=1;_flatFallbackTypes.lily=1;_flatFallbackTypes.moss=1;_flatFallbackTypes.water_lily=1;}
@@ -20447,7 +20721,7 @@ function _renderEntityLayer(){
 
   /* v9.6.13 FIX: статик-кеш может быть недоступен — тогда весь декор идёт через draw-list. */
   if(_staticDecorDirty||!_staticDecorCanvas)_buildStaticDecorCanvas();
-  var _staticDecorOK=!!_staticDecorCanvas&&_staticDecorCanvas.width>0&&_staticDecorCanvas.height>0;
+  var _staticDecorOK=!_staticDecorDirty&&!_buildStaticDecorCanvas._baking&&!!_staticDecorCanvas&&_staticDecorCanvas.width>0&&_staticDecorCanvas.height>0;
   if(_staticDecorOK)_drawCameraCrop(_staticDecorCanvas);
 
   /* v9.6.13 FIX: динамический декор и fallback, если статик-кеш недоступен. */
@@ -20627,6 +20901,9 @@ function _renderTopLayer(){
   drawProjectiles();
 }
 function _renderWalls(x0,y0,x1,y1){
+  /* v9.9.4 PERF: один save/restore на весь цикл стен вместо пары на тайл. */
+  ctx.save();
+  ctx.imageSmoothingEnabled=false;
   for(var y=y0;y<y1;y++){
     var wrow=map[y];if(!wrow)continue;
     for(var x=x0;x<x1;x++){
@@ -20706,6 +20983,7 @@ function _renderWalls(x0,y0,x1,y1){
       }
     }
   }
+  ctx.restore();
 }
 /* v8.4.1 — ОРЕОЛ ГЕРОЯ: не зависит от освещения/времени суток. */
 function _drawPlayerHalo(){
@@ -20746,10 +21024,101 @@ function _drawPlayerHalo(){
 
 }
 
+
+/* v9.9.14 — Path-batched grass with Ultra-only flowers. */
+function _drawDynamicGrass(){
+  if(!_currentPerf || !_currentPerf.grassDensity) return;
+  if(inHub || gameOver || !player || !map || !cam || !ctx) return;
+
+  var biomeName = (typeof biome !== 'undefined' && biome && typeof biome.name === 'string') ? biome.name : '';
+  if(biomeName && /Лавов|Катакомб|Ледян|Затоплен|Паутин/i.test(biomeName)) return;
+
+  var density = _currentPerf.grassDensity;
+  var viewX = cam.x, viewY = cam.y;
+  var wf = (typeof _windFactor === 'function') ? _windFactor() : 0.5;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(74, 96, 48, 0.55)';
+  ctx.lineWidth = 1.2;
+
+  var step = (density === 2) ? 14 : 20;
+  var startX = Math.floor(viewX / step) * step;
+  var startY = Math.floor(viewY / step) * step;
+  var endX = viewX + VW + step;
+  var endY = viewY + VH + step;
+
+  ctx.beginPath();
+  for(var y = startY; y < endY; y += step){
+    for(var x = startX; x < endX; x += step){
+      var tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      if(ty < 0 || tx < 0 || !map[ty] || map[ty][tx] !== 0) continue;
+
+      var seed = ((tx * 73 + ty * 37 + x + y) % 100 + 100) % 100;
+      if(seed > (density === 2 ? 95 : 75)) continue;
+
+      var px = x - viewX + (seed % 8) - 4;
+      var py = y - viewY + (seed % 5);
+      var sway = Math.sin((_visualTime * 0.002) + tx) * wf * 4;
+
+      ctx.moveTo(px, py + 5);
+      ctx.quadraticCurveTo(px + sway * 0.5, py + 2, px + sway, py);
+
+      if(density === 2){
+        if(seed % 2 === 0){
+          var sway2 = Math.sin((_visualTime * 0.002) + tx + 1.5) * wf * 3;
+          ctx.moveTo(px + 2, py + 5);
+          ctx.quadraticCurveTo(px + 2 + sway2 * 0.5, py + 2, px + 2 + sway2, py - 1);
+        }
+        if(seed % 5 === 0){
+          var sway3 = Math.sin((_visualTime * 0.002) + tx + 3.0) * wf * 2.5;
+          ctx.moveTo(px - 2, py + 4);
+          ctx.quadraticCurveTo(px - 2 + sway3 * 0.5, py + 1, px - 2 + sway3, py - 1);
+        }
+      }
+    }
+  }
+  ctx.stroke();
+
+  // v9.9.14 — цветы на Ultra с естественным разбросом, меньшей плотностью и разной яркостью.
+  if(density === 2){
+    for(var cy2 = startY; cy2 < endY; cy2 += step * 3){
+      for(var cx2 = startX; cx2 < endX; cx2 += step * 3){
+        // Детерминированное смещение ломает регулярную сетку без мерцания между кадрами.
+        var offsetX = ((cx2 * 7 + cy2 * 13) % 11) - 5;
+        var offsetY = ((cx2 * 11 + cy2 * 7) % 9) - 4;
+
+        var flowerX = cx2 + offsetX * step;
+        var flowerY = cy2 + offsetY * step;
+        var ctx2 = Math.floor(flowerX / TILE), cty2 = Math.floor(flowerY / TILE);
+        if(cty2 < 0 || ctx2 < 0 || !map[cty2] || map[cty2][ctx2] !== 0) continue;
+
+        var cseed = ((ctx2 * 91 + cty2 * 53) % 100 + 100) % 100;
+        if(cseed > 5) continue;
+
+        var cpx = flowerX - viewX;
+        var cpy = flowerY - viewY;
+        var ccolor, alpha;
+        if(cseed === 0) { ccolor = '#e8a94a'; alpha = 0.6; }
+        else if(cseed === 1) { ccolor = '#d87543'; alpha = 0.5; }
+        else if(cseed === 2) { ccolor = '#e4d28a'; alpha = 0.7; }
+        else if(cseed === 3) { ccolor = '#a8c060'; alpha = 0.4; }
+        else { ccolor = '#c89060'; alpha = 0.4; }
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = ccolor;
+        ctx.fillRect(Math.floor(cpx), Math.floor(cpy), 2, 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
 function _renderOverlays(){
   if(fallingLeaves.length)drawFallingLeaves();
   drawWeather();
   drawAmbientMotes();
+  _drawDynamicGrass();
   _drawLootPixelBursts();   /* v9.6.9 FIX: лут-пиксели в общем слое оверлеев. */
   /* v9.1.8 PERF: _drawDungeonDust убрана — рисовала 8 точек каждый кадр поверх всего,
      визуально бесполезна, но ела CPU на слабых устройствах. */
@@ -21155,8 +21524,9 @@ if(typeof player.gold !== 'number' || !isFinite(player.gold)){
   player.gold = 0;
   _warn('[DungeonElf] player.gold was invalid, reset to 0');
 }
-player.gold = Math.max(0, Math.floor(player.gold));
-if(el.gold&&_hudCache.gold!==player.gold){el.gold.textContent=player.gold;_hudCache.gold=player.gold;}
+/* v9.9.4 FIX: не мутируем player.gold каждый кадр — только показываем округлённое значение. */
+var _displayGold = Math.max(0, Math.floor(player.gold));
+if(el.gold&&_hudCache.gold!==_displayGold){el.gold.textContent=_displayGold;_hudCache.gold=_displayGold;}
 if(el.gems&&player.craftInv){
 var _gems=(player.craftInv.ruby||0)+(player.craftInv.sapphire||0)+(player.craftInv.emerald||0);
 if(_hudCache.gems!==_gems){el.gems.textContent=_gems;_hudCache.gems=_gems;}
@@ -21224,7 +21594,15 @@ el.abilityBtn.style.filter='none';el.abilityBtn.style.opacity='1';
 }else el.abilityBtn.style.display='none';
 }else if(el.abilityBtn){el.abilityBtn.style.display='none';}
 if(el.loreProgress&&stats.loreRead){
-var _loreSeen=(typeof countLoreSeen==='function')?countLoreSeen():stats.loreRead.length;
+/* v9.9.4 PERF: кешируем число прочитанных записей по длине loreRead. */
+var _loreSeen;
+if(typeof _loreCountCache==='number'&&_loreCountCache>=0&&_loreCountCacheLen===stats.loreRead.length){
+  _loreSeen=_loreCountCache;
+}else{
+  _loreSeen=(typeof countLoreSeen==='function')?countLoreSeen():stats.loreRead.length;
+  _loreCountCache=_loreSeen;
+  _loreCountCacheLen=stats.loreRead.length;
+}
 var _loreTotal=(typeof totalLoreEntries==='function')?totalLoreEntries():89;
 var _loreStr=_loreSeen>0?('📖 Записи: '+_loreSeen+'/'+_loreTotal):'';
 var _bookFound=(typeof countBookPagesFound==='function')?countBookPagesFound():0;
@@ -21330,7 +21708,9 @@ function renderBottomBarItems(){
   var armor=player.armor&&ARMORS[player.armor]?ARMORS[player.armor]:null;
   function iconFor(slotId,kind,id,title){
     var el=document.getElementById(slotId);if(!el)return;
-    /* Remove legacy icon engines only inside this slot, never touch counters/cooldowns. */
+    /* v9.9.4 PERF: не пересобираем SVG, если предмет и title не изменились. */
+    if(el._dfIconId===id&&el._dfIconKind===kind&&el._dfIconTitle===title)return;
+    el._dfIconId=id;el._dfIconKind=kind;el._dfIconTitle=title;
     el.querySelectorAll('.p-slot-icon,.p-icon,.svg-icon,.df-bottom-weapon').forEach(function(n){n.remove();});
     var icon=el.querySelector('.live-item-icon');
     if(!icon){icon=document.createElement('span');icon.className='live-item-icon';el.insertBefore(icon,el.firstChild);}
@@ -21342,12 +21722,13 @@ function renderBottomBarItems(){
   iconFor('slotArmor','armor',player.armor,armor?armor.name:'Нет брони');
   iconFor('slotBag','bag','bag','Сумка');
   iconFor('slotPotion','potion','potion','Зелья');
-  /* Mirror the exact potion sprite from the inventory slot; preserve the button and counter. */
   var useBtn=document.getElementById('useBtn');
   var potionSlot=document.getElementById('slotPotion');
   if(useBtn&&potionSlot){
     var prettySvg=potionSlot.querySelector('.live-item-icon svg');
-    if(prettySvg){
+    var _svgSig=prettySvg?prettySvg.innerHTML.length+'_'+(prettySvg.getAttribute('viewBox')||''):'none';
+    if(prettySvg&&useBtn._dfPotionSvgSig!==_svgSig){
+      useBtn._dfPotionSvgSig=_svgSig;
       var oldSvgs=useBtn.querySelectorAll(':scope > svg');
       oldSvgs.forEach(function(svg){svg.remove();});
       var copiedSvg=prettySvg.cloneNode(true);
@@ -21362,6 +21743,9 @@ function renderBottomBarItems(){
       copiedSvg.style.imageRendering='pixelated';
       var useCnt=useBtn.querySelector('.cnt');
       useBtn.insertBefore(copiedSvg,useCnt||null);
+    }else if(!prettySvg&&useBtn._dfPotionSvgSig!=='none'){
+      useBtn._dfPotionSvgSig='none';
+      useBtn.querySelectorAll(':scope > svg').forEach(function(svg){svg.remove();});
     }
   }
   var acc=player.equippedAccessory&&LEGENDARY_ITEMS[player.equippedAccessory]?LEGENDARY_ITEMS[player.equippedAccessory]:null;
@@ -22246,6 +22630,31 @@ function handleCanvasTap(clientX,clientY){
       }
     }
   }
+  /* === Сундуки и страницы книги: приоритет точного тапа === */
+  // Проверяем небольшие интерактивные объекты до NPC и торговца.
+  var _exactTap = false;
+  for(var _bpi=0;_bpi<bookPagesOnFloor.length;_bpi++){
+    var _bp=bookPagesOnFloor[_bpi];
+    if(dist2(wx,wy,_bp.x,_bp.y)<35*35){
+      if(dist2(_bp.x,_bp.y,player.x,player.y)<85*85)pickUpBookPage(_bp);
+      else showToast('Подойди ближе');
+      _exactTap = true;
+      break;
+    }
+  }
+  if(!_exactTap){
+    for(var _ci=0;_ci<chests.length;_ci++){
+      var _ch=chests[_ci];if(_ch.opened)continue;
+      if(dist2(wx,wy,_ch.x,_ch.y)<35*35){
+        if(dist2(_ch.x,_ch.y,player.x,player.y)<85*85)openChest(_ch);
+        else showToast('Подойди ближе');
+        _exactTap = true;
+        break;
+      }
+    }
+  }
+  if(_exactTap)return;
+
   /* === NPC === */
   for(var n=0;n<npcs.length;n++){
     var np=npcs[n];
@@ -22392,7 +22801,7 @@ function handleCanvasTap(clientX,clientY){
     }
     if(dd2.type==='altar'){
       var ax=dd2.x*TILE+TILE/2,ay=dd2.y*TILE+TILE/2;
-      if(dist2(wx,wy,ax,ay)<50*50){if(dist2(ax,ay,player.x,player.y)<80*80)openAltar(dd2);else showToast('Подойди ближе');return;}
+      if(dist2(wx,wy,ax,ay)<30*30){if(dist2(ax,ay,player.x,player.y)<80*80)openAltar(dd2);else showToast('Подойди ближе');return;}
     }
     if(dd2.type==='lore'){
       var lx=dd2.x*TILE+TILE/2,ly=dd2.y*TILE+TILE/2;
@@ -22415,17 +22824,6 @@ function handleCanvasTap(clientX,clientY){
         if(dist2(_skx,_sky,player.x,player.y)<90*90)openFortressNotes();else showToast('Подойди ближе');
         return;
       }
-    }
-  }
-  /* === Сундуки === */
-  for(var i=0;i<chests.length;i++){var c=chests[i];if(c.opened)continue;
-    if(dist2(wx,wy,c.x,c.y)<70*70){if(dist2(c.x,c.y,player.x,player.y)<85*85)openChest(c);else showToast('Подойди ближе');return;}}
-  /* === Страницы книги === */
-  for(var _bpi=0;_bpi<bookPagesOnFloor.length;_bpi++){
-    var _bp=bookPagesOnFloor[_bpi];
-    if(dist2(wx,wy,_bp.x,_bp.y)<70*70){
-      if(dist2(_bp.x,_bp.y,player.x,player.y)<85*85)pickUpBookPage(_bp);else showToast('Подойди ближе');
-      return;
     }
   }
   /* === Двери === */
@@ -22750,7 +23148,10 @@ function _openSacredTree(){
 
   /* Кнопка: Помолиться */
   if(!_prayed){
-    html += '<button class="btn gold" onclick="sacredTreePray()">🙏 Помолиться (+5 HP на забег)</button>';
+    html += '<button class="btn gold sacred-tree-btn" onclick="sacredTreePray()">' +
+            '<span>🙏 Помолиться</span>' +
+            '<span style="font-size:12px; opacity:0.85;">+5 HP на забег</span>' +
+            '</button>';
   } else {
     html += '<div class="itemRow done"><div class="itemInfo"><i>🙏 Ты уже молился здесь</i></div></div>';
   }
@@ -22759,7 +23160,10 @@ function _openSacredTree(){
   if(!_offered){
     var _canOffer = (player.gold >= 25);
     if(_canOffer){
-      html += '<button class="btn gold" onclick="sacredTreeOffer()">🎁 Оставить дар (25✦, +5% урона на забег)</button>';
+      html += '<button class="btn gold sacred-tree-btn" onclick="sacredTreeOffer()">' +
+              '<span>🎁 Оставить дар (25✦)</span>' +
+              '<span style="font-size:12px; opacity:0.85;">+5% урона на забег</span>' +
+              '</button>';
     } else {
       html += '<div class="itemRow"><div class="itemInfo"><i>🎁 Дар: нужно 25✦</i></div></div>';
     }
@@ -22768,7 +23172,9 @@ function _openSacredTree(){
   }
 
   /* Кнопка: Послушать */
-  html += '<button class="btn" onclick="sacredTreeListen()">👂 Послушать Древо</button>';
+  html += '<button class="btn sacred-tree-btn" onclick="sacredTreeListen()">' +
+          '<span>👂 Послушать Древо</span>' +
+          '</button>';
 
   /* Закрыть */
   html += '<button class="btn" onclick="closeGameModal()">Уйти</button>';
@@ -22824,9 +23230,36 @@ function sacredTreeListen(){
     '«Ты слышишь детский смех. Где-то очень далеко. И очень давно.»'
   ];
   var _line = _lines[Math.floor(gameRNG() * _lines.length)];
-  showToast('🌳 ' + _line);
   SfxPlay('altar');
-  /* Не закрываем модалку — можно слушать дальше. */
+
+  /* Текст выводится внутри модалки: canvas-тост скрывается её затемнённым фоном. */
+  var _modalPanel = document.getElementById('modalPanel');
+  if(_modalPanel){
+    var _loreBox = _modalPanel.querySelector('.lore-text');
+    if(_loreBox){
+      var _originalLore = '«Древо огромно. Кора — серая, вся в глубоких трещинах. ' +
+        'Листья не падают — они застыли в воздухе, как будто время здесь остановилось. ' +
+        'Где-то в глубине ствола — тихий, ровный пульс. Оно ещё живо. Ещё дышит. Но уже очень устало.»';
+      _loreBox.innerHTML = '🌳 <span style="color:#a0d0a0;font-style:italic;">' + _line + '</span>';
+      _loreBox.style.transition = 'opacity 0.2s';
+      _loreBox.style.opacity = '0.5';
+      setTimeout(function(){
+        if(_loreBox.isConnected)_loreBox.style.opacity = '1';
+      }, 50);
+      clearTimeout(window._sacredTreeListenTimer);
+      window._sacredTreeListenTimer = setTimeout(function(){
+        var _currentPanel = document.getElementById('modalPanel');
+        var _currentLore = _currentPanel&&_currentPanel.querySelector('.lore-text');
+        if(_currentLore&&_currentLore===_loreBox){
+          _currentLore.textContent = _originalLore;
+          _currentLore.style.opacity = '1';
+        }
+      }, 3500);
+      return;
+    }
+  }
+  /* Fallback, если модалка или блок лора недоступны. */
+  showToast('🌳 ' + _line);
 }
 
 var _lastMemoryShrine=null;
@@ -23744,10 +24177,10 @@ function _syncWindDecorMode(){
   if(typeof _buildDecalCanvas==='function'&&typeof decor!=='undefined'&&decor.length)_buildDecalCanvas();
 }
 var PERF_PRESETS={
-  low:{particlesMax:30,weatherOff:true,fallingLeavesOff:true,ambientMotesOff:true,lightingOff:true,decorGlowOff:true,renderIntervalMs:1000/40,spriteCacheMax:200,wind:0,enhancedFog:false,extraWeatherCount:0,haloBoost:0},
-  medium:{particlesMax:60,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:500,wind:0.6,enhancedFog:false,extraWeatherCount:0,haloBoost:0},
-  high:{particlesMax:120,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:1000,wind:1.0,enhancedFog:false,extraWeatherCount:0,haloBoost:0,bloom:true},
-  ultra:{particlesMax:320,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:2000,wind:2.2,enhancedFog:true,extraWeatherCount:120,haloBoost:0.4,bloom:true}
+  low:{particlesMax:30,weatherOff:true,fallingLeavesOff:true,ambientMotesOff:true,lightingOff:true,decorGlowOff:true,renderIntervalMs:1000/40,spriteCacheMax:200,wind:0,enhancedFog:false,extraWeatherCount:0,haloBoost:0,grassDensity:0},
+  medium:{particlesMax:60,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:500,wind:0.6,enhancedFog:false,extraWeatherCount:0,haloBoost:0,grassDensity:0},
+  high:{particlesMax:100,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:1000,wind:1.0,enhancedFog:false,extraWeatherCount:0,haloBoost:0,bloom:true,grassDensity:1},
+  ultra:{particlesMax:180,weatherOff:false,fallingLeavesOff:false,ambientMotesOff:false,lightingOff:false,decorGlowOff:false,renderIntervalMs:1000/60,spriteCacheMax:2000,wind:2.0,enhancedFog:true,extraWeatherCount:60,haloBoost:0.3,bloom:true,grassDensity:2}
 };
 var _currentPerf=PERF_PRESETS.medium;
 var _perfWeatherBase=null;
@@ -23892,6 +24325,7 @@ requestAnimationFrame(loop);
       updateProjectiles(dt);
       if(gameOver){_fixedAccumulator=0;break;}
       updateParticles(dt);
+      _updateLootPixelBursts();
       updateCamera();updateFallingLeaves(dt);updateWeather(dt);updateAmbientMotes(dt);
       _weatherChangeTimer-=dt;if(_weatherChangeTimer<=0){_weatherChangeTimer=1800+randi(0,600);_changeWeatherDynamic();}
       /* v9.8.0-HOTFIX: toast lifetimes advance on every simulation tick. */
@@ -23908,7 +24342,20 @@ requestAnimationFrame(loop);
     if(_didHitStop)updateHUD();
     /* v9.3.6 FIX: не вызываем тяжёлый игровой render после die() в этом кадре. */
     if(!gameOver)_renderIfDue(now);
-  }catch(err){dbg('LOOP: '+(err&&err.message?err.message:err));}
+  }catch(err){
+    dbg('LOOP: '+(err&&err.message?err.message:err));
+    /* v9.9.4 SAFETY: не оставляем игру в «полупаузе» после исключения. */
+    if(!inHub && !gameOver && !_loreQueueActive && typeof _modalPausedGame==='boolean' && _modalPausedGame){
+      /* Не форсим false вслепую — только логируем, если модалка реально закрыта. */
+      var _modalNow=document.getElementById('modal');
+      if(!_modalNow || _modalNow.style.display!=='flex'){
+        _modalPausedGame=false;
+        gamePaused=false;
+        var _tRecover=document.getElementById('touch');
+        if(_tRecover)_tRecover.style.display=isTouch?'block':'none';
+      }
+    }
+  }
 }
 
 /* =====================================================================
@@ -25789,6 +26236,25 @@ html body #hud {
 #hud #manaRow { display:flex !important; align-items:center !important; gap:5px !important; }
 #hud #manaRow .hp { background:#071b3b !important; border-color:#245c9b !important; }
 #hud #manaBar { background:linear-gradient(90deg,#1674d1,#6bd8ff) !important; display:block !important; height:100% !important; }
+
+/* v9.9.4 UI-FIX: предсказуемая раскладка кнопок Священного Древа без !important. */
+#modalPanel .sacred-tree-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.4;
+  padding: 12px 16px;
+  text-align: center;
+  word-break: break-word;
+}
+#modalPanel .sacred-tree-btn svg,
+#modalPanel .sacred-tree-btn canvas {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
 </style>
 
 </html>
