@@ -16232,6 +16232,27 @@ function updatePlayer(dt){
   if(now-lastStepSound>520){
     lastStepSound=now;
     SfxPlay('step');
+    // Иммерсив: круги на воде
+    var ptx = Math.floor(player.x/TILE), pty = Math.floor(player.y/TILE);
+    if(map[pty] && map[pty][ptx] === 3 && typeof _waterRipples !== 'undefined'){
+      if(_waterRipples.length < 30){
+        _waterRipples.push({ x: player.x, y: player.y, r: 2, maxR: 20, life: 30 });
+      }
+    }
+    // ИММЕРСИВ: Следы на снегу
+    if(typeof biome !== 'undefined' && biome && biome.name &&
+       (biome.name.indexOf('Ледян')>=0 || biome.name.indexOf('Льда')>=0)){
+      if(!groundDecals) groundDecals = [];
+      if(groundDecals.length < 400){
+        groundDecals.push({
+          x: player.x + rand(-4,4),
+          y: player.y + rand(2,6),
+          type: 'snow_track',
+          size: 4,
+          life: 300
+        });
+      }
+    }
     /* v9.1.8 PERF: пыль под ногами отключена — она создавала 3 частицы
        каждые 520мс при движении и засоряла пул. Визуально почти незаметна. */
   }
@@ -19977,6 +19998,52 @@ function drawAmbientMotes(){
   }
   ctx.globalAlpha=1;
 }
+var _caveDrips = [];
+var _waterRipples = [];
+
+function drawCaveDrips(){
+  if(!biome || !biome.name) return;
+  var bName = biome.name;
+  if(bName.indexOf('Катакомб')<0 && bName.indexOf('Лавов')<0 && bName.indexOf('Ржав')<0 && bName.indexOf('Паутин')<0) return;
+
+  if(gameRNG() < 0.1 && _caveDrips.length < 20){
+    _caveDrips.push({ x: cam.x + gameRNG() * VW, y: cam.y - 20, vy: 6 + gameRNG() * 4, life: 100 });
+  }
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(150, 200, 255, 0.6)';
+  for(var i = _caveDrips.length - 1; i >= 0; i--){
+    var d = _caveDrips[i];
+    d.y += d.vy; d.life--;
+    if(d.life <= 0 || solidAt(d.x, d.y)){
+      ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
+      ctx.fillRect(Math.floor(d.x - cam.x - 2), Math.floor(d.y - cam.y), 5, 1);
+      ctx.fillStyle = 'rgba(150, 200, 255, 0.6)';
+      _caveDrips.splice(i, 1);
+      continue;
+    }
+    ctx.fillRect(Math.floor(d.x - cam.x), Math.floor(d.y - cam.y), 1, 3);
+  }
+  ctx.restore();
+}
+
+function drawWaterRipples(){
+  if(_waterRipples.length === 0) return;
+  ctx.save();
+  ctx.lineWidth = 1;
+  for(var i = _waterRipples.length - 1; i >= 0; i--){
+    var rip = _waterRipples[i];
+    rip.r += 0.5; rip.life--;
+    if(rip.life <= 0 || rip.r > rip.maxR){ _waterRipples.splice(i, 1); continue; }
+    var alpha = rip.life / 30 * 0.4;
+    ctx.strokeStyle = 'rgba(200, 230, 255, ' + alpha + ')';
+    ctx.beginPath();
+    ctx.ellipse(rip.x - cam.x, rip.y - cam.y + 10, rip.r, rip.r * 0.4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawWeather(){
   if(_currentPerf&&_currentPerf.weatherOff)return;
   /* v9.3.4 PERF — на мобилке погода рисуется каждый второй кадр. */
@@ -20093,9 +20160,14 @@ function drawLighting(){
   var now=Date.now(),px=player.x-cam.x,py=player.y-cam.y;
   var bl=BIOME_LIGHT[biome.name]||{radius:220,dark:0.55,tint:null};
   var radius=bl.radius;
-  if(player.curseFog===true)radius=Math.max(100,radius-80);
   var dark=bl.dark;
+  if(player.curseFog===true)radius=Math.max(100,radius-80);
   if(floorNum===1)dark=dayTime==='night'?0.56:(dayTime==='evening'?0.32:0);
+  // ИММЕРСИВ: Пыль ухудшает видимость
+  if(typeof weatherParticles !== 'undefined' && weatherParticles.length > 0 && weatherParticles[0].type === 'dust'){
+    radius = Math.max(100, radius - 60);
+    dark = Math.min(0.8, dark + 0.15);
+  }
   if(dark<=0)return;
 
   /* ВАЖНО: маску темноты рисуем на отдельном offscreen canvas.
@@ -20305,6 +20377,8 @@ function render(){
   _renderEntityLayer();
   _renderTopLayer();
   _renderWalls(x0,y0,x1,y1);
+  drawCaveDrips();
+  drawWaterRipples();
   _renderOverlays();
   _renderFloodOverlay();
   _renderHUDFrame();
@@ -20566,6 +20640,22 @@ function _renderParallaxBackground(){
 }
 
 function _renderGroundLayer(){
+  // Отрисовка тающих следов на снегу
+  if(groundDecals){
+    for(var t = groundDecals.length - 1; t >= 0; t--){
+      var tr = groundDecals[t];
+      if(tr && tr.type === 'snow_track'){
+        tr.life--;
+        if(tr.life <= 0){
+          groundDecals.splice(t, 1);
+          continue;
+        }
+        var alpha = Math.min(1, tr.life / 60) * 0.5;
+        ctx.fillStyle = 'rgba(30, 45, 60, ' + alpha + ')';
+        ctx.fillRect(Math.floor(tr.x - cam.x), Math.floor(tr.y - cam.y), tr.size, tr.size);
+      }
+    }
+  }
   if(decalCanvas&&!_buildDecalCanvas._baking) ctx.drawImage(decalCanvas, -cam.x, -cam.y);
   else {
     /* v9.9.4 PERF-FREEZE: пока кеш запекается, временно рисуем decals живьём. */
@@ -21078,6 +21168,23 @@ function _drawDynamicGrass(){
     }
   }
   ctx.stroke();
+
+  // ИММЕРСИВ: Блеск травы при дожде
+  if(typeof weatherParticles !== 'undefined' && weatherParticles.length > 0 && weatherParticles[0].type === 'rain'){
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
+    for(var ry = startY; ry < endY; ry += step * 2){
+      for(var rx = startX; rx < endX; rx += step * 2){
+        var rtx = Math.floor(rx / TILE), rty = Math.floor(ry / TILE);
+        if(!map[rty] || map[rty][rtx] !== 0) continue;
+        var rseed = ((rtx * 73 + rty * 37) % 100 + 100) % 100;
+        if(rseed > 40) continue;
+        var rpx = rx - viewX + (rseed % 8) - 4;
+        var rpy = ry - viewY + (rseed % 5);
+        ctx.fillRect(Math.floor(rpx), Math.floor(rpy), 2, 2);
+      }
+    }
+  }
 
   // v9.9.14 — цветы на Ultra с естественным разбросом, меньшей плотностью и разной яркостью.
   if(density === 2){
