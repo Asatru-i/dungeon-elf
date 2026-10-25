@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Dungeon Elf 9.9.8 — single-file release; version is defined by GAME_VERSION in the main script. -->
+<!-- Dungeon Elf 9.9.17 — single-file release; version is defined by GAME_VERSION in the main script. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -761,6 +761,30 @@ button, .btn, .menuBtn, .modeBtn, .tab, .craftBtn { text-rendering: geometricPre
 :root { --df-pixel-font: "Crumbline 2", monospace !important; }
 html, body, body * { font-family: var(--df-pixel-font) !important; }
 </style>
+<style id="v9-8-0-hotfix-mana-row">
+#hud #manaRow { display:flex !important; align-items:center !important; gap:5px !important; }
+#hud #manaRow .hp { background:#071b3b !important; border-color:#245c9b !important; }
+#hud #manaBar { background:linear-gradient(90deg,#1674d1,#6bd8ff) !important; display:block !important; height:100% !important; }
+
+/* v9.9.4 UI-FIX: предсказуемая раскладка кнопок Священного Древа без !important. */
+#modalPanel .sacred-tree-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.4;
+  padding: 12px 16px;
+  text-align: center;
+  word-break: break-word;
+}
+#modalPanel .sacred-tree-btn svg,
+#modalPanel .sacred-tree-btn canvas {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -906,7 +930,7 @@ var isTouch=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigat
    ===================================================================== */
 /* v7.0.0 — ЕДИНЫЙ источник версии. Все строки версии в игре
 (вкладка, футер хаба, логи) берутся отсюда. */
-var GAME_VERSION='9.9.14';
+var GAME_VERSION='9.9.17';
 var DEBUG_UI = false;
 /* v8.5.0 — глобальный флаг отладочных логов.
    true — информационные логи доступны разработчику.
@@ -5563,6 +5587,8 @@ for(var _dk in _diaryLock){if(_diaryLock.hasOwnProperty(_dk))delete _diaryLock[_
     player.altarSpeedBonus=0;
     player.altarCritBonus=0;
     player.altarDmgBonus=0;
+    player.groveHpBonus=0;
+    player.groveDmgBonus=0;
     /* v7.0 (из v6.5.14-step2): сброс покупок сумки у торговца (на забег). */
     player.bagPurchased=0;
     player._runLore = {};
@@ -10934,6 +10960,7 @@ function calcMaxHp(armorBonus, subclass, cs){
   /* --- ПЛОСКИЕ БОНУСЫ: броня, алтарь, уровни. НЕ умножаются. --- */
   total += (armorBonus || 0);
   if(player && player.altarHpBonus) total += player.altarHpBonus;
+  if(player && player.groveHpBonus) total += player.groveHpBonus;
   /* v9.3.1 — HP-бонус от уровней: плоский, не умножается на класс/подкласс. */
   if(player && player.lvlHpBonus) total += player.lvlHpBonus;
 
@@ -11103,7 +11130,7 @@ function getWeaponStats(){
   var dmgBonus=(hasUpgrade('dmgBoost')?2:0);
   /* v7.3.12 — из BALANCE.skills. */
   var skillBonus = hasSkill('fire_dmg') ? BALANCE.skills.fire_dmg.dmgBonus : 0;
-  var altarBonus=(player.altarDmgBonus||0)+(player._curseDmgBonus||0);
+  var altarBonus=(player.altarDmgBonus||0)+(player.groveDmgBonus||0)+(player._curseDmgBonus||0);
   var accBonus=0;
   if(player.equippedAccessory&&LEGENDARY_ITEMS[player.equippedAccessory]&&LEGENDARY_ITEMS[player.equippedAccessory].stats){
     accBonus=LEGENDARY_ITEMS[player.equippedAccessory].stats.dmg||0;
@@ -12074,6 +12101,8 @@ function _collectRunData(){
       bagPurchased: player.bagPurchased || 0,
       altarHpBonus: player.altarHpBonus || 0,
       altarDmgBonus: player.altarDmgBonus || 0,
+      groveHpBonus: player.groveHpBonus || 0,
+      groveDmgBonus: player.groveDmgBonus || 0,
       _grovePrayed: !!player._grovePrayed,
       /* v8.5.7 — ФИКС: дневник и сюжетные реакции не повторяются после continueRun. */
       _diaryShown: player._diaryShown || {},
@@ -12194,6 +12223,8 @@ function _validateRunSaveData(data){
   p.regen=finiteOr(p.regen,0,0,100000);
   p.altarHpBonus=finiteOr(p.altarHpBonus,0,0,100000);
   p.altarDmgBonus=finiteOr(p.altarDmgBonus,0,0,100000);
+  p.groveHpBonus=finiteOr(p.groveHpBonus,0,0,100000);
+  p.groveDmgBonus=finiteOr(p.groveDmgBonus,0,0,100000);
   /* v9.7.5 — clamp remaining persisted combat/vital stats before restore.
      Keep this whitelist explicit: unknown fields may be flags or objects. */
   var _numericSaveFields={
@@ -12299,6 +12330,8 @@ function _migrateRunData(data){
   }
   if(typeof data.player.altarHpBonus!=='number'||!isFinite(data.player.altarHpBonus))data.player.altarHpBonus=0;
   if(typeof data.player.altarDmgBonus!=='number'||!isFinite(data.player.altarDmgBonus))data.player.altarDmgBonus=0;
+  if(typeof data.player.groveHpBonus!=='number'||!isFinite(data.player.groveHpBonus))data.player.groveHpBonus=0;
+  if(typeof data.player.groveDmgBonus!=='number'||!isFinite(data.player.groveDmgBonus))data.player.groveDmgBonus=0;
   if(typeof data.player.altarSpeedBonus!=='number'||!isFinite(data.player.altarSpeedBonus))data.player.altarSpeedBonus=0;
   if(typeof data.player.altarCritBonus!=='number'||!isFinite(data.player.altarCritBonus))data.player.altarCritBonus=0;
   if(!data.player._diaryShown||typeof data.player._diaryShown!=='object'||Array.isArray(data.player._diaryShown))data.player._diaryShown={};
@@ -13441,6 +13474,18 @@ function openCompendium(){
     }
     html+='</div></details>';
   }
+  html+='<h3 style="margin-top:16px;color:#a08060">📜 Лицензии</h3>';
+  html+='<div class="itemRow info"><div class="itemInfo" style="font-size:11px;line-height:1.5">'
+    +'<b>Шрифт Crumbline 2</b><br>'
+    +'Pixel-производная от Noto Sans Bold. Copyright 2010, 2012–2020 Google Inc.; 2015–2020 Google LLC. '
+    +'Распространяется по SIL Open Font License 1.1. Reserved Font Name: Noto. '
+    +'Производная не аффилирована с апстрим-проектом Noto.<br><br>'
+    +'<b>Иконки атаки</b><br>'
+    +'Shining Sword by Lorc · Bow Arrow by Delapouite · Plain Dagger by Lorc · Wizard Staff by Lorc. '
+    +'Источник: <span style="color:#c8a040">game-icons.net</span>, CC BY 3.0.<br><br>'
+    +'<b>Движок и игровой код</b><br>'
+    +'Dungeon Elf v'+GAME_VERSION+' — MIT License. Игра предоставляется «как есть», без гарантий.'
+    +'</div></div>';
   html+='<button class="btn" onclick="closeModal()">Закрыть</button>';showModal(html);
 }
 function openAchievements(){
@@ -15729,7 +15774,16 @@ if(e.ally){
     if(e.type==='mimic'&&e.disguised)continue;
     /* Роли врагов: фланкеры заходят дугой, кастеры ставят щит на половине HP. */
     if((e.role==='caster'||e.type==='shaman')&&e.hp<e.maxHp*0.5&&!e.shielded){e.shielded=true;e.shieldHp=100;_dmgTextPush(e.x,e.y-30,'🛡️',30,'#80c0ff');}
-    if((e.role==='flanker'||e.type==='goblin'||e.type==='wolf')&&e.aggro&&d<200){if(!e.flankDir)e.flankDir=gameRNG()<0.5?-1:1;var _flankAng=Math.atan2(dy,dx)+e.flankDir*0.5;moveEntity(e,Math.cos(_flankAng)*spd*dt,Math.sin(_flankAng)*spd*dt);continue;}
+    if((e.role==='flanker'||e.type==='goblin'||e.type==='wolf')&&e.aggro&&d<200){
+      // Не продолжаем фланговать, если моб уже в радиусе ближней атаки.
+      if(d > e.r + player.r + 5) {
+        if(!e.flankDir)e.flankDir=gameRNG()<0.5?-1:1;
+        var _flankAng=Math.atan2(dy,dx)+e.flankDir*0.5;
+        moveEntity(e,Math.cos(_flankAng)*spd*dt,Math.sin(_flankAng)*spd*dt);
+        continue;
+      }
+      // Вблизи цели обычная атака ниже обработает укус.
+    }
     /* v5.4.3 — поведение врагов через реестр */
     /* v6.5.9 — ФИКС: не вызываем поведение для мёртвых.
        Раньше bonelord/qspider/mage спавнили скелетов/пауков/призраков
@@ -19074,10 +19128,10 @@ function _drawElfHeldWeapon(sx,sy,w,flipX){
       // v9.8.8 — Bloom для посоха при атаке
       if(_currentPerf && _currentPerf.bloom){
         ctx.save();ctx.globalCompositeOperation='lighter';
-        var _sg=ctx.createRadialGradient(0,-ps*7,1,0,-ps*7,14);
-        _sg.addColorStop(0,w.pal.M||'#b080ff');_sg.addColorStop(1,'transparent');
-        ctx.fillStyle=_sg;ctx.globalAlpha=0.7+swing*0.3;
-        ctx.beginPath();ctx.arc(0,-ps*7,14,0,Math.PI*2);ctx.fill();ctx.restore();
+        var _staffBloomColor=w.pal.M||'#b080ff';
+        var _staffBloom=_getBloomSprite(_staffBloomColor,14);
+        ctx.globalAlpha=0.7+swing*0.3;
+        ctx.drawImage(_staffBloom,-14,-ps*7-14,28,28);ctx.restore();
       }
       ctx.globalAlpha=0.45+0.35*swing;ctx.fillStyle=(w.pal.M||'#b080ff');
       ctx.beginPath();ctx.arc(0,-ps*7,2+Math.round(swing),0,Math.PI*2);ctx.fill();
@@ -19085,10 +19139,10 @@ function _drawElfHeldWeapon(sx,sy,w,flipX){
       // v9.8.8 — Спокойное свечение посоха в руке
       if(_currentPerf && _currentPerf.bloom){
         ctx.save();ctx.globalCompositeOperation='lighter';
-        var _sg2=ctx.createRadialGradient(0,-ps*7,0.5,0,-ps*7,8);
-        _sg2.addColorStop(0,w.pal.M||'#b080ff');_sg2.addColorStop(1,'transparent');
-        ctx.fillStyle=_sg2;ctx.globalAlpha=0.15+((Math.sin(now*0.004)+1)*0.05);
-        ctx.beginPath();ctx.arc(0,-ps*7,8,0,Math.PI*2);ctx.fill();ctx.restore();
+        var _staffBloomColor2=w.pal.M||'#b080ff';
+        var _staffBloom2=_getBloomSprite(_staffBloomColor2,8);
+        ctx.globalAlpha=0.15+((Math.sin(now*0.004)+1)*0.05);
+        ctx.drawImage(_staffBloom2,-8,-ps*7-8,16,16);ctx.restore();
       }
       ctx.globalAlpha=0.07+((Math.sin(now*0.004)+1)*0.025);ctx.fillStyle=(w.pal.M||'#b080ff');
       ctx.beginPath();ctx.arc(0,-ps*7,2,0,Math.PI*2);ctx.fill();
@@ -19132,6 +19186,25 @@ function _syncAttackIcon(){
   el.style.color=tint;
   var iconSvg=el.querySelector('.game-icon-original');if(iconSvg){iconSvg.style.width='23px';iconSvg.style.height='23px';iconSvg.style.display='block';iconSvg.style.objectFit='contain';iconSvg.style.mixBlendMode='screen';iconSvg.style.filter='none';iconSvg.style.background='transparent';}
 }
+// Cached bloom sprites for Canvas 2D.
+var _bloomSpriteCache = Object.create(null);
+function _getBloomSprite(color, radius) {
+  radius = Math.max(1, Math.ceil(Number(radius) || 1));
+  var key = String(color) + '_' + radius;
+  if (_bloomSpriteCache[key]) return _bloomSpriteCache[key];
+  var c = document.createElement('canvas');
+  c.width = radius * 2;
+  c.height = radius * 2;
+  var cx = c.getContext('2d');
+  var g = cx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, c.width, c.height);
+  _bloomSpriteCache[key] = c;
+  return c;
+}
+
 function drawElf(){
   if(!player)return;
   var _walkBob=0;
@@ -19896,12 +19969,9 @@ function drawProjectiles(){
 
           // Само свечение
           var glowR = (p.type==='fire'||p.type==='shadow') ? 24 : 18;
-          var gGlow = ctx.createRadialGradient(sx, sy, 2, sx, sy, glowR);
-          gGlow.addColorStop(0, vis.color);
-          gGlow.addColorStop(1, 'transparent');
-          ctx.fillStyle = gGlow;
+          var _projectileBloom=_getBloomSprite(vis.color||'#ffffff',glowR);
           ctx.globalAlpha = 0.65;
-          ctx.beginPath(); ctx.arc(sx, sy, glowR, 0, Math.PI*2); ctx.fill();
+          ctx.drawImage(_projectileBloom,sx-glowR,sy-glowR,glowR*2,glowR*2);
           ctx.restore();
         }
 
@@ -20175,14 +20245,16 @@ function drawLighting(){
      из-за чего возникали чёрные/прозрачные ореолы вместо освещения. */
   if(!_lightMaskCanvas){_lightMaskCanvas=document.createElement('canvas');_lightMaskCtx=_lightMaskCanvas.getContext('2d');}
   if(_lightMaskW!==VW||_lightMaskH!==VH){
+    // Оптимизация: маска освещения рендерится с DPR 1.
+    var _lightDPR=1.0;
     /* v9.6.9 FIX: маска света учитывает DPR — иначе на HiDPI мыло. */
-    _lightMaskCanvas.width=Math.floor(VW*DPR);
-    _lightMaskCanvas.height=Math.floor(VH*DPR);
+    _lightMaskCanvas.width=Math.floor(VW*_lightDPR);
+    _lightMaskCanvas.height=Math.floor(VH*_lightDPR);
     _lightMaskCanvas.style.width=VW+'px';
     _lightMaskCanvas.style.height=VH+'px';
     _lightMaskW=VW;_lightMaskH=VH;
     _lightMaskCtx=_lightMaskCanvas.getContext('2d');
-    _lightMaskCtx.setTransform(DPR,0,0,DPR,0,0);
+    _lightMaskCtx.setTransform(_lightDPR,0,0,_lightDPR,0,0);
   }
   var lctx=_lightMaskCtx;
   lctx.save();
@@ -21001,6 +21073,7 @@ function _renderWalls(x0,y0,x1,y1){
       var wt=wrow[x];
       if(wt!==1&&wt!==6)continue;
       var wx2=x*TILE-cam.x,wy2=y*TILE-cam.y;
+      if(wx2 < -TILE || wy2 < -TILE || wx2 > VW || wy2 > VH)continue;
       drawWallTile(wx2,wy2,x,y,wt);
       if(wt===6){
         ctx.strokeStyle='rgba(0,0,0,0.7)';ctx.lineWidth=2;
@@ -21719,7 +21792,8 @@ if(_hudCache.lore!==_loreStr){el.loreProgress.textContent=_loreStr;_hudCache.lor
 }
 if(el.altarBuffs&&player){
 var _ab=[];
-if(player.altarHpBonus)_ab.push('❤️+'+player.altarHpBonus);
+var _totalHpBonus=(player.altarHpBonus||0)+(player.groveHpBonus||0); if(_totalHpBonus)_ab.push('❤️+'+_totalHpBonus);
+var _totalDmgBonus=(player.altarDmgBonus||0)+(player.groveDmgBonus||0); if(_totalDmgBonus)_ab.push('⚔️+'+Math.round(_totalDmgBonus*100)+'%');
 var _hudSpeedBonus=(player.altarSpeedBonus||0)+(player._curseSpeedBonus||0); if(_hudSpeedBonus)_ab.push('⚡+'+Math.round(_hudSpeedBonus*100)+'%');
 var _hudCritBonus=(player.altarCritBonus||0)+(player._curseCritBonus||0); if(_hudCritBonus)_ab.push('💥+'+Math.round(_hudCritBonus*100)+'%');
 var _altarStr=_ab.length?('⛩️ '+_ab.join(' · ')):'';
@@ -23298,7 +23372,7 @@ function sacredTreePray(){
   if(player.gold < 0) return;
   player._grovePrayed = true;
   /* Бафф +5 HP на забег. */
-  player.altarHpBonus = (player.altarHpBonus || 0) + 5;
+  player.groveHpBonus = (player.groveHpBonus || 0) + 5;
   applySubclassBonuses();
   player.hp = Math.min(player.maxHp, player.hp + 5);
   updateHUD();
@@ -23318,7 +23392,7 @@ function sacredTreeOffer(){
   }
   player.gold -= 25;
   player._groveOfferings = true;
-  player.altarDmgBonus = (player.altarDmgBonus || 0) + 0.05;
+  player.groveDmgBonus = (player.groveDmgBonus || 0) + 0.05;
   updateHUD();
   SfxPlay('forge');
   showToast('🎁 Древо принимает дар. +5% урона');
@@ -24442,7 +24516,7 @@ requestAnimationFrame(loop);
       mmTimer+=dt;
       /* v9.1.8 PERF: миникарта раз в 3 секунды вместо 0.5 сек, HUD — раз в секунду. */
       if(mmTimer>180){mmTimer=0;drawMinimap();}
-      if(_frameCounter%60===0)updateHUD();
+      if(_frameCounter%10===0)updateHUD();
     }
     /* Не допускаем спираль отложенных обновлений после длительной паузы. */
     if(_steps===_fixedMaxSteps&&_fixedAccumulator>=_fixedStepMs)_fixedAccumulator=0;
@@ -25190,89 +25264,7 @@ requestAnimationFrame(loop);
 </script>
 
 <script id="v853-global-pixel-coin-js">
-/* v8.5.3 — заменяем видимые эмодзи золота во всём интерфейсе пиксельной монетой SPR_COIN. */
-(function(){
-  'use strict';
-  function makeCoin(){
-    var c=document.createElement('canvas'); c.width=21; c.height=21;
-    c.setAttribute('aria-label','золото'); c.setAttribute('role','img');
-    c.style.cssText='display:inline-block;width:1em;height:1em;vertical-align:-0.16em;image-rendering:pixelated;flex:none;';
-    var x=c.getContext('2d');
-    if(x && typeof SPR_COIN!=='undefined' && typeof PAL_COIN!=='undefined' && typeof drawPixelCoin==='function'){
-      drawPixelCoin(x,10.5,10.5,2.5);
-    } else {
-      x.fillStyle='#d9a43c';x.beginPath();x.arc(10.5,10.5,8,0,Math.PI*2);x.fill();
-      x.strokeStyle='#ffe19a';x.lineWidth=2;x.stroke();
-    }
-    return c;
-  }
-  function processTextNode(node){
-    if(!node || !node.parentNode || !node.nodeValue || node.nodeValue.indexOf('✦')<0)return;
-    var parent=node.parentNode;
-    if(parent.nodeType!==1 || /^(SCRIPT|STYLE|TEXTAREA|INPUT|CANVAS|CODE|PRE)$/.test(parent.tagName))return;
-    var parts=node.nodeValue.split('✦'); if(parts.length<2)return;
-    var frag=document.createDocumentFragment();
-    for(var i=0;i<parts.length;i++){
-      if(parts[i])frag.appendChild(document.createTextNode(parts[i]));
-      if(i<parts.length-1)frag.appendChild(makeCoin());
-    }
-    parent.replaceChild(frag,node);
-  }
-  function scan(root){
-    if(!root)return;
-    if(root.nodeType===3){processTextNode(root);return;}
-    if(root.nodeType!==1 && root.nodeType!==9 && root.nodeType!==11)return;
-    if(root.nodeType===1 && /^(SCRIPT|STYLE|TEXTAREA|INPUT|CANVAS|CODE|PRE)$/.test(root.tagName))return;
-    var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT), nodes=[],n;
-    while((n=walker.nextNode()))if(n.nodeValue && n.nodeValue.indexOf('✦')>=0)nodes.push(n);
-    for(var i=0;i<nodes.length;i++)processTextNode(nodes[i]);
-  }
-  function start(){
-    scan(document.body);
-    if(window.MutationObserver){
-      var observer=new MutationObserver(function(records){
-        for(var i=0;i<records.length;i++){
-          var r=records[i];
-          if(r.type==='characterData')processTextNode(r.target);
-          else for(var j=0;j<r.addedNodes.length;j++)scan(r.addedNodes[j]);
-        }
-      });
-      observer.observe(document.body,{subtree:true,childList:true,characterData:true});
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-})();
-/* v9.7.1-FIX: глобальный перехват необработанных Promise-rejection. */
-window.addEventListener('unhandledrejection', function(e){
-  try{ _error('[PromiseRejection]', e.reason && e.reason.message ? e.reason.message : e.reason); }catch(_e){}
-  /* Не даём promise уронить игру — просто логируем. */
-  if(e && typeof e.preventDefault === 'function') e.preventDefault();
-});
-
-/* v9.7.1-FIX: защита от отсутствия BALANCE.bosses.treant при регенерации справочника. */
-try {
-  if(typeof _generateBalanceCompendium === 'function') _generateBalanceCompendium();
-} catch(_cgenErr){
-  try{ _warn('[Compendium] regeneration failed:', _cgenErr && _cgenErr.message); }catch(_e){}
-}
-
-/* v9.7.1-FIX: защита кумулятивных границ шансов от инверсии. */
-(function _validateLootCumulative(){
-  if(typeof BALANCE==='undefined'||!BALANCE.loot)return;
-  var _b=BALANCE.loot;
-  function _chance(v){v=Number(v);return Number.isFinite(v)?Math.max(0,Math.min(0.99,v)):0;}
-  function _ordered(keys){
-    var prev=0;
-    for(var i=0;i<keys.length;i++){
-      var k=keys[i],v=_chance(_b[k]);
-      v=Math.max(prev,v);
-      if(i===keys.length-1)v=Math.min(0.99,v);
-      _b[k]=v;prev=v;
-    }
-  }
-  _ordered(['chestPotionChance','chestGoldChance','chestWeaponChance','chestArmorChance']);
-  _ordered(['deadEndChestChance','deadEndGoldChance','deadEndScrollChance']);
-})();
+/* Отключено: символов ✦ в тексте почти нет, canvas-монета уже рисуется в #hud. Патч 4. */
 </script>
 <!-- v9.6.21 — этап 15: итоговая стабилизация сюжетных расширений. Проверка без изменения механики игры. -->
 <script id="dungeon-elf-pixel-svg-engine">
@@ -25761,43 +25753,26 @@ body, body * {
 canvas { image-rendering: pixelated; }
 </style>
 <script id="df-pixel-font-dynamic-ui">
-(function(){
-  const family = '"Crumbline 2", monospace';
-  function applyFont(root) {
-    if (!root || !root.querySelectorAll) return;
-    root.querySelectorAll('*').forEach(function(el) {
-      if (el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
-      el.style.setProperty('font-family', family, 'important');
-      el.style.setProperty('font-synthesis', 'none', 'important');
-    });
-  }
-  function start() {
-    applyFont(document.body);
-    if (document.body && window.MutationObserver) {
-      new MutationObserver(function(records) {
-        records.forEach(function(record) {
-          record.addedNodes.forEach(function(node) {
-            if (node.nodeType === 1) {
-              if (node.tagName !== 'CANVAS' && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-                node.style.setProperty('font-family', family, 'important');
-                node.style.setProperty('font-synthesis', 'none', 'important');
-                applyFont(node);
-              }
-            }
-          });
-        });
-      }).observe(document.body, {childList:true, subtree:true});
-    }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
-  else start();
-})();
+/* Отключено: дублирует df-crumbline-final-dynamic. Патч 4. */
 </script>
 
-\n<style id="df-crumbline-final-everywhere">
-/* Final release: Crumbline 2 for all DOM text, while preserving each element's size/weight. */
+<style id="df-crumbline-final-everywhere">
+/* Final release: Crumbline 2 for the primary UI containers, while preserving size/weight. */
 :root { --df-pixel-font: "Crumbline 2", monospace !important; }
-html, body, body *, body *::before, body *::after {
+html, body,
+#hub, #hub *,
+#modal, #modal *,
+#inv, #inv *,
+#hud, #hud *,
+#touch, #touch *,
+#floorLabel, #floorTxt,
+#curseLabel, #biomeName,
+#comboLabel, #dbg,
+.panel, .panel *,
+.menuBtn, .menuBtn *,
+.btn, .btn *,
+button, button *,
+.toast, .toast * {
   font-family: "Crumbline 2", monospace !important;
   font-synthesis: none !important;
 }
@@ -26339,29 +26314,6 @@ html body #hud {
 </style>
 </body>
 
-<style id="v9-8-0-hotfix-mana-row">
-#hud #manaRow { display:flex !important; align-items:center !important; gap:5px !important; }
-#hud #manaRow .hp { background:#071b3b !important; border-color:#245c9b !important; }
-#hud #manaBar { background:linear-gradient(90deg,#1674d1,#6bd8ff) !important; display:block !important; height:100% !important; }
 
-/* v9.9.4 UI-FIX: предсказуемая раскладка кнопок Священного Древа без !important. */
-#modalPanel .sacred-tree-btn {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  line-height: 1.4;
-  padding: 12px 16px;
-  text-align: center;
-  word-break: break-word;
-}
-#modalPanel .sacred-tree-btn svg,
-#modalPanel .sacred-tree-btn canvas {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-}
-</style>
 
 </html>
